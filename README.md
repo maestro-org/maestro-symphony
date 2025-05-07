@@ -1,2 +1,3 @@
-# maestro-symphony
-Orchestrating Bitcoin blocks into readable harmony
+_from hash to harmony: an orchestrated Bitcoin indexing suite_
+
+# The Maestro Symphony

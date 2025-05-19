@@ -1,0 +1,14 @@
+[package]
+name = "maestro-symphony-macros"
+version = "0.1.0"
+edition = "2024"
+authors = ["jharper@gomaestro.org"]
+
+[dependencies]
+proc-macro2 = "1.0.95"
+quote = "1.0.40"
+syn = { version = "2.0.101", features = ["full"] }
+
+[lib]
+name = "maestro_symphony_macros"
+proc-macro = true

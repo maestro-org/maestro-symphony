@@ -45,6 +45,12 @@ impl Decode for u8 {
     }
 }
 
+impl Decode for u16 {
+    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+        <[u8; 2]>::decode(bytes).map(|(b, rest)| (u16::from_be_bytes(b), rest))
+    }
+}
+
 impl Decode for VarUInt {
     fn decode(bytes: &[u8]) -> DecodingResult<Self> {
         let len = *bytes
@@ -69,7 +75,7 @@ impl Decode for VarUInt {
     }
 }
 
-macro_rules! impl_uint_decode {
+macro_rules! impl_varuint_decode {
     ($t:ty) => {
         impl Decode for $t {
             fn decode(bytes: &[u8]) -> DecodingResult<$t> {
@@ -83,11 +89,10 @@ macro_rules! impl_uint_decode {
     };
 }
 
-impl_uint_decode!(usize);
-impl_uint_decode!(u16);
-impl_uint_decode!(u32);
-impl_uint_decode!(u64);
-impl_uint_decode!(u128);
+impl_varuint_decode!(usize);
+impl_varuint_decode!(u32);
+impl_varuint_decode!(u64);
+impl_varuint_decode!(u128);
 
 impl<A: Decode> Decode for Vec<A> {
     fn decode(bytes: &[u8]) -> DecodingResult<Self> {

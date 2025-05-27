@@ -1,6 +1,6 @@
 [package]
 name = "maestro-symphony"
-version = "0.1.0"
+version = "0.0.1"
 edition = "2024"
 authors = ["jharper@gomaestro.org"]
 
@@ -22,6 +22,7 @@ maestro-symphony-macros = { path = "./macros" }
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
 ordinals = "0.0.15"
 indexmap = "2.9.0"
+itertools = "0.14.0"
 
 [workspace]
 members = ["macros"]

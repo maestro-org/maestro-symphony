@@ -8,7 +8,7 @@ pub enum Error {
     Decoding(#[from] DecodingError),
 
     #[error("rocksdb error: {0}")]
-    RocksError(#[from] rocksdb::Error),
+    Rocks(#[from] rocksdb::Error),
 
     #[error("{0}")]
     Custom(String),

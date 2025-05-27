@@ -15,19 +15,29 @@ pub struct Timestamp {
 }
 
 impl Timestamp {
-    pub fn new(prev: Option<Self>) -> Self {
+    pub fn new() -> Self {
         let unix_ts = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .expect("Time went backwards")
             .as_secs();
 
-        let logical = if let Some(prev) = prev {
-            if unix_ts == prev.physical {
-                // increment counter to distinguish this timestamp within same second
-                prev.logical + 1
-            } else {
-                0
-            }
+        let logical = 0;
+
+        Self {
+            physical: unix_ts,
+            logical,
+        }
+    }
+
+    pub fn after(prev: Self) -> Self {
+        let unix_ts = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+
+        let logical = if unix_ts == prev.physical {
+            // increment counter to distinguish this timestamp within same second
+            prev.logical + 1
         } else {
             0
         };

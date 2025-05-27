@@ -14,6 +14,12 @@ impl Encode for u8 {
     }
 }
 
+impl Encode for u16 {
+    fn encode(&self) -> Vec<u8> {
+        self.to_be_bytes().to_vec()
+    }
+}
+
 impl Encode for VarUInt {
     fn encode(&self) -> Vec<u8> {
         let bend = self.0.to_be_bytes();
@@ -34,7 +40,7 @@ impl Encode for VarUInt {
     }
 }
 
-macro_rules! impl_uint_encode {
+macro_rules! impl_varuint_encode {
     ($type:ty) => {
         impl Encode for $type {
             fn encode(&self) -> Vec<u8> {
@@ -44,12 +50,11 @@ macro_rules! impl_uint_encode {
     };
 }
 
-// u8 encoding is more efficient than if we used our varuint
-impl_uint_encode!(usize);
-impl_uint_encode!(u16);
-impl_uint_encode!(u32);
-impl_uint_encode!(u64);
-impl_uint_encode!(u128);
+// we wont use varuint for u8 or u16
+impl_varuint_encode!(usize);
+impl_varuint_encode!(u32);
+impl_varuint_encode!(u64);
+impl_varuint_encode!(u128);
 
 impl<A: Encode> Encode for Vec<A> {
     fn encode(&self) -> Vec<u8> {

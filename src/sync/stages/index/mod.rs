@@ -1,3 +1,2 @@
-mod core;
-pub mod custom;
-pub mod stage;
+pub mod indexers;
+pub mod worker;

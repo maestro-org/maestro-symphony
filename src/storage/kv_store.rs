@@ -1,12 +1,13 @@
 use std::{collections::HashMap, path::PathBuf};
 
+use itertools::Itertools;
 use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, Snapshot, WriteBatch};
 
 use crate::error::Error;
 
 use super::{
     encdec::{Decode, Encode},
-    table::{IndexerTable, Table},
+    table::Table,
     timestamp::{Timestamp, U64Comparator, U64Timestamp},
 };
 
@@ -48,6 +49,50 @@ impl<'a> Task<'a> {
             .transpose()
     }
 
+    pub fn multi_get<T>(&self, keys: Vec<T::Key>) -> Result<Vec<(T::Key, Option<T::Value>)>, Error>
+    where
+        T: Table,
+    {
+        // Encode the keys for the relevant table
+        let keys = keys.into_iter().map(|key| {
+            let encoded_key = T::encode_key(&key);
+            (key, encoded_key)
+        });
+
+        let mut out = Vec::with_capacity(keys.len());
+
+        let mut to_fetch = Vec::with_capacity(keys.len());
+
+        for (key, encoded_key) in keys {
+            // Check the write buffer first
+            if let Some(action) = self.write_buffer.get(&encoded_key) {
+                let value = match action {
+                    StorageAction::Set(value) => Some(T::Value::decode_all(value)?),
+                    StorageAction::Delete => None,
+                };
+
+                out.push((key, value))
+            } else {
+                to_fetch.push((key, encoded_key))
+            }
+        }
+
+        let fetched = self
+            .reader
+            .multi_get_cf(to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)));
+
+        for ((key, _), value) in to_fetch.into_iter().zip_eq(fetched) {
+            let value = match value? {
+                Some(v) => Some(T::Value::decode_all(&v)?),
+                None => None,
+            };
+
+            out.push((key, value));
+        }
+
+        Ok(out)
+    }
+
     pub fn set<T>(&mut self, key: T::Key, value: T::Value) -> Result<(), Error>
     where
         T: Table,
@@ -84,7 +129,7 @@ impl<'a> Task<'a> {
 
     /// If we are mutable, this will store the original KV for any keys modified during the task,
     /// such that we can use them to later undo the effects of the current task on storage.
-    pub fn maybe_store_original_kv(&mut self, raw_key: &RawKey) -> Result<(), Error> {
+    fn maybe_store_original_kv(&mut self, raw_key: &RawKey) -> Result<(), Error> {
         if let Some(original_kvs) = self.original_kvs.as_mut() {
             // Only need to do once per key
             if !original_kvs.contains_key(raw_key) {
@@ -99,6 +144,18 @@ impl<'a> Task<'a> {
 
         Ok(())
     }
+
+    pub fn finalize(self) -> FinalizedTask {
+        FinalizedTask {
+            write_buffer: self.write_buffer,
+            original_kvs: self.original_kvs,
+        }
+    }
+}
+
+pub struct FinalizedTask {
+    write_buffer: HashMap<RawKey, StorageAction>,
+    original_kvs: Option<HashMap<RawKey, PreviousValue>>,
 }
 
 pub struct StorageHandler {
@@ -138,10 +195,6 @@ impl StorageHandler {
         }
     }
 
-    fn next_ts(&self) -> Timestamp {
-        Timestamp::new(self.previous_timestamp)
-    }
-
     pub fn begin_task(&mut self, mutable: bool) -> Task {
         // only one live task at a time
         assert!(self.task_live == false);
@@ -159,34 +212,33 @@ impl StorageHandler {
 
     /// Finish the task, by flushing all the pending writes to storage, along with the original KVs
     /// into the rollback buffer
-    pub fn finish_task(&mut self, task: Task) -> Result<(), Error> {
-        let timestamp = Timestamp::new(self.previous_timestamp);
-
-        // - peform the write buffer actions, using Timestamp
-
+    pub fn apply_task(&mut self, task: FinalizedTask) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
-        let ts = timestamp.as_rocksdb_ts();
+        let commit_ts = self
+            .previous_timestamp
+            .clone()
+            .map(|x| Timestamp::after(x))
+            .unwrap_or(Timestamp::new());
+
+        let ts = commit_ts.as_rocksdb_ts();
+
+        let cf = self.db.cf_handle(DEFAULT_COLUMN_FAMILY_NAME).unwrap();
 
         for (key, action) in task.write_buffer {
             match action {
-                StorageAction::Set(value) => wb.put_cf_with_ts(task.cf_handle, key, ts, value),
-                StorageAction::Delete => wb.delete_cf_with_ts(task.cf_handle, key, ts),
+                StorageAction::Set(value) => wb.put_cf_with_ts(cf, key, ts, value),
+                StorageAction::Delete => wb.delete_cf_with_ts(cf, key, ts),
             }
         }
 
-        // - insert the undo actions into the rollback buffer if mutable
+        // TODO: rollback buffer
 
-        unimplemented!();
+        self.db.write(wb)?;
 
-        // - insert a timestamp entry
+        self.previous_timestamp = Some(commit_ts);
 
-        unimplemented!();
-
-        // - finish
-
-        self.task_live = false;
-        self.previous_timestamp = timestamp.into();
+        Ok(())
     }
 }
 
@@ -208,6 +260,3 @@ impl From<Option<RawValue>> for PreviousValue {
         }
     }
 }
-
-// use should be able to define a db
-// within a reducer, the user needs to be able to get, set, delete KVs in a specific table in a specific

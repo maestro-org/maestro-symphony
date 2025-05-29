@@ -1,6 +1,3 @@
-use std::collections::{HashMap, HashSet};
-
-use bitcoin::hashes::Hash;
 /// Represents a table that maps a transaction output reference (`TxoRef`) to an unspent transaction
 /// output (`Utxo`).
 ///
@@ -14,6 +11,9 @@ use bitcoin::hashes::Hash;
 /// - **Value**: [`Utxo`] - The unspent transaction output, containing details such as the amount,
 /// script, block height, and extended metadata.
 /// - **Indexer**: [`CoreIndexer::UtxoByTxoRef`] - The indexer responsible for managing this table.
+use std::collections::{HashMap, HashSet};
+
+use bitcoin::hashes::Hash;
 use indexmap::IndexMap;
 use maestro_symphony_macros::{Decode, Encode};
 
@@ -21,7 +21,7 @@ use crate::{
     define_core_table,
     error::Error,
     storage::{encdec::Encode, kv_store::Task, table::CoreTable},
-    sync::stages::BlockTxs,
+    sync::stages::{BlockTxs, index::indexers::custom::TransactionIndexer},
 };
 
 use super::CoreIndexer;
@@ -63,7 +63,7 @@ pub struct Utxo {
     pub extended: ExtendedUtxoData,
 }
 
-pub type ExtendedUtxoData = IndexMap<u8, Vec<u8>>;
+pub type ExtendedUtxoData = IndexMap<TransactionIndexer, Vec<u8>>;
 
 pub struct ResolvedUtxos {
     pub resolver: HashMap<TxoRef, Utxo>,
@@ -78,7 +78,7 @@ impl UtxoByTxoRefKV {
     ) -> Result<ResolvedUtxos, Error> {
         let tx_ids = txs
             .iter()
-            .map(|x| x.id.to_byte_array())
+            .map(|x| x.tx_id.to_byte_array())
             .collect::<HashSet<_>>();
 
         let input_refs = txs
@@ -95,10 +95,14 @@ impl UtxoByTxoRefKV {
 
         let mut fetch_from_db = Vec::with_capacity(input_refs.len());
 
+        // txos which are not found in db must be produced and consumed within the block ("chained")
+        let mut chained_txos = HashSet::new();
+
         // first try resolve input utxos using cache
         for input_ref in input_refs {
             // ignore utxos produced in this block
             if tx_ids.contains(&input_ref.tx_hash) {
+                chained_txos.insert(input_ref);
                 continue;
             }
 
@@ -110,9 +114,6 @@ impl UtxoByTxoRefKV {
             }
         }
 
-        // txos which are not found in db must be produced and consumed within the block ("chained")
-        let mut chained_txos = HashSet::new();
-
         // then fetch the remaining from storage
         if !fetch_from_db.is_empty() {
             let fetched_utxos = task.multi_get::<Self>(fetch_from_db)?;
@@ -122,9 +123,7 @@ impl UtxoByTxoRefKV {
                     Some(u) => {
                         resolver.insert(txo_ref, u);
                     }
-                    None => {
-                        chained_txos.insert(txo_ref);
-                    }
+                    None => panic!("missing non chained utxo {txo_ref:?}"), // TODO
                 }
             }
         }

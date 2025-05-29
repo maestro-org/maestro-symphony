@@ -77,3 +77,31 @@ impl<K: Encode, V: Encode> Encode for IndexMap<K, V> {
         .concat()
     }
 }
+
+impl Encode for () {
+    fn encode(&self) -> Vec<u8> {
+        vec![]
+    }
+}
+
+impl Encode for bool {
+    fn encode(&self) -> Vec<u8> {
+        vec![*self as u8]
+    }
+}
+
+impl<T: Encode> Encode for Option<T> {
+    fn encode(&self) -> Vec<u8> {
+        [
+            self.is_some().encode(),
+            self.as_ref().map(|t| t.encode()).unwrap_or_default(),
+        ]
+        .concat()
+    }
+}
+
+impl<A: Encode, B: Encode> Encode for (A, B) {
+    fn encode(&self) -> Vec<u8> {
+        [self.0.encode(), self.1.encode()].concat()
+    }
+}

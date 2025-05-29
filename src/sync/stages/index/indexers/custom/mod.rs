@@ -1,13 +1,14 @@
 use id::ProcessTransaction;
 use maestro_symphony_macros::{Decode, Encode};
+use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
 use tx_count_by_address::{TxCountByAddressConfig, TxCountByAddressIndexer};
 
 use crate::error::Error;
 
 pub mod id;
-mod runes;
-mod tx_count_by_address;
+pub mod runes;
+pub mod tx_count_by_address;
 
 /// Unique u8 for each transaction indexer, used in the key encodings. Do not modify, only add new
 /// variants.
@@ -15,18 +16,21 @@ mod tx_count_by_address;
 #[repr(u8)]
 pub enum TransactionIndexer {
     TxCountByAddress = 0,
+    Runes = 1,
 }
 
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum TransactionIndexerFactory {
     TxCountByAddress(TxCountByAddressConfig),
+    Runes(RunesIndexerConfig),
 }
 
 impl TransactionIndexerFactory {
     pub fn create_indexer(self) -> Result<Box<dyn ProcessTransaction>, Error> {
         match self {
             Self::TxCountByAddress(c) => Ok(Box::new(TxCountByAddressIndexer::new(c)?)),
+            Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
         }
     }
 }

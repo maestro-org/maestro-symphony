@@ -1,23 +1,19 @@
-use std::collections::HashMap;
-
-use bitcoin::hashes::Hash;
-use gasket::framework::*;
-use serde::Deserialize;
-use tracing::{debug, info};
-
 use crate::{
-    storage::{kv_store::StorageHandler, timestamp::Timestamp},
-    sync::stages::{
-        ChainEvent,
-        index::{
-            indexers::{
-                core::utxo_by_txo_ref::{TxoRef, Utxo},
-                custom::{TransactionIndexerFactory, id::ProcessTransaction},
+    storage::kv_store::StorageHandler,
+    sync::{
+        self, IndexersConfig,
+        stages::{
+            ChainEvent,
+            index::{
+                indexers::{core::hash_by_height::HashByHeightKV, custom::id::ProcessTransaction},
+                worker::context::IndexingContext,
             },
-            worker::context::IndexingContext,
         },
     },
 };
+use bitcoin::hashes::Hash;
+use gasket::framework::*;
+use tracing::info;
 
 /*
     Index Stage
@@ -30,28 +26,24 @@ use crate::{
 pub type UpstreamPort = gasket::messaging::tokio::InputPort<ChainEvent>;
 pub type DownstreamPort = gasket::messaging::tokio::OutputPort<()>;
 
-#[derive(Debug, Deserialize)]
-pub struct StageConfig {
-    #[serde(default)]
-    pub transaction_indexers: Vec<TransactionIndexerFactory>,
-}
-
 #[derive(Stage)]
 #[stage(name = "index", unit = "ChainEvent", worker = "Worker")]
 pub struct Stage {
     db: StorageHandler,
-    config: StageConfig,
+    config: IndexersConfig,
+    network: sync::Network,
 
     // custom indexers
-    upstream: UpstreamPort,
-    downstream: DownstreamPort,
+    pub upstream: UpstreamPort,
+    pub downstream: DownstreamPort,
 }
 
 impl Stage {
-    pub fn new(db: StorageHandler, config: StageConfig) -> Self {
+    pub fn new(db: StorageHandler, config: IndexersConfig, network: sync::Network) -> Self {
         Self {
             db,
             config,
+            network,
 
             upstream: Default::default(),
             downstream: Default::default(),
@@ -68,7 +60,8 @@ impl Worker {}
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
-        // TODO: wipe db task
+        // TODO wipe live task
+        // stage.db.task_live = false;
 
         let indexers = stage
             .config
@@ -96,19 +89,30 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         let mut task = stage.db.begin_task(mutable);
 
-        let result = match unit {
+        match unit {
             ChainEvent::RollForward(point, _header, txs) => {
-                let mut ctx = IndexingContext::new(&mut task, txs, *point).or_restart()?;
+                info!("indexing {point:?}...");
+
+                let mut ctx =
+                    IndexingContext::new(&mut task, txs, *point, stage.network).or_restart()?;
 
                 for (block_index, tx) in txs.iter().enumerate() {
                     for indexer in &self.indexers {
                         indexer
-                            .process_tx(&mut task, tx, block_index, &ctx)
+                            .process_tx(&mut task, tx, block_index, &mut ctx)
                             .or_restart()?;
                     }
 
                     ctx.update_utxo_set(&mut task, tx).or_restart()?;
                 }
+
+                // IndexerInfoKV::set_info(&mut task, IndexerInfo::new()).or_restart()?; // TODO
+
+                // task.set::<IndexerInfoKV>((), IndexerInfo::new())
+                //     .or_restart()?;
+
+                task.set::<HashByHeightKV>(point.height, point.hash.to_byte_array())
+                    .or_restart()?;
 
                 // block indexers (might have to change utxo resolver removal to after)
 
@@ -141,7 +145,9 @@ impl gasket::framework::Worker<Stage> for Worker {
         };
 
         let task = task.finalize();
+
         stage.db.apply_task(task).or_restart()?;
+        stage.db.db.flush().unwrap();
 
         Ok(())
     }

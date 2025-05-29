@@ -14,7 +14,7 @@ pub struct Point {
 
 #[derive(Debug, Clone)]
 pub struct TransactionWithId {
-    id: Txid,
+    tx_id: Txid,
     tx: Transaction,
 }
 

@@ -12,7 +12,7 @@ pub trait ProcessTransaction {
         task: &mut Task,
         tx: &TransactionWithId,
         tx_block_index: usize,
-        ctx: &IndexingContext,
+        ctx: &mut IndexingContext,
     ) -> Result<(), Error>;
 }
 

@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use crate::{error::Error, storage::kv_store::StorageHandler};
+use gasket::messaging::{RecvPort, SendPort};
+
+use crate::{error::Error, storage::kv_store::StorageHandler, sync::stages::index};
 
 use super::{Config, stages::pull};
 
@@ -25,14 +27,14 @@ fn gasket_policy(stage_timeout: u64) -> gasket::runtime::Policy {
     }
 }
 
-pub fn pipeline(config: &Config, db: StorageHandler) -> Result<gasket::daemon::Daemon, Error> {
+pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Daemon, Error> {
     // * use db to find cursor / rollback buffer, pass to both stages where relevant
 
     // create Pull stage for pulling blocks/mempool from node
-    // let mut pull = pull::Stage::new(config.node_address);
+    let mut pull = pull::Stage::new(config.node_address, config.network, db.clone());
 
-    // // create Index stage for processing blocks and storing data
-    // let mut index = index::Stage::new();
+    // create Index stage for processing blocks and storing data
+    let mut index = index::worker::stage::Stage::new(db, config.indexers, config.network);
 
     // // create Health stage for exposing health info
     // let mut health = health::Stage::new();
@@ -46,9 +48,9 @@ pub fn pipeline(config: &Config, db: StorageHandler) -> Result<gasket::daemon::D
         .stage_timeout_secs
         .unwrap_or(DEFAULT_SYNC_STAGE_TIMEOUT_SECS);
 
-    // let (pull_to_index, index_from_pull) = gasket::messaging::tokio::mpsc_channel(queue_size);
-    // pull.downstream.connect(pull_to_index);
-    // index.upstream.connect(index_from_pull);
+    let (pull_to_index, index_from_pull) = gasket::messaging::tokio::mpsc_channel(queue_size);
+    pull.downstream.connect(pull_to_index);
+    index.upstream.connect(index_from_pull);
 
     // let (index_to_health, index_from_health) = gasket::messaging::tokio::mpsc_channel(queue_size);
     // index.health_downstream.connect(index_to_health);
@@ -58,12 +60,10 @@ pub fn pipeline(config: &Config, db: StorageHandler) -> Result<gasket::daemon::D
 
     let policy = gasket_policy(stage_timeout);
 
-    // let pull = gasket::runtime::spawn_stage(pull, policy.clone());
-    // let index = gasket::runtime::spawn_stage(index, policy.clone());
+    let pull = gasket::runtime::spawn_stage(pull, policy.clone());
+    let index = gasket::runtime::spawn_stage(index, policy.clone());
     // let health = gasket::runtime::spawn_stage(health, policy);
 
-    // Ok(gasket::daemon::Daemon(vec![pull]))
-    // Ok(gasket::daemon::Daemon(vec![pull, index, health]))
-
-    unimplemented!()
+    Ok(gasket::daemon::Daemon(vec![pull, index]))
+    // Ok(gasket::daemon::Daemon(vec![pull, index, health])
 }

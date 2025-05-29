@@ -1,7 +1,9 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, path::PathBuf, sync::Arc, u64};
 
 use itertools::Itertools;
-use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, Snapshot, WriteBatch};
+use rocksdb::{
+    ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Snapshot, WriteBatch,
+};
 
 use crate::error::Error;
 
@@ -11,14 +13,15 @@ use super::{
     timestamp::{Timestamp, U64Comparator, U64Timestamp},
 };
 
-static DEFAULT_COLUMN_FAMILY_NAME: &str = "cf";
+static SYMPHONY_CF_NAME: &str = "symphony";
 
 pub type RawKey = Vec<u8>;
 pub type RawValue = Vec<u8>;
 
 pub struct Task<'a> {
-    reader: Snapshot<'a>,
+    pub reader: Snapshot<'a>, // TODO private
     cf_handle: &'a ColumnFamily,
+    read_ts: Option<Timestamp>, // TODO
     // when we write keys, we do not write to storage, we manipulate here until we flush via write batch
     // when we read, we first check for the key here and if we dont find it we use the snapshot
     write_buffer: HashMap<RawKey, StorageAction>,
@@ -42,9 +45,12 @@ impl<'a> Task<'a> {
             }
         }
 
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+
         // Else read from the database
         self.reader
-            .get_cf(self.cf_handle, encoded_key)?
+            .get_cf_opt(self.cf_handle, encoded_key, read_opts)?
             .map(|x| T::Value::decode(&x).map(|y| y.0).map_err(|e| e.into()))
             .transpose()
     }
@@ -77,9 +83,13 @@ impl<'a> Task<'a> {
             }
         }
 
-        let fetched = self
-            .reader
-            .multi_get_cf(to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)));
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+
+        let fetched = self.reader.multi_get_cf_opt(
+            to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)),
+            read_opts,
+        );
 
         for ((key, _), value) in to_fetch.into_iter().zip_eq(fetched) {
             let value = match value? {
@@ -158,8 +168,9 @@ pub struct FinalizedTask {
     original_kvs: Option<HashMap<RawKey, PreviousValue>>,
 }
 
+#[derive(Clone)]
 pub struct StorageHandler {
-    pub db: DB,
+    pub db: Arc<DB>,
     pub task_live: bool,
     pub previous_timestamp: Option<Timestamp>,
     // utxo cache TODO
@@ -181,29 +192,31 @@ impl StorageHandler {
             Box::new(U64Comparator::compare_without_ts),
         );
 
-        let cfs = vec![ColumnFamilyDescriptor::new(
-            DEFAULT_COLUMN_FAMILY_NAME,
-            cf_opts,
-        )];
+        let cfs = vec![ColumnFamilyDescriptor::new(SYMPHONY_CF_NAME, cf_opts)];
 
         let db = DB::open_cf_descriptors(&db_opts, path, cfs).unwrap();
 
         Self {
-            db,
+            db: Arc::new(db),
             task_live: false,
             previous_timestamp: None, // TODO detect from DB
         }
     }
 
+    pub fn cf_handle(&self) -> &ColumnFamily {
+        self.db.cf_handle(SYMPHONY_CF_NAME).expect("cf missing")
+    }
+
     pub fn begin_task(&mut self, mutable: bool) -> Task {
-        // only one live task at a time
-        assert!(self.task_live == false);
+        // TODO only one live task at a time
+        // assert!(self.task_live == false);
 
         self.task_live = true;
-        let cf = self.db.cf_handle(DEFAULT_COLUMN_FAMILY_NAME).unwrap();
+        let cf = self.cf_handle();
 
         Task {
             reader: self.db.snapshot(),
+            read_ts: self.previous_timestamp.clone(),
             cf_handle: cf,
             write_buffer: HashMap::new(),
             original_kvs: mutable.then_some(HashMap::new()),
@@ -223,7 +236,7 @@ impl StorageHandler {
 
         let ts = commit_ts.as_rocksdb_ts();
 
-        let cf = self.db.cf_handle(DEFAULT_COLUMN_FAMILY_NAME).unwrap();
+        let cf = self.cf_handle();
 
         for (key, action) in task.write_buffer {
             match action {
@@ -236,6 +249,7 @@ impl StorageHandler {
 
         self.db.write(wb)?;
 
+        self.task_live = false;
         self.previous_timestamp = Some(commit_ts);
 
         Ok(())

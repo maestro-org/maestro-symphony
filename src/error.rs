@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::DecodingError;
+use crate::storage::encdec::DecodingError;
 
 #[derive(Error, Debug)]
 pub enum Error {

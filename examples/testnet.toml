@@ -1,0 +1,12 @@
+[sync]
+node_address = "localhost:8333"
+network = "testnet"
+
+[sync.indexers]
+transaction_indexers = [
+    { type = "TxCountByAddress" },
+    { type = "Runes", start_height = 30562 }
+]
+
+#[serve]
+#listen_address = "[::]:50051"

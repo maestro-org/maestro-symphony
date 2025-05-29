@@ -1,8 +1,9 @@
 use bitcoin::{Block, consensus::Decodable, p2p::Magic};
 use serde::Deserialize;
+use stages::index::indexers::custom::TransactionIndexerFactory;
 
-mod pipeline;
-mod stages;
+pub mod pipeline;
+pub mod stages;
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
@@ -13,12 +14,22 @@ pub struct Config {
 
     pub stage_queue_size: Option<usize>,
     pub stage_timeout_secs: Option<u64>,
+
+    pub indexers: IndexersConfig,
+    // TODO
     // utxo cache
     // rb buffer
     // mempool
 }
 
+#[derive(Debug, Deserialize)]
+pub struct IndexersConfig {
+    #[serde(default)]
+    pub transaction_indexers: Vec<TransactionIndexerFactory>,
+}
+
 #[derive(Deserialize, Debug, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
 pub enum Network {
     Mainnet,
     Testnet,

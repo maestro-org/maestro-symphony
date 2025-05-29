@@ -131,3 +131,43 @@ where
         Ok((map, bytes))
     }
 }
+
+impl Decode for () {
+    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+        Ok(((), bytes))
+    }
+}
+
+impl Decode for bool {
+    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+        let (byte, rem) = u8::decode(bytes)?;
+
+        match byte {
+            0 => Ok((false, rem)),
+            1 => Ok((true, rem)),
+            _ => Err(malformed_input("invalid bool byte", bytes)),
+        }
+    }
+}
+
+impl<T: Decode> Decode for Option<T> {
+    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+        let (presence, bytes) = bool::decode(bytes)?;
+
+        if !presence {
+            return Ok((None, bytes));
+        }
+
+        let (value, bytes) = T::decode(bytes)?;
+        Ok((Some(value), bytes))
+    }
+}
+
+impl<A: Decode, B: Decode> Decode for (A, B) {
+    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+        let (first, bytes) = A::decode(bytes)?;
+        let (second, bytes) = B::decode(bytes)?;
+
+        Ok(((first, second), bytes))
+    }
+}

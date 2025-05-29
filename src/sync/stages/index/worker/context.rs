@@ -1,17 +1,20 @@
 use std::collections::{HashMap, HashSet};
 
-use bitcoin::{BlockHash, hashes::Hash};
+use bitcoin::{BlockHash, Network, hashes::Hash};
 
 use crate::{
     error::Error,
     storage::{encdec::Encode, kv_store::Task},
-    sync::stages::{
-        BlockHeight, BlockTxs, Point, TransactionWithId,
-        index::indexers::{
-            core::utxo_by_txo_ref::{
-                ExtendedUtxoData, ResolvedUtxos, TxoRef, Utxo, UtxoByTxoRefKV,
+    sync::{
+        self,
+        stages::{
+            BlockHeight, BlockTxs, Point, TransactionWithId,
+            index::indexers::{
+                core::utxo_by_txo_ref::{
+                    ExtendedUtxoData, ResolvedUtxos, TxoRef, Utxo, UtxoByTxoRefKV,
+                },
+                custom::TransactionIndexer,
             },
-            custom::TransactionIndexer,
         },
     },
 };
@@ -22,6 +25,7 @@ pub struct IndexingContext {
     resolver: HashMap<TxoRef, Utxo>,
     utxo_metadata: HashMap<TxoRef, ExtendedUtxoData>,
     chained_txos: HashSet<TxoRef>,
+    network: Network,
 }
 
 // Public methods available to custom indexers
@@ -32,6 +36,14 @@ impl IndexingContext {
 
     pub fn block_hash(&self) -> BlockHash {
         self.point.hash
+    }
+
+    pub fn resolver(&self) -> &HashMap<TxoRef, Utxo> {
+        &self.resolver
+    }
+
+    pub fn network(&self) -> Network {
+        self.network
     }
 
     // Given an input TxoRef return the UTxO information (amount, script, etc)
@@ -49,23 +61,34 @@ impl IndexingContext {
         self.utxo_metadata
             .entry(txo_ref)
             .or_default()
-            .insert(indexer as u8, data.encode());
+            .insert(indexer, data.encode());
     }
 }
 
 // Internal methods only used by the stage worker
 impl IndexingContext {
-    pub(super) fn new(task: &mut Task, txs: &BlockTxs, point: Point) -> Result<Self, Error> {
+    pub(super) fn new(
+        task: &mut Task,
+        txs: &BlockTxs,
+        point: Point,
+        network: sync::Network,
+    ) -> Result<Self, Error> {
         let ResolvedUtxos {
             resolver,
             chained_txos,
         } = UtxoByTxoRefKV::resolve_inputs(&task, txs, None)?; // TODO cache
+
+        let network = match network {
+            sync::Network::Mainnet => Network::Bitcoin,
+            sync::Network::Testnet => Network::Testnet4,
+        };
 
         Ok(Self {
             point,
             resolver,
             utxo_metadata: Default::default(),
             chained_txos,
+            network,
         })
     }
 
@@ -85,7 +108,7 @@ impl IndexingContext {
         // the rest to storage
         for (output_index, output) in tx.tx.output.iter().enumerate() {
             let txo_ref = TxoRef {
-                tx_hash: tx.id.to_byte_array(),
+                tx_hash: tx.tx_id.to_byte_array(),
                 txo_index: output_index as u32,
             };
 

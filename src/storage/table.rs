@@ -83,7 +83,7 @@ macro_rules! define_indexer_table {
 
         impl $crate::storage::table::IndexerTable for $name {
             const INDEXER_ID: u16 = $indexer_id as u16;
-            const TABLE_ID: u8 = $table_id;
+            const TABLE_ID: u8 = $table_id as u8;
         }
 
         impl $crate::storage::table::Table for $name {

@@ -36,8 +36,9 @@ async fn main() -> Result<(), ()> {
 
     let cf = db.cf_handle();
 
-    db.db.compact_range_cf(cf, None::<&[u8]>, None::<&[u8]>);
-    db.db.flush().unwrap();
+    // info!("compacting/flushing db...");
+    // db.db.compact_range_cf(cf, None::<&[u8]>, None::<&[u8]>);
+    // db.db.flush().unwrap();
 
     match args.command {
         Command::Run(_) => {
@@ -48,6 +49,7 @@ async fn main() -> Result<(), ()> {
             sync::pipeline::pipeline(config.sync, db).unwrap().block()
         }
         Command::Query(query_args) => {
+            info!("querying data...");
             // temporary query logic for testing
 
             if query_args.string.contains(':') {

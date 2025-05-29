@@ -4,6 +4,7 @@ use itertools::Itertools;
 use rocksdb::{
     ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Snapshot, WriteBatch,
 };
+use tracing::info;
 
 use crate::error::Error;
 
@@ -179,6 +180,7 @@ pub struct StorageHandler {
 
 impl StorageHandler {
     pub fn open(path: PathBuf) -> Self {
+        info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
         db_opts.create_if_missing(true);

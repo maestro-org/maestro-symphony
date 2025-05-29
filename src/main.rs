@@ -4,9 +4,11 @@ use crate::storage::encdec::Decode;
 use bitcoin::hashes::Hash;
 use bitcoin::{Network, Txid};
 use clap::{Parser, Subcommand};
+use ordinals::RuneId;
 use rocksdb::ReadOptions;
 use serde::Deserialize;
 use storage::{kv_store::StorageHandler, table::Table, timestamp::Timestamp};
+use sync::stages::index::indexers::custom::runes::tables::RuneInfoByIdKV;
 use sync::stages::index::indexers::{
     core::utxo_by_txo_ref::{TxoRef, UtxoByTxoRefKV},
     custom::{
@@ -30,7 +32,7 @@ async fn main() -> Result<(), ()> {
 
     info!("using db path: './tmp/symphony'");
 
-    let db = StorageHandler::open("./tmp/symphony".into()); // TODO
+    let mut db = StorageHandler::open("./tmp/symphony".into()); // TODO
 
     let cf = db.cf_handle();
 
@@ -48,90 +50,93 @@ async fn main() -> Result<(), ()> {
         Command::Query(query_args) => {
             // temporary query logic for testing
 
-            let address = bitcoin::Address::from_str(&query_args.address).unwrap();
-            let script = address
-                .require_network(Network::Testnet4)
-                .unwrap()
-                .script_pubkey();
+            if query_args.string.contains(':') {
+                // rune ID query
+                let mut parts = query_args.string.split(":");
+                let block = parts.next().unwrap().parse().unwrap();
+                let tx = parts.next().unwrap().parse().unwrap();
 
-            // make key range to return all rune utxos for script
-            let range_start = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
-                script: script.to_bytes(),
-                produced_height: 0,
-                txo_ref: TxoRef {
-                    tx_hash: [0; 32],
-                    txo_index: 0,
-                },
-            });
+                let task = db.begin_task(false);
 
-            let range_end = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
-                script: script.to_bytes(),
-                produced_height: u64::MAX,
-                txo_ref: TxoRef {
-                    tx_hash: [0; 32],
-                    txo_index: 0,
-                },
-            });
+                let rune_id = RuneId { block, tx };
 
-            println!(
-                "utxos containing runes controlled by {} (divisibility ignored):",
-                query_args.address
-            );
+                let res = task.get::<RuneInfoByIdKV>(&rune_id).unwrap();
 
-            let mut read_opts = ReadOptions::default();
-            read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
+                if let Some(info) = res {
+                    println!("rune info for {block}:{tx}:");
+                    println!("{info:?}")
+                } else {
+                    println!("rune not found")
+                }
+            } else {
+                let address = bitcoin::Address::from_str(&query_args.string).unwrap();
+                let script = address
+                    .require_network(Network::Testnet4)
+                    .unwrap()
+                    .script_pubkey();
 
-            let snapshot = db.db.snapshot();
-            let iter = snapshot
-                .iterator_cf_opt(
-                    &cf,
-                    read_opts,
-                    rocksdb::IteratorMode::From(&range_start, rocksdb::Direction::Forward),
-                )
-                .filter(|x| x.as_ref().unwrap().0.as_ref() < range_end.as_slice());
+                // make key range to return all rune utxos for script
+                let range_start = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
+                    script: script.to_bytes(),
+                    produced_height: 0,
+                    txo_ref: TxoRef {
+                        tx_hash: [0; 32],
+                        txo_index: 0,
+                    },
+                });
 
-            for kv in iter {
-                let (raw_k, _) = kv.unwrap();
+                let range_end = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
+                    script: script.to_bytes(),
+                    produced_height: u64::MAX,
+                    txo_ref: TxoRef {
+                        tx_hash: [0; 32],
+                        txo_index: 0,
+                    },
+                });
 
-                let key = <RuneUtxosByScriptKV as Table>::Key::decode_all(&raw_k[4..]).unwrap(); // TODO: prefixed key decode
+                println!(
+                    "utxos containing runes controlled by {} (divisibility ignored):",
+                    query_args.string
+                );
 
                 let mut read_opts = ReadOptions::default();
                 read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
 
-                let res = snapshot
-                    .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), read_opts)
-                    .unwrap()
-                    .unwrap();
+                let snapshot = db.db.snapshot();
+                let iter = snapshot
+                    .iterator_cf_opt(
+                        &cf,
+                        read_opts,
+                        rocksdb::IteratorMode::From(&range_start, rocksdb::Direction::Forward),
+                    )
+                    .filter(|x| x.as_ref().unwrap().0.as_ref() < range_end.as_slice());
 
-                let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res).unwrap();
-                let utxo_runes_raw = utxo_val.extended.get(&TransactionIndexer::Runes).unwrap();
+                for kv in iter {
+                    let (raw_k, _) = kv.unwrap();
 
-                let utxo_runes = UtxoRunes::decode_all(&utxo_runes_raw).unwrap();
+                    let key = <RuneUtxosByScriptKV as Table>::Key::decode_all(&raw_k[4..]).unwrap(); // TODO: prefixed key decode
 
-                println!(
-                    ">> {}#{} -> {} sats + {utxo_runes:?} ",
-                    Txid::from_byte_array(key.txo_ref.tx_hash).to_string(),
-                    key.txo_ref.txo_index,
-                    utxo_val.satoshis
-                )
+                    let mut read_opts = ReadOptions::default();
+                    read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
+
+                    let res = snapshot
+                        .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), read_opts)
+                        .unwrap()
+                        .unwrap();
+
+                    let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res).unwrap();
+                    let utxo_runes_raw = utxo_val.extended.get(&TransactionIndexer::Runes).unwrap();
+
+                    let utxo_runes = UtxoRunes::decode_all(&utxo_runes_raw).unwrap();
+
+                    println!(
+                        ">> {}#{} -> {} sats + {utxo_runes:?} ",
+                        Txid::from_byte_array(key.txo_ref.tx_hash).to_string(),
+                        key.txo_ref.txo_index,
+                        utxo_val.satoshis
+                    )
+                }
             }
-
-            // TODO
-            // let key = hex::decode(&query_args.hex_key).unwrap();
-
-            // let mut read_opts = ReadOptions::default();
-            // read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
-
-            // let task = db.begin_task(false);
-
-            // let rune_id = RuneId {
-            //     block: 30562,
-            //     tx: 50,
-            // };
-
-            // let res = task.get::<RuneInfoByIdKV>(&rune_id).unwrap();
-
-            // println!("{res:?}")
         }
     }
 
@@ -151,7 +156,7 @@ pub struct Args {}
 
 #[derive(Debug, clap::Args)]
 pub struct QueryArgs {
-    address: String,
+    string: String,
 }
 
 #[derive(Debug, Parser)]

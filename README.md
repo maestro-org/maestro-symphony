@@ -2,6 +2,8 @@ _from hash to harmony: an orchestrated Bitcoin indexing suite_
 
 # The Maestro Symphony
 
+State of the project: https://github.com/orgs/maestro-org/projects/16/views/1
+
 ## Local deployment
 
 Run a node and point to it in the run [config](examples/testnet.toml).
@@ -31,14 +33,3 @@ RUST_LOG=info cargo run -- query tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9
 utxos containing runes controlled by tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936 (divisibility ignored):
 >> 63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121#1 -> 10000 sats + [(RuneId { block: 30562, tx: 50 }, 100000000)]
 ```
-
-# TODOs
-
--   [x] Base RocksDB database handler
--   [x] Base indexer
--   [x] Base UTXO resolution
--   [x] Node communications handler
--   [ ] Rollback buffer and processing
--   [ ] Mempool processing with p2p
--   [ ] Custom indexer: runes
--   [ ] Customer endpoint: runes by address

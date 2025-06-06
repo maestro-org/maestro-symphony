@@ -5,7 +5,7 @@ use stages::index::indexers::custom::TransactionIndexerFactory;
 pub mod pipeline;
 pub mod stages;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub node_address: String,
     pub network: Network,
@@ -16,13 +16,15 @@ pub struct Config {
     pub stage_timeout_secs: Option<u64>,
 
     pub indexers: IndexersConfig,
+
+    pub max_rollback: Option<usize>,
+    pub safe_mode: Option<bool>,
     // TODO
     // utxo cache
-    // rb buffer
     // mempool
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct IndexersConfig {
     #[serde(default)]
     pub transaction_indexers: Vec<TransactionIndexerFactory>,

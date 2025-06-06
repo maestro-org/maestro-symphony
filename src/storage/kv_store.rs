@@ -1,12 +1,20 @@
 use std::{collections::HashMap, path::PathBuf, sync::Arc, u64};
 
+use bitcoin::hashes::Hash;
 use itertools::Itertools;
+use maestro_symphony_macros::{Decode, Encode};
 use rocksdb::{
     ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Snapshot, WriteBatch,
 };
 use tracing::info;
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    sync::stages::{
+        Point,
+        index::indexers::core::rollback_buffer::{RollbackBufferKV, RollbackKey},
+    },
+};
 
 use super::{
     encdec::{Decode, Encode},
@@ -165,8 +173,8 @@ impl<'a> Task<'a> {
 }
 
 pub struct FinalizedTask {
-    write_buffer: HashMap<RawKey, StorageAction>,
-    original_kvs: Option<HashMap<RawKey, PreviousValue>>,
+    pub write_buffer: HashMap<RawKey, StorageAction>,
+    pub original_kvs: Option<HashMap<RawKey, PreviousValue>>,
 }
 
 #[derive(Clone)]
@@ -175,7 +183,6 @@ pub struct StorageHandler {
     pub task_live: bool,
     pub previous_timestamp: Option<Timestamp>,
     // utxo cache TODO
-    // rollback buffer TODO
 }
 
 impl StorageHandler {
@@ -227,7 +234,7 @@ impl StorageHandler {
 
     /// Finish the task, by flushing all the pending writes to storage, along with the original KVs
     /// into the rollback buffer
-    pub fn apply_task(&mut self, task: FinalizedTask) -> Result<(), Error> {
+    pub fn apply_task(&mut self, task: FinalizedTask, point: &Point) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
         let commit_ts = self
@@ -240,6 +247,7 @@ impl StorageHandler {
 
         let cf = self.cf_handle();
 
+        // apply storage actions
         for (key, action) in task.write_buffer {
             match action {
                 StorageAction::Set(value) => wb.put_cf_with_ts(cf, key, ts, value),
@@ -247,7 +255,18 @@ impl StorageHandler {
             }
         }
 
-        // TODO: rollback buffer
+        // write rollback buffer keys (TODO cleaner)
+        if let Some(original_kvs) = task.original_kvs {
+            for (key, original) in original_kvs {
+                let rollback_key = RollbackBufferKV::encode_key(&RollbackKey {
+                    height: point.height,
+                    hash: point.hash.to_byte_array(),
+                    key,
+                });
+
+                wb.put_cf_with_ts(cf, rollback_key, ts, original.encode())
+            }
+        };
 
         self.db.write(wb)?;
 
@@ -263,6 +282,7 @@ pub enum StorageAction {
     Delete,
 }
 
+#[derive(Encode, Decode, Debug, Clone)]
 pub enum PreviousValue {
     Present(RawValue),
     NotPresent,

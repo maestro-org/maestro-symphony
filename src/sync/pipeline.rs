@@ -31,10 +31,10 @@ pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Da
     // * use db to find cursor / rollback buffer, pass to both stages where relevant
 
     // create Pull stage for pulling blocks/mempool from node
-    let mut pull = pull::Stage::new(config.node_address, config.network, db.clone());
+    let mut pull = pull::Stage::new(&config.node_address, config.network, db.clone());
 
     // create Index stage for processing blocks and storing data
-    let mut index = index::worker::stage::Stage::new(db, config.indexers, config.network);
+    let mut index = index::worker::stage::Stage::new(config.clone(), db);
 
     // // create Health stage for exposing health info
     // let mut health = health::Stage::new();

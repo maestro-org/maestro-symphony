@@ -6,7 +6,7 @@ pub mod pull;
 
 pub type BlockHeight = u64;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Point {
     pub height: BlockHeight,
     pub hash: BlockHash,

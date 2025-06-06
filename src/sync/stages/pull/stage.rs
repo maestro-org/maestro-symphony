@@ -39,9 +39,9 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn new(node_address: String, network: Network, db: StorageHandler) -> Self {
+    pub fn new(node_address: &String, network: Network, db: StorageHandler) -> Self {
         Self {
-            node_address,
+            node_address: node_address.clone(),
             network,
             db,
             downstream: Default::default(),

@@ -116,7 +116,7 @@ impl RollbackBuffer {
 
                 entry.original_kvs.extend(new_actions);
             }
-            None => panic!("point not in rb buf"),
+            None => self.add_block(*point, new_actions),
         }
     }
 

@@ -1,6 +1,8 @@
 pub mod decode;
 pub mod encode;
 
+use std::ops::Range;
+
 pub use decode::{DecodingError, DecodingResult};
 
 pub trait Encode {
@@ -81,3 +83,20 @@ impl_try_from_varuint!(u16);
 impl_try_from_varuint!(u32);
 impl_try_from_varuint!(u64);
 impl_try_from_varuint!(u128);
+
+pub fn prefix_key_range(prefix: &[u8]) -> Range<Vec<u8>> {
+    let start = prefix.to_vec();
+    let mut end = prefix.to_vec();
+
+    // Work backwards to handle the case where the last byte(s) are 255
+    for i in (0..end.len()).rev() {
+        if end[i] != 255 {
+            end[i] += 1;
+            end.truncate(i + 1);
+            return start..end;
+        }
+    }
+
+    // If all bytes are 255, the range is unbounded at the upper end
+    start..vec![]
+}

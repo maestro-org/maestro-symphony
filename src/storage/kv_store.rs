@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc, u64};
+use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc, u64};
 
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
@@ -18,7 +18,7 @@ use crate::{
 
 use super::{
     encdec::{Decode, Encode},
-    table::Table,
+    table::{Table, TableIterator},
     timestamp::{Timestamp, U64Comparator, U64Timestamp},
 };
 
@@ -274,6 +274,30 @@ impl StorageHandler {
         self.previous_timestamp = Some(commit_ts);
 
         Ok(())
+    }
+
+    pub fn iter_kvs<'a, T: Table>(
+        &self,
+        snapshot: &'a rocksdb::SnapshotWithThreadMode<'a, DB>,
+        range: Range<Vec<u8>>,
+        ts: Timestamp,
+        reverse: bool,
+    ) -> TableIterator<'a, T> {
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(ts.as_rocksdb_ts());
+        read_opts.set_iterate_range(range);
+
+        let mode = if reverse {
+            rocksdb::IteratorMode::End
+        } else {
+            rocksdb::IteratorMode::Start
+        };
+
+        let iter = snapshot.iterator_cf_opt(&self.cf_handle(), read_opts, mode);
+
+        let table_iter = TableIterator::<T>::new(iter);
+
+        table_iter
     }
 }
 

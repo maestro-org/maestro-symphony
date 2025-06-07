@@ -1,13 +1,13 @@
 use crate::{
     storage::{
         kv_store::{PreviousValue, StorageHandler},
-        table::CoreTable,
+        table::Table,
         timestamp::Timestamp,
     },
     sync::{
         self, IndexersConfig,
         stages::{
-            ChainEvent,
+            ChainEvent, Point,
             index::{
                 indexers::{
                     core::{
@@ -22,7 +22,7 @@ use crate::{
         },
     },
 };
-use bitcoin::hashes::Hash;
+use bitcoin::{BlockHash, hashes::Hash};
 use gasket::framework::*;
 use rocksdb::WriteBatch;
 use tracing::info;
@@ -56,11 +56,39 @@ impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Self {
         let safe_mode = config.safe_mode.unwrap_or_default();
 
-        // TODO: populate memory rollback buffer using persistent
-        let rollback_buffer = RollbackBuffer::new(
+        // -- populate in memory buffer using persistent rb buf
+
+        let mut rollback_buffer = RollbackBuffer::new(
             config.max_rollback.unwrap_or(DEFAULT_MAX_BUFFER_LEN),
             safe_mode,
         );
+
+        // TODO: cleanup
+        {
+            let snapshot = db.db.snapshot();
+
+            let range = <RollbackBufferKV>::encode_range(None::<&()>, None::<&()>);
+
+            let iter = db.iter_kvs::<RollbackBufferKV>(
+                &snapshot,
+                range,
+                Timestamp::from_u64(u64::MAX),
+                false,
+            );
+
+            for kv in iter {
+                let (k, v) = kv.unwrap();
+
+                let point = Point {
+                    height: k.height,
+                    hash: BlockHash::from_byte_array(k.hash),
+                };
+
+                let action = vec![(k.key, v)].into_iter().collect();
+
+                rollback_buffer.insert_actions_for_point(&point, action);
+            }
+        }
 
         Self {
             db,

@@ -1,6 +1,8 @@
 [sync]
 node_address = "localhost:8333"
-network = "testnet"
+network = "mainnet"
+safe_mode = true
+max_rollback = 1
 
 [sync.indexers]
 transaction_indexers = [

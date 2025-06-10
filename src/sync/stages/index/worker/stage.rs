@@ -1,11 +1,23 @@
 use crate::{
-    storage::kv_store::StorageHandler,
+    error::Error,
+    storage::{
+        kv_store::{PreviousValue, StorageHandler},
+        table::Table,
+        timestamp::Timestamp,
+    },
     sync::{
         self, IndexersConfig,
         stages::{
             ChainEvent,
             index::{
-                indexers::{core::hash_by_height::HashByHeightKV, custom::id::ProcessTransaction},
+                indexers::{
+                    core::{
+                        hash_by_height::HashByHeightKV,
+                        rollback_buffer::{RollbackBufferKV, RollbackKey},
+                    },
+                    custom::id::ProcessTransaction,
+                },
+                rollback::buffer::RollbackBuffer,
                 worker::context::IndexingContext,
             },
         },
@@ -13,6 +25,7 @@ use crate::{
 };
 use bitcoin::hashes::Hash;
 use gasket::framework::*;
+use rocksdb::WriteBatch;
 use tracing::info;
 
 /*
@@ -30,8 +43,10 @@ pub type DownstreamPort = gasket::messaging::tokio::OutputPort<()>;
 #[stage(name = "index", unit = "ChainEvent", worker = "Worker")]
 pub struct Stage {
     db: StorageHandler,
-    config: IndexersConfig,
+    indexers: IndexersConfig,
     network: sync::Network,
+    rollback_buffer: RollbackBuffer,
+    safe_mode: bool,
 
     // custom indexers
     pub upstream: UpstreamPort,
@@ -39,15 +54,22 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn new(db: StorageHandler, config: IndexersConfig, network: sync::Network) -> Self {
-        Self {
+    pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
+        let safe_mode = config.safe_mode.unwrap_or_default();
+
+        // TODO: in worker vs stage?
+        let rollback_buffer = RollbackBuffer::fetch_from_storage(&config, &db)?;
+
+        Ok(Self {
             db,
-            config,
-            network,
+            network: config.network,
+            indexers: config.indexers,
+            rollback_buffer,
+            safe_mode,
 
             upstream: Default::default(),
             downstream: Default::default(),
-        }
+        })
     }
 }
 
@@ -60,11 +82,8 @@ impl Worker {}
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
-        // TODO wipe live task
-        // stage.db.task_live = false;
-
         let indexers = stage
-            .config
+            .indexers
             .transaction_indexers
             .clone()
             .into_iter()
@@ -85,12 +104,12 @@ impl gasket::framework::Worker<Stage> for Worker {
     }
 
     async fn execute(&mut self, unit: &ChainEvent, stage: &mut Stage) -> Result<(), WorkerError> {
-        let mutable = false; // TODO
-
-        let mut task = stage.db.begin_task(mutable);
+        let mutable = true; // TODO
 
         match unit {
             ChainEvent::RollForward(point, _header, txs) => {
+                let mut task = stage.db.begin_task(mutable);
+
                 info!("indexing {point:?}...");
 
                 let mut ctx =
@@ -108,26 +127,73 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 // IndexerInfoKV::set_info(&mut task, IndexerInfo::new()).or_restart()?; // TODO
 
-                // task.set::<IndexerInfoKV>((), IndexerInfo::new())
-                //     .or_restart()?;
-
                 task.set::<HashByHeightKV>(point.height, point.hash.to_byte_array())
                     .or_restart()?;
 
-                // block indexers (might have to change utxo resolver removal to after)
+                // TODO: block-level indexers (might have to change utxo resolver removal to after)
 
-                // cursor, rb buf, ...
+                let task = task.finalize();
+
+                let original_kvs = task.original_kvs.clone();
+
+                stage
+                    .db
+                    .apply_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
+                    .or_restart()?;
+
+                stage.db.db.flush().or_panic()?;
+
+                // TODO, move into stage.apply_task or something?
+                if let Some(original_kvs) = original_kvs {
+                    stage.rollback_buffer.add_block(*point, original_kvs);
+                }
             }
-            ChainEvent::RollBack(point) => {
-                // find point in rollback buffer
+            ChainEvent::RollBack(rb_point) => {
+                // TODO refactor
+                let mut wb = WriteBatch::new();
 
-                // apply all inverse actions (merged) and trim rb buff
+                let commit_ts = stage
+                    .db
+                    .previous_timestamp
+                    .clone()
+                    .map(|x| Timestamp::after(x))
+                    .unwrap_or(Timestamp::new());
 
-                // re-insert utxos which are no longer spent, delete produced utxos
+                let ts = commit_ts.as_rocksdb_ts();
 
-                // timestamp entry
+                let cf = stage.db.cf_handle();
 
-                unimplemented!()
+                let blocks_to_undo = stage.rollback_buffer.points_since(rb_point).or_panic()?;
+
+                for block in blocks_to_undo {
+                    let point = block.point;
+
+                    for (key, original_kv) in block.original_kvs {
+                        // perform inverse action
+                        match original_kv {
+                            PreviousValue::Present(prev) => wb.put_cf_with_ts(cf, &key, ts, prev),
+                            PreviousValue::NotPresent => wb.delete_cf_with_ts(cf, &key, ts),
+                        }
+
+                        // remove entry from persistent rollback buffer
+                        let rollback_key = RollbackBufferKV::encode_key(&RollbackKey {
+                            height: point.height,
+                            hash: point.hash.to_byte_array(),
+                            key: key.clone(),
+                        });
+
+                        wb.delete_cf_with_ts(cf, rollback_key, ts);
+                    }
+                }
+
+                // TODO: just update ts here instead of using everywhere above?
+                stage.db.db.write(wb).or_restart()?;
+                stage.db.previous_timestamp = Some(commit_ts);
+
+                stage
+                    .rollback_buffer
+                    .rollback_to_point(rb_point)
+                    .or_panic()?;
             }
             ChainEvent::MempoolBlocks(info, mempool_blocks) => {
                 // resolve UTxOs
@@ -143,11 +209,6 @@ impl gasket::framework::Worker<Stage> for Worker {
                 unimplemented!()
             }
         };
-
-        let task = task.finalize();
-
-        stage.db.apply_task(task).or_restart()?;
-        stage.db.db.flush().unwrap();
 
         Ok(())
     }

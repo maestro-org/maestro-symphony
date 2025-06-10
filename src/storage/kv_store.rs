@@ -1,16 +1,24 @@
-use std::{collections::HashMap, path::PathBuf, sync::Arc, u64};
+use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc, u64};
 
+use bitcoin::hashes::Hash;
 use itertools::Itertools;
+use maestro_symphony_macros::{Decode, Encode};
 use rocksdb::{
     ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Snapshot, WriteBatch,
 };
-use tracing::info;
+use tracing::{debug, info};
 
-use crate::error::Error;
+use crate::{
+    error::Error,
+    sync::stages::{
+        Point,
+        index::indexers::core::rollback_buffer::{RollbackBufferKV, RollbackKey},
+    },
+};
 
 use super::{
     encdec::{Decode, Encode},
-    table::Table,
+    table::{Table, TableIterator},
     timestamp::{Timestamp, U64Comparator, U64Timestamp},
 };
 
@@ -40,11 +48,15 @@ impl<'a> Task<'a> {
 
         // Check the write buffer first
         if let Some(action) = self.write_buffer.get(&encoded_key) {
+            debug!("fetching {} from writebuf", hex::encode(&encoded_key));
+
             match action {
                 StorageAction::Set(value) => return Ok(Some(T::Value::decode_all(value)?)),
                 StorageAction::Delete => return Ok(None),
             }
         }
+
+        debug!("fetching {} from storage", hex::encode(&encoded_key));
 
         let mut read_opts = ReadOptions::default();
         read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
@@ -112,6 +124,8 @@ impl<'a> Task<'a> {
         let encoded_key = T::encode_key(&key);
         let encoded_value = value.encode();
 
+        debug!("setting {}", hex::encode(&encoded_key));
+
         // Store original KV if mutable
         self.maybe_store_original_kv(&encoded_key)?;
 
@@ -129,6 +143,8 @@ impl<'a> Task<'a> {
         // Encode the key and value
         let encoded_key = T::encode_key(&key);
 
+        debug!("deleting {}", hex::encode(&encoded_key));
+
         // Store original KV if mutable
         self.maybe_store_original_kv(&encoded_key)?;
 
@@ -144,9 +160,12 @@ impl<'a> Task<'a> {
         if let Some(original_kvs) = self.original_kvs.as_mut() {
             // Only need to do once per key
             if !original_kvs.contains_key(raw_key) {
+                let mut read_opts = ReadOptions::default();
+                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+
                 let original_value = self
                     .reader
-                    .get_cf(self.cf_handle, raw_key.clone())
+                    .get_cf_opt(self.cf_handle, raw_key.clone(), read_opts)
                     .map(|x| x.into())?;
 
                 original_kvs.insert(raw_key.clone(), original_value);
@@ -165,17 +184,15 @@ impl<'a> Task<'a> {
 }
 
 pub struct FinalizedTask {
-    write_buffer: HashMap<RawKey, StorageAction>,
-    original_kvs: Option<HashMap<RawKey, PreviousValue>>,
+    pub write_buffer: HashMap<RawKey, StorageAction>,
+    pub original_kvs: Option<HashMap<RawKey, PreviousValue>>,
 }
 
 #[derive(Clone)]
 pub struct StorageHandler {
     pub db: Arc<DB>,
-    pub task_live: bool,
     pub previous_timestamp: Option<Timestamp>,
     // utxo cache TODO
-    // rollback buffer TODO
 }
 
 impl StorageHandler {
@@ -200,8 +217,7 @@ impl StorageHandler {
 
         Self {
             db: Arc::new(db),
-            task_live: false,
-            previous_timestamp: None, // TODO detect from DB
+            previous_timestamp: None, // TODO detect from DB?
         }
     }
 
@@ -210,10 +226,6 @@ impl StorageHandler {
     }
 
     pub fn begin_task(&mut self, mutable: bool) -> Task {
-        // TODO only one live task at a time
-        // assert!(self.task_live == false);
-
-        self.task_live = true;
         let cf = self.cf_handle();
 
         Task {
@@ -227,7 +239,12 @@ impl StorageHandler {
 
     /// Finish the task, by flushing all the pending writes to storage, along with the original KVs
     /// into the rollback buffer
-    pub fn apply_task(&mut self, task: FinalizedTask) -> Result<(), Error> {
+    pub fn apply_task(
+        &mut self,
+        task: FinalizedTask,
+        point: &Point,
+        max_rollback: usize,
+    ) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
         let commit_ts = self
@@ -240,6 +257,7 @@ impl StorageHandler {
 
         let cf = self.cf_handle();
 
+        // apply storage actions
         for (key, action) in task.write_buffer {
             match action {
                 StorageAction::Set(value) => wb.put_cf_with_ts(cf, key, ts, value),
@@ -247,14 +265,61 @@ impl StorageHandler {
             }
         }
 
-        // TODO: rollback buffer
+        // write rollback buffer keys (TODO cleaner)
+        if let Some(original_kvs) = task.original_kvs {
+            for (key, original) in original_kvs {
+                let rollback_key = RollbackBufferKV::encode_key(&RollbackKey {
+                    height: point.height,
+                    hash: point.hash.to_byte_array(),
+                    key,
+                });
+
+                wb.put_cf_with_ts(cf, rollback_key, ts, original.encode())
+            }
+
+            // remove old entries from persistent rollback buffer (maintain at most MAX_ROLLBACK
+            // entries)
+            let remove_before = point.height.saturating_sub(max_rollback as u64);
+            let rbbuf_gc_range = RollbackBufferKV::encode_range(None::<&()>, Some(&remove_before));
+
+            wb.delete_range_cf(cf, rbbuf_gc_range.start, rbbuf_gc_range.end);
+        };
+
+        // TODO: hide within write batch wrapper? or use tx?
+        wb.update_timestamps_with_size(ts, U64Timestamp::SIZE)?;
 
         self.db.write(wb)?;
 
-        self.task_live = false;
+        // allow data for previous blocks to be GC'd
+        self.db.increase_full_history_ts_low(cf, ts)?;
+
         self.previous_timestamp = Some(commit_ts);
 
         Ok(())
+    }
+
+    pub fn iter_kvs<'a, T: Table>(
+        &self,
+        snapshot: &'a rocksdb::SnapshotWithThreadMode<'a, DB>,
+        range: Range<Vec<u8>>,
+        ts: Timestamp,
+        reverse: bool,
+    ) -> TableIterator<'a, T> {
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(ts.as_rocksdb_ts());
+        read_opts.set_iterate_range(range);
+
+        let mode = if reverse {
+            rocksdb::IteratorMode::End
+        } else {
+            rocksdb::IteratorMode::Start
+        };
+
+        let iter = snapshot.iterator_cf_opt(&self.cf_handle(), read_opts, mode);
+
+        let table_iter = TableIterator::<T>::new(iter);
+
+        table_iter
     }
 }
 
@@ -263,6 +328,7 @@ pub enum StorageAction {
     Delete,
 }
 
+#[derive(Encode, Decode, Debug, Clone)]
 pub enum PreviousValue {
     Present(RawValue),
     NotPresent,

@@ -1,7 +1,7 @@
 use crate::{
     error::Error,
     storage::kv_store::Task,
-    sync::stages::{Point, TransactionWithId, index::worker::context::IndexingContext},
+    sync::stages::{TransactionWithId, index::worker::context::IndexingContext},
 };
 
 use super::{BlockIndexer, TransactionIndexer};

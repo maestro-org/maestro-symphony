@@ -1,6 +1,6 @@
 use thiserror::Error;
 
-use crate::storage::encdec::DecodingError;
+use crate::{storage::encdec::DecodingError, sync::stages::Point};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -9,6 +9,9 @@ pub enum Error {
 
     #[error("rocksdb error: {0}")]
     Rocks(#[from] rocksdb::Error),
+
+    #[error("rollback point not within range: {0:?}")]
+    Rollback(Point),
 
     #[error("{0}")]
     Custom(String),

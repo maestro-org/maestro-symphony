@@ -5,15 +5,16 @@ use bitcoin::hashes::Hash;
 use bitcoin::{Network, Txid};
 use clap::{Parser, Subcommand};
 use ordinals::RuneId;
-use rocksdb::ReadOptions;
+use rocksdb::{IteratorMode, ReadOptions};
 use serde::Deserialize;
-use storage::{kv_store::StorageHandler, table::Table, timestamp::Timestamp};
+use storage::table::Table;
+use storage::{kv_store::StorageHandler, timestamp::Timestamp};
 use sync::stages::index::indexers::custom::runes::tables::RuneInfoByIdKV;
 use sync::stages::index::indexers::{
-    core::utxo_by_txo_ref::{TxoRef, UtxoByTxoRefKV},
+    core::utxo_by_txo_ref::UtxoByTxoRefKV,
     custom::{
         TransactionIndexer,
-        runes::tables::{RuneUtxosByScriptKV, RuneUtxosByScriptKey, UtxoRunes},
+        runes::tables::{RuneUtxosByScriptKV, UtxoRunes},
     },
 };
 use tracing::info;
@@ -52,7 +53,18 @@ async fn main() -> Result<(), ()> {
             info!("querying data...");
             // temporary query logic for testing
 
-            if query_args.string.contains(':') {
+            if query_args.string == String::from("dump") {
+                let snapshot = db.db.snapshot();
+
+                let mut read_opts = ReadOptions::default();
+                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
+
+                for x in snapshot.iterator_cf_opt(&cf, read_opts, IteratorMode::Start) {
+                    let x = x.unwrap();
+
+                    println!("{} -> {}", hex::encode(&x.0), hex::encode(&x.1));
+                }
+            } else if query_args.string.contains(':') {
                 // rune ID query
                 let mut parts = query_args.string.split(":");
                 let block = parts.next().unwrap().parse().unwrap();
@@ -77,46 +89,26 @@ async fn main() -> Result<(), ()> {
                     .unwrap()
                     .script_pubkey();
 
-                // make key range to return all rune utxos for script
-                let range_start = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
-                    script: script.to_bytes(),
-                    produced_height: 0,
-                    txo_ref: TxoRef {
-                        tx_hash: [0; 32],
-                        txo_index: 0,
-                    },
-                });
-
-                let range_end = <RuneUtxosByScriptKV>::encode_key(&RuneUtxosByScriptKey {
-                    script: script.to_bytes(),
-                    produced_height: u64::MAX,
-                    txo_ref: TxoRef {
-                        tx_hash: [0; 32],
-                        txo_index: 0,
-                    },
-                });
+                let range = <RuneUtxosByScriptKV>::encode_range(
+                    Some(&(script.to_bytes(), u64::MIN)),
+                    Some(&(script.to_bytes(), u64::MAX)),
+                );
 
                 println!(
                     "utxos containing runes controlled by {} (divisibility ignored):",
                     query_args.string
                 );
 
-                let mut read_opts = ReadOptions::default();
-                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
-
                 let snapshot = db.db.snapshot();
-                let iter = snapshot
-                    .iterator_cf_opt(
-                        &cf,
-                        read_opts,
-                        rocksdb::IteratorMode::From(&range_start, rocksdb::Direction::Forward),
-                    )
-                    .filter(|x| x.as_ref().unwrap().0.as_ref() < range_end.as_slice());
+                let iter = db.iter_kvs::<RuneUtxosByScriptKV>(
+                    &snapshot,
+                    range,
+                    Timestamp::from_u64(u64::MAX),
+                    false,
+                );
 
                 for kv in iter {
-                    let (raw_k, _) = kv.unwrap();
-
-                    let key = <RuneUtxosByScriptKV as Table>::Key::decode_all(&raw_k[4..]).unwrap(); // TODO: prefixed key decode
+                    let (key, _) = kv.unwrap();
 
                     let mut read_opts = ReadOptions::default();
                     read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());

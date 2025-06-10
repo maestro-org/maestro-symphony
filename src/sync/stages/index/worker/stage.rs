@@ -141,7 +141,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     .apply_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
                     .or_restart()?;
 
-                stage.db.db.flush().unwrap();
+                stage.db.db.flush().or_panic()?;
 
                 // TODO, move into stage.apply_task or something?
                 if let Some(original_kvs) = original_kvs {

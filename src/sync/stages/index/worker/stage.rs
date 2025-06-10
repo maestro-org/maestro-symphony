@@ -1,4 +1,5 @@
 use crate::{
+    error::Error,
     storage::{
         kv_store::{PreviousValue, StorageHandler},
         table::Table,
@@ -7,7 +8,7 @@ use crate::{
     sync::{
         self, IndexersConfig,
         stages::{
-            ChainEvent, Point,
+            ChainEvent,
             index::{
                 indexers::{
                     core::{
@@ -16,13 +17,13 @@ use crate::{
                     },
                     custom::id::ProcessTransaction,
                 },
-                rollback::buffer::{DEFAULT_MAX_BUFFER_LEN, RollbackBuffer},
+                rollback::buffer::RollbackBuffer,
                 worker::context::IndexingContext,
             },
         },
     },
 };
-use bitcoin::{BlockHash, hashes::Hash};
+use bitcoin::hashes::Hash;
 use gasket::framework::*;
 use rocksdb::WriteBatch;
 use tracing::info;
@@ -53,44 +54,13 @@ pub struct Stage {
 }
 
 impl Stage {
-    pub fn new(config: sync::Config, db: StorageHandler) -> Self {
+    pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
         let safe_mode = config.safe_mode.unwrap_or_default();
 
-        // -- populate in memory buffer using persistent rb buf
+        // TODO: in worker vs stage?
+        let rollback_buffer = RollbackBuffer::fetch_from_storage(&config, &db)?;
 
-        let mut rollback_buffer = RollbackBuffer::new(
-            config.max_rollback.unwrap_or(DEFAULT_MAX_BUFFER_LEN),
-            safe_mode,
-        );
-
-        // TODO: cleanup
-        {
-            let snapshot = db.db.snapshot();
-
-            let range = <RollbackBufferKV>::encode_range(None::<&()>, None::<&()>);
-
-            let iter = db.iter_kvs::<RollbackBufferKV>(
-                &snapshot,
-                range,
-                Timestamp::from_u64(u64::MAX),
-                false,
-            );
-
-            for kv in iter {
-                let (k, v) = kv.unwrap();
-
-                let point = Point {
-                    height: k.height,
-                    hash: BlockHash::from_byte_array(k.hash),
-                };
-
-                let action = vec![(k.key, v)].into_iter().collect();
-
-                rollback_buffer.insert_actions_for_point(&point, action);
-            }
-        }
-
-        Self {
+        Ok(Self {
             db,
             network: config.network,
             indexers: config.indexers,
@@ -99,7 +69,7 @@ impl Stage {
 
             upstream: Default::default(),
             downstream: Default::default(),
-        }
+        })
     }
 }
 
@@ -112,9 +82,6 @@ impl Worker {}
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
-        // TODO wipe live task
-        // stage.db.task_live = false;
-
         let indexers = stage
             .indexers
             .transaction_indexers
@@ -137,7 +104,7 @@ impl gasket::framework::Worker<Stage> for Worker {
     }
 
     async fn execute(&mut self, unit: &ChainEvent, stage: &mut Stage) -> Result<(), WorkerError> {
-        let mutable = false; // TODO
+        let mutable = true; // TODO
 
         match unit {
             ChainEvent::RollForward(point, _header, txs) => {
@@ -163,20 +130,20 @@ impl gasket::framework::Worker<Stage> for Worker {
                 task.set::<HashByHeightKV>(point.height, point.hash.to_byte_array())
                     .or_restart()?;
 
-                // block indexers (might have to change utxo resolver removal to after)
-
-                // cursor?
-
-                // TODO: gc persistent buffer entries
+                // TODO: block-level indexers (might have to change utxo resolver removal to after)
 
                 let task = task.finalize();
 
                 let original_kvs = task.original_kvs.clone();
 
-                stage.db.apply_task(task, point).or_restart()?;
+                stage
+                    .db
+                    .apply_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
+                    .or_restart()?;
+
                 stage.db.db.flush().unwrap();
 
-                // TODO, move into stage.apply_task or something
+                // TODO, move into stage.apply_task or something?
                 if let Some(original_kvs) = original_kvs {
                     stage.rollback_buffer.add_block(*point, original_kvs);
                 }
@@ -219,6 +186,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     }
                 }
 
+                // TODO: just update ts here instead of using everywhere above?
                 stage.db.db.write(wb).or_restart()?;
                 stage.db.previous_timestamp = Some(commit_ts);
 

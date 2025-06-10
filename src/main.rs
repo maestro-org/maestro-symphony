@@ -5,7 +5,7 @@ use bitcoin::hashes::Hash;
 use bitcoin::{Network, Txid};
 use clap::{Parser, Subcommand};
 use ordinals::RuneId;
-use rocksdb::ReadOptions;
+use rocksdb::{IteratorMode, ReadOptions};
 use serde::Deserialize;
 use storage::table::Table;
 use storage::{kv_store::StorageHandler, timestamp::Timestamp};
@@ -53,7 +53,18 @@ async fn main() -> Result<(), ()> {
             info!("querying data...");
             // temporary query logic for testing
 
-            if query_args.string.contains(':') {
+            if query_args.string == String::from("dump") {
+                let snapshot = db.db.snapshot();
+
+                let mut read_opts = ReadOptions::default();
+                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
+
+                for x in snapshot.iterator_cf_opt(&cf, read_opts, IteratorMode::Start) {
+                    let x = x.unwrap();
+
+                    println!("{} -> {}", hex::encode(&x.0), hex::encode(&x.1));
+                }
+            } else if query_args.string.contains(':') {
                 // rune ID query
                 let mut parts = query_args.string.split(":");
                 let block = parts.next().unwrap().parse().unwrap();

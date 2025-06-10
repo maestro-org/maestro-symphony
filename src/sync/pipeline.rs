@@ -34,7 +34,7 @@ pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Da
     let mut pull = pull::Stage::new(&config.node_address, config.network, db.clone());
 
     // create Index stage for processing blocks and storing data
-    let mut index = index::worker::stage::Stage::new(config.clone(), db);
+    let mut index = index::worker::stage::Stage::new(config.clone(), db)?;
 
     // // create Health stage for exposing health info
     // let mut health = health::Stage::new();

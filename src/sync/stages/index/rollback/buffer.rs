@@ -1,14 +1,22 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 
+use bitcoin::{BlockHash, hashes::Hash};
 use tracing::{info, warn};
 
 use crate::{
     error::Error,
-    storage::kv_store::{PreviousValue, RawKey},
-    sync::stages::Point,
+    storage::{
+        kv_store::{PreviousValue, RawKey, StorageHandler},
+        table::Table,
+        timestamp::Timestamp,
+    },
+    sync::{
+        Config,
+        stages::{Point, index::indexers::core::rollback_buffer::RollbackBufferKV},
+    },
 };
 
-pub const DEFAULT_MAX_BUFFER_LEN: usize = 16;
+pub const DEFAULT_MAX_ROLLBACK: usize = 16;
 
 #[derive(Debug, Clone)]
 pub struct RollbackBuffer {
@@ -36,7 +44,7 @@ impl RollbackBuffer {
     pub fn new(size: usize, safe_mode: bool) -> Self {
         Self {
             points: VecDeque::new(),
-            size,
+            size: size + 1, // for a rollback of size X we need X+1 entries to find the rb point
             safe_mode,
         }
     }
@@ -144,5 +152,36 @@ impl RollbackBuffer {
             }
             None => warn!("no point found when trying to remove"),
         }
+    }
+}
+
+impl RollbackBuffer {
+    pub fn fetch_from_storage(config: &Config, db: &StorageHandler) -> Result<Self, Error> {
+        let mut rollback_buffer = RollbackBuffer::new(
+            config.max_rollback.unwrap_or(DEFAULT_MAX_ROLLBACK),
+            config.safe_mode.unwrap_or_default(),
+        );
+
+        let snapshot = db.db.snapshot();
+
+        let range = <RollbackBufferKV>::encode_range(None::<&()>, None::<&()>);
+
+        let iter =
+            db.iter_kvs::<RollbackBufferKV>(&snapshot, range, Timestamp::from_u64(u64::MAX), false);
+
+        for kv in iter {
+            let (k, v) = kv?;
+
+            let point = Point {
+                height: k.height,
+                hash: BlockHash::from_byte_array(k.hash),
+            };
+
+            let action = vec![(k.key, v)].into_iter().collect();
+
+            rollback_buffer.insert_actions_for_point(&point, action);
+        }
+
+        Ok(rollback_buffer)
     }
 }

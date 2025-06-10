@@ -7,7 +7,8 @@ authors = ["jharper@gomaestro.org"]
 [dependencies]
 thiserror = "2.0.12"
 tempfile = "3.19.1"
-rocksdb = "0.23.0"
+#rocksdb = { path = "/Users/hrpr/code/maestro/rust-rocksdb" }
+rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb", branch = "ts-support" }
 gasket = { version = "^0.5", features = ["derive"] }
 tokio = { version = "1.45.0", features = ["rt", "rt-multi-thread", "net", "io-util"] }
 hex = "0.4.3"

@@ -1,157 +1,31 @@
-use std::str::FromStr;
-
-use crate::storage::encdec::Decode;
-use bitcoin::hashes::Hash;
-use bitcoin::{Network, Txid};
+use crate::serve::{DEFAULT_SERVE_ADDRESS, ServerConfig};
 use clap::{Parser, Subcommand};
-use ordinals::RuneId;
-use rocksdb::{IteratorMode, ReadOptions};
 use serde::Deserialize;
-use storage::table::Table;
-use storage::{kv_store::StorageHandler, timestamp::Timestamp};
-use sync::stages::index::indexers::custom::runes::tables::RuneInfoByIdKV;
-use sync::stages::index::indexers::{
-    core::utxo_by_txo_ref::UtxoByTxoRefKV,
-    custom::{
-        TransactionIndexer,
-        runes::tables::{RuneUtxosByScriptKV, UtxoRunes},
-    },
-};
+use storage::kv_store::StorageHandler;
 use tracing::info;
 
 pub use storage::encdec::{DecodingError, DecodingResult};
 
 mod error;
+pub mod serve;
 pub mod storage;
 pub mod sync;
 
-#[tokio::main]
-async fn main() -> Result<(), ()> {
-    tracing_subscriber::fmt::init();
-
-    let args = Cli::parse();
-
-    info!("using db path: './tmp/symphony'");
-
-    let mut db = StorageHandler::open("./tmp/symphony".into()); // TODO
-
-    let cf = db.cf_handle();
-
-    // info!("compacting/flushing db...");
-    // db.db.compact_range_cf(cf, None::<&[u8]>, None::<&[u8]>);
-    // db.db.flush().unwrap();
-
-    match args.command {
-        Command::Run(_) => {
-            let config = Config::new(&args.config).unwrap(); // TODO: error handle
-
-            info!("running symphony with config: {config:?}");
-
-            sync::pipeline::pipeline(config.sync, db).unwrap().block()
-        }
-        Command::Query(query_args) => {
-            info!("querying data...");
-            // temporary query logic for testing
-
-            if query_args.string == String::from("dump") {
-                let snapshot = db.db.snapshot();
-
-                let mut read_opts = ReadOptions::default();
-                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
-
-                for x in snapshot.iterator_cf_opt(&cf, read_opts, IteratorMode::Start) {
-                    let x = x.unwrap();
-
-                    println!("{} -> {}", hex::encode(&x.0), hex::encode(&x.1));
-                }
-            } else if query_args.string.contains(':') {
-                // rune ID query
-                let mut parts = query_args.string.split(":");
-                let block = parts.next().unwrap().parse().unwrap();
-                let tx = parts.next().unwrap().parse().unwrap();
-
-                let task = db.begin_task(false);
-
-                let rune_id = RuneId { block, tx };
-
-                let res = task.get::<RuneInfoByIdKV>(&rune_id).unwrap();
-
-                if let Some(info) = res {
-                    println!("rune info for {block}:{tx}:");
-                    println!("{info:?}")
-                } else {
-                    println!("rune not found")
-                }
-            } else {
-                let address = bitcoin::Address::from_str(&query_args.string).unwrap();
-                let script = address
-                    .require_network(Network::Testnet4)
-                    .unwrap()
-                    .script_pubkey();
-
-                let range = <RuneUtxosByScriptKV>::encode_range(
-                    Some(&(script.to_bytes(), u64::MIN)),
-                    Some(&(script.to_bytes(), u64::MAX)),
-                );
-
-                println!(
-                    "utxos containing runes controlled by {} (divisibility ignored):",
-                    query_args.string
-                );
-
-                let snapshot = db.db.snapshot();
-                let iter = db.iter_kvs::<RuneUtxosByScriptKV>(
-                    &snapshot,
-                    range,
-                    Timestamp::from_u64(u64::MAX),
-                    false,
-                );
-
-                for kv in iter {
-                    let (key, _) = kv.unwrap();
-
-                    let mut read_opts = ReadOptions::default();
-                    read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
-
-                    let res = snapshot
-                        .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), read_opts)
-                        .unwrap()
-                        .unwrap();
-
-                    let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res).unwrap();
-                    let utxo_runes_raw = utxo_val.extended.get(&TransactionIndexer::Runes).unwrap();
-
-                    let utxo_runes = UtxoRunes::decode_all(&utxo_runes_raw).unwrap();
-
-                    println!(
-                        ">> {}#{} -> {} sats + {utxo_runes:?} ",
-                        Txid::from_byte_array(key.txo_ref.tx_hash).to_string(),
-                        key.txo_ref.txo_index,
-                        utxo_val.satoshis
-                    )
-                }
-            }
-        }
-    }
-
-    Ok(())
-}
-
 #[derive(Debug, Subcommand)]
 enum Command {
-    // Sync(sync::Args),
-    // Serve(serve::Args),
-    Run(Args),        // TODO
-    Query(QueryArgs), // TODO
+    Sync(SyncArgs),
+    Serve(ServeArgs),
+    Run(RunArgs),
 }
 
 #[derive(Debug, clap::Args)]
-pub struct Args {}
+pub struct SyncArgs {}
 
 #[derive(Debug, clap::Args)]
-pub struct QueryArgs {
-    string: String,
-}
+pub struct ServeArgs {}
+
+#[derive(Debug, clap::Args)]
+pub struct RunArgs {}
 
 #[derive(Debug, Parser)]
 #[clap(name = "maestro-symphony")]
@@ -166,7 +40,9 @@ struct Cli {
 
 #[derive(Deserialize, Debug)]
 pub struct Config {
+    pub db_path: Option<String>,
     pub sync: sync::Config,
+    pub server: Option<ServerConfig>,
 }
 
 impl Config {
@@ -183,4 +59,78 @@ impl Config {
 
         s.build()?.try_deserialize()
     }
+}
+
+#[tokio::main]
+async fn main() -> Result<(), ()> {
+    tracing_subscriber::fmt::init();
+
+    let args = Cli::parse();
+
+    let config = Config::new(&args.config).unwrap();
+
+    let db_path = config
+        .db_path
+        .clone()
+        .unwrap_or_else(|| "./tmp/symphony".into());
+
+    info!("using db path: '{}'", db_path);
+
+    match args.command {
+        Command::Sync(_) => {
+            let db = StorageHandler::open(db_path.into(), false);
+
+            info!(
+                "running symphony in sync mode with config: {:?}",
+                config.sync
+            );
+
+            sync::pipeline::pipeline(config.sync, db).unwrap().block()
+        }
+        Command::Serve(_) => {
+            let db = StorageHandler::open(db_path.into(), true);
+
+            let serve_address = config
+                .server
+                .as_ref()
+                .and_then(|s| s.address.clone())
+                .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
+
+            info!(
+                "running symphony in serve mode with config: {:?}",
+                config.server
+            );
+
+            serve::run(db, &serve_address).await.unwrap()
+        }
+        Command::Run(_) => {
+            let db = StorageHandler::open(db_path.into(), false);
+
+            let serve_address = config
+                .server
+                .as_ref()
+                .and_then(|s| s.address.clone())
+                .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
+
+            info!(
+                "running symphony in sync+serve mode with config: {:?}",
+                config
+            );
+
+            let sync_db = db.clone();
+            let sync_handle = tokio::spawn(async move {
+                sync::pipeline::pipeline(config.sync, sync_db)
+                    .unwrap()
+                    .block()
+            });
+
+            let serve_result = serve::run(db, &serve_address).await;
+
+            sync_handle.abort();
+
+            info!("serve stage ended: {serve_result:?}")
+        }
+    }
+
+    Ok(())
 }

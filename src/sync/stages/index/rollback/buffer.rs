@@ -162,12 +162,9 @@ impl RollbackBuffer {
             config.safe_mode.unwrap_or_default(),
         );
 
-        let snapshot = db.db.snapshot();
-
         let range = <RollbackBufferKV>::encode_range(None::<&()>, None::<&()>);
 
-        let iter =
-            db.iter_kvs::<RollbackBufferKV>(&snapshot, range, Timestamp::from_u64(u64::MAX), false);
+        let iter = db.iter_kvs::<RollbackBufferKV>(range, Timestamp::from_u64(u64::MAX), false); // TODO: ts
 
         for kv in iter {
             let (k, v) = kv?;

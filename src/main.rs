@@ -76,6 +76,12 @@ async fn main() -> Result<(), ()> {
 
     info!("using db path: '{}'", db_path);
 
+    let serve_address = config
+        .server
+        .as_ref()
+        .and_then(|s| s.address.clone())
+        .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
+
     match args.command {
         Command::Sync(_) => {
             let db = StorageHandler::open(db_path.into(), false);
@@ -90,12 +96,6 @@ async fn main() -> Result<(), ()> {
         Command::Serve(_) => {
             let db = StorageHandler::open(db_path.into(), true);
 
-            let serve_address = config
-                .server
-                .as_ref()
-                .and_then(|s| s.address.clone())
-                .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
-
             info!(
                 "running symphony in serve mode with config: {:?}",
                 config.server
@@ -106,17 +106,12 @@ async fn main() -> Result<(), ()> {
         Command::Run(_) => {
             let db = StorageHandler::open(db_path.into(), false);
 
-            let serve_address = config
-                .server
-                .as_ref()
-                .and_then(|s| s.address.clone())
-                .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
-
             info!(
                 "running symphony in sync+serve mode with config: {:?}",
                 config
             );
 
+            // TODO: serve stage should stop if sync stage finishes
             let sync_db = db.clone();
             let sync_handle = tokio::spawn(async move {
                 sync::pipeline::pipeline(config.sync, sync_db)

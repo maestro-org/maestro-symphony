@@ -9,5 +9,5 @@ max_rollback = 1
 [sync.indexers]
 transaction_indexers = [
     { type = "TxCountByAddress" },
-    { type = "Runes", start_height = 35062 }
+    { type = "Runes", start_height = 30562 }
 ]

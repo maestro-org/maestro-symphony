@@ -1,9 +1,11 @@
 use crate::error::Error;
+use crate::storage::encdec::prefix_key_range;
 use crate::storage::kv_store::StorageHandler;
 use crate::storage::table::Table;
 use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::core::hash_by_height::HashByHeightKV;
 use axum::body::Body;
+use axum::extract::Query;
 use axum::http::Request;
 use axum::{
     Json, Router,
@@ -23,6 +25,10 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
 
+mod error;
+mod routes;
+mod utils;
+
 pub static DEFAULT_SERVE_ADDRESS: &str = "0.0.0.0:8080";
 
 #[derive(Deserialize, Debug)]
@@ -30,7 +36,7 @@ pub struct ServerConfig {
     pub address: Option<String>,
 }
 
-type AppState = Arc<RwLock<StorageHandler>>;
+pub type AppState = Arc<RwLock<StorageHandler>>;
 
 async fn auto_refresh(
     State(state): State<AppState>,
@@ -64,6 +70,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         .route("/", get(root))
         .route("/dump", get(dump))
         .route("/tip", get(tip))
+        .nest("/addresses", routes::addresses::router())
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             auto_refresh,
@@ -92,13 +99,25 @@ async fn root() -> &'static str {
     "Symphony API Server"
 }
 
+#[derive(Debug, Deserialize)]
+pub struct DumpParam {
+    pub prefix: Option<String>,
+}
+
 // Dump all KVs (temporary debugging)
-async fn dump(State(state): State<AppState>) -> impl IntoResponse {
+async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> impl IntoResponse {
     let storage_handler = state.read().await;
     let cf = storage_handler.cf_handle();
 
     let mut read_opts = ReadOptions::default();
     read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
+
+    if let Some(prefix) = param.prefix {
+        let prefix = hex::decode(&prefix).unwrap();
+
+        let range = prefix_key_range(&prefix);
+        read_opts.set_iterate_range(range);
+    }
 
     let mut out = vec![];
 
@@ -132,49 +151,3 @@ async fn tip(State(state): State<AppState>) -> impl IntoResponse {
 
     json.into_response()
 }
-
-/*
-        //         let address = bitcoin::Address::from_str(&query_args.string).unwrap();
-        //         let script = address
-        //             .require_network(Network::Testnet4)
-        //             .unwrap()
-        //             .script_pubkey();
-
-        //         let range = <RuneUtxosByScriptKV>::encode_range(
-        //             Some(&(script.to_bytes(), u64::MIN)),
-        //             Some(&(script.to_bytes(), u64::MAX)),
-        //         );
-
-        //         println!(
-        //             "utxos containing runes controlled by {} (divisibility ignored):",
-        //             query_args.string
-        //         );
-
-        //         let iter =
-        //             db.iter_kvs::<RuneUtxosByScriptKV>(range, Timestamp::from_u64(u64::MAX), false);
-
-        //         for kv in iter {
-        //             let (key, _) = kv.unwrap();
-
-        //             let mut read_opts = ReadOptions::default();
-        //             read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts());
-
-        //             let res = db
-        //                 .db
-        //                 .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), &read_opts)
-        //                 .unwrap()
-        //                 .unwrap();
-
-        //             let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res).unwrap();
-        //             let utxo_runes_raw = utxo_val.extended.get(&TransactionIndexer::Runes).unwrap();
-
-        //             let utxo_runes = UtxoRunes::decode_all(&utxo_runes_raw).unwrap();
-
-        //             println!(
-        //                 ">> {}#{} -> {} sats + {utxo_runes:?} ",
-        //                 Txid::from_byte_array(key.txo_ref.tx_hash).to_string(),
-        //                 key.txo_ref.txo_index,
-        //                 utxo_val.satoshis
-        //             )
-        //         }
-*/

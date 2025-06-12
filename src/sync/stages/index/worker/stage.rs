@@ -104,7 +104,7 @@ impl gasket::framework::Worker<Stage> for Worker {
     }
 
     async fn execute(&mut self, unit: &ChainEvent, stage: &mut Stage) -> Result<(), WorkerError> {
-        let mutable = true; // TODO
+        let mutable = false; // TODO
 
         match unit {
             ChainEvent::RollForward(point, _header, txs) => {

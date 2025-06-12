@@ -1,8 +1,9 @@
+use crate::error::Error;
 use crate::serve::{DEFAULT_SERVE_ADDRESS, ServerConfig};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use storage::kv_store::StorageHandler;
-use tracing::info;
+use tracing::{info, warn};
 
 pub use storage::encdec::{DecodingError, DecodingResult};
 
@@ -111,19 +112,43 @@ async fn main() -> Result<(), ()> {
                 config
             );
 
-            // TODO: serve stage should stop if sync stage finishes
             let sync_db = db.clone();
+
+            // Create a channel for task completion notification
+            let (tx1, rx1) = tokio::sync::oneshot::channel();
+            let (tx2, rx2) = tokio::sync::oneshot::channel();
+
+            // Spawn the sync task
             let sync_handle = tokio::spawn(async move {
-                sync::pipeline::pipeline(config.sync, sync_db)
-                    .unwrap()
-                    .block()
+                let sync_task = sync::pipeline::pipeline(config.sync, sync_db).unwrap();
+                sync_task.block();
+                warn!("sync side ended, telling serve side to stop...");
+                let _ = tx1.send(());
             });
 
-            let serve_result = serve::run(db, &serve_address).await;
+            // Spawn the serve task
+            let serve_handle = tokio::spawn(async move {
+                let res = serve::run(db, &serve_address).await;
+                warn!(
+                    "serve task ended with result: {:?}, telling sync side to stop...",
+                    res
+                );
+                let _ = tx2.send(());
+            });
 
-            sync_handle.abort();
+            // Wait for either task to end
+            tokio::select! {
+                _ = rx1 => {
+                    info!("stopping serve side...");
+                    serve_handle.abort();
+                },
+                _ = rx2 => {
+                    info!("stopping sync side...");
+                    sync_handle.abort();
+                }
+            }
 
-            info!("serve stage ended: {serve_result:?}")
+            info!("symphony stopping...");
         }
     }
 

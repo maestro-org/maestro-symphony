@@ -7,7 +7,10 @@ use crate::{
         encdec::{Decode, Encode},
         table::IndexerTable,
     },
-    sync::stages::index::indexers::{core::utxo_by_txo_ref::TxoRef, custom::TransactionIndexer},
+    sync::stages::index::indexers::{
+        custom::TransactionIndexer,
+        types::{ScriptPubKey, TxoRef},
+    },
 };
 
 // ---
@@ -66,9 +69,6 @@ pub struct RuneUtxosByScriptKey {
     pub produced_height: u64,
     pub txo_ref: TxoRef,
 }
-
-// TODO: move
-pub type ScriptPubKey = Vec<u8>;
 
 #[derive(Encode, Decode, Debug)]
 pub struct RuneTerms {

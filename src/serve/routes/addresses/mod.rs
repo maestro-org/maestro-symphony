@@ -2,12 +2,15 @@ pub mod all_rune_balances;
 pub mod all_rune_utxos;
 pub mod specific_rune_balance;
 pub mod specific_rune_utxos;
+pub mod utxos_by_address;
+
+use axum::{Router, routing::get};
 
 use crate::serve::AppState;
-use axum::{Router, routing::get};
 
 pub fn router() -> Router<AppState> {
     Router::new()
+        .route("/{address}/utxos", get(utxos_by_address::handler))
         .route("/{address}/runes/utxos", get(all_rune_utxos::handler))
         .route(
             "/{address}/runes/utxos/{rune}",

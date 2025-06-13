@@ -21,9 +21,9 @@ define_indexer_table! {
 
 #[derive(Encode, Decode)]
 pub struct UtxosByAddressKey {
-    script: ScriptPubKey,
-    produced_height: u64,
-    txo_ref: TxoRef,
+    pub script: ScriptPubKey,
+    pub produced_height: u64,
+    pub txo_ref: TxoRef,
 }
 
 // --- indexer

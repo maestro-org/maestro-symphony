@@ -71,6 +71,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         .route("/dump", get(dump))
         .route("/tip", get(tip))
         .nest("/addresses", routes::addresses::router())
+        .nest("/runes", routes::runes::router())
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             auto_refresh,

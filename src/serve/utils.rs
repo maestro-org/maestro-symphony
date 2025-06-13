@@ -1,3 +1,9 @@
+use std::str::FromStr;
+
+use ordinals::{Rune, RuneId};
+
+use crate::serve::error::ServeError;
+
 pub fn decimal(num: u128, dec: u8) -> String {
     let dec = dec as usize;
 
@@ -26,4 +32,33 @@ pub fn decimal(num: u128, dec: u8) -> String {
     }
 
     bal_string
+}
+
+pub enum RuneIdentifier {
+    Id(RuneId),
+    Name(u128),
+}
+
+impl RuneIdentifier {
+    pub fn parse(string: String) -> Result<Self, ServeError> {
+        if string.contains(':') {
+            let parts: Vec<_> = string.split(':').collect();
+            if parts.len() != 2 {
+                return Err(ServeError::malformed_request(
+                    "rune id must be etching block and transaction index in form '30562:50'",
+                ));
+            }
+            let block = parts[0].parse().unwrap();
+            let tx = parts[1].parse().unwrap();
+
+            Ok(Self::Id(RuneId { block, tx }))
+        } else {
+            let without_spacers = string.replace("•", "");
+
+            let rune = Rune::from_str(&without_spacers)
+                .map_err(|_| ServeError::malformed_request("unable to decode rune name"))?;
+
+            Ok(Self::Name(rune.n()))
+        }
+    }
 }

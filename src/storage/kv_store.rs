@@ -255,7 +255,7 @@ impl StorageHandler {
         &mut self,
         task: FinalizedTask,
         point: &Point,
-        max_rollback: usize,
+        max_rollback: u64,
     ) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
@@ -291,7 +291,7 @@ impl StorageHandler {
 
             // remove old entries from persistent rollback buffer (maintain at most MAX_ROLLBACK
             // entries)
-            let remove_before = point.height.saturating_sub(max_rollback as u64);
+            let remove_before = point.height.saturating_sub(max_rollback);
             let rbbuf_gc_range = RollbackBufferKV::encode_range(None::<&()>, Some(&remove_before));
 
             wb.delete_range_cf(cf, rbbuf_gc_range.start, rbbuf_gc_range.end);

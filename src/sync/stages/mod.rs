@@ -27,9 +27,11 @@ pub struct MempoolSnapshotInfo {
     tip: Point,
 }
 
+pub type TipEstimate = Point;
+
 #[derive(Debug, Clone)]
 pub enum ChainEvent {
-    RollForward(Point, Header, BlockTxs),
+    RollForward(Point, Header, BlockTxs, TipEstimate),
     RollBack(Point),
     MempoolBlocks(MempoolSnapshotInfo, Vec<BlockTxs>),
 }

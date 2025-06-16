@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use super::id::ProcessTransaction;
 use crate::error::Error;
-use crate::storage::kv_store::Task;
+use crate::storage::kv_store::IndexingTask;
 use crate::sync::stages::TransactionWithId;
 use crate::sync::stages::index::worker::context::IndexingContext;
 use bitcoin::Address;
@@ -34,7 +34,7 @@ pub struct TxCountByAddressConfig {
 impl ProcessTransaction for TxCountByAddressIndexer {
     fn process_tx(
         &self,
-        _task: &mut Task,
+        _task: &mut IndexingTask,
         tx: &TransactionWithId,
         _tx_block_index: usize,
         ctx: &mut IndexingContext,
@@ -45,7 +45,7 @@ impl ProcessTransaction for TxCountByAddressIndexer {
             for input in tx.input.iter() {
                 ctx.resolve_input(&(input.previous_output.into())).unwrap();
 
-                // ...
+                unimplemented!();
             }
         }
 

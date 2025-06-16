@@ -1,8 +1,7 @@
 use crate::serve::AppState;
 use crate::serve::error::ServeError;
+use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::utils::{RuneIdentifier, decimal};
-use crate::storage::encdec::Decode;
-use crate::storage::table::Table;
 use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::custom::runes::tables::{RuneIdByNameKV, RuneInfoByIdKV};
 use axum::extract::Path;
@@ -11,7 +10,6 @@ use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
 use ordinals::{Rune, SpacedRune};
-use rocksdb::ReadOptions;
 use serde::Serialize;
 
 #[derive(Serialize)]
@@ -39,31 +37,18 @@ pub async fn handler(
     State(state): State<AppState>,
     Path(rune): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.read().await;
-    let cf = storage.cf_handle(); // TODO: hide
-
-    let latest_ts = Timestamp::from_u64(u64::MAX); // TODO: use ts from storage
-    let mut read_opts = ReadOptions::default();
-    read_opts.set_timestamp(latest_ts.as_rocksdb_ts());
+    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // cleaner
 
     let rune_id = match RuneIdentifier::parse(rune)? {
         RuneIdentifier::Id(x) => x,
-        RuneIdentifier::Name(n) => {
-            let res = storage
-                .db
-                .get_cf_opt(&cf, RuneIdByNameKV::encode_key(&n), &read_opts)?
-                .ok_or_else(|| ServeError::NotFound)?;
-
-            <RuneIdByNameKV as Table>::Value::decode_all(&res)?
-        }
+        RuneIdentifier::Name(n) => storage
+            .get_maybe::<RuneIdByNameKV>(&n)?
+            .ok_or_else(|| ServeError::NotFound)?,
     };
 
-    let raw_rune_info = storage
-        .db
-        .get_cf_opt(&cf, RuneInfoByIdKV::encode_key(&rune_id), &read_opts)?
-        .ok_or_else(|| ServeError::internal("missing expected data"))?;
-
-    let rune_info = <RuneInfoByIdKV as Table>::Value::decode_all(&raw_rune_info)?;
+    let rune_info = storage
+        .get_maybe::<RuneInfoByIdKV>(&rune_id)?
+        .ok_or_else(|| ServeError::NotFound)?;
 
     let rune = Rune(rune_info.name);
     let spaced = SpacedRune::new(rune, rune_info.spacers);

@@ -4,7 +4,7 @@ use bitcoin::{BlockHash, Network, hashes::Hash};
 
 use crate::{
     error::Error,
-    storage::{encdec::Encode, kv_store::Task},
+    storage::{encdec::Encode, kv_store::IndexingTask},
     sync::{
         self,
         stages::{
@@ -67,7 +67,7 @@ impl IndexingContext {
 // Internal methods only used by the stage worker
 impl IndexingContext {
     pub(super) fn new(
-        task: &mut Task,
+        task: &mut IndexingTask,
         txs: &BlockTxs,
         point: Point,
         network: sync::Network,
@@ -93,7 +93,7 @@ impl IndexingContext {
 
     pub(super) fn update_utxo_set(
         &mut self,
-        task: &mut Task,
+        task: &mut IndexingTask,
         tx: &TransactionWithId,
     ) -> Result<(), Error> {
         // remove consumed utxos from resolver and strorage

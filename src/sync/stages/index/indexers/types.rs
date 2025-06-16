@@ -21,7 +21,7 @@ impl From<bitcoin::OutPoint> for TxoRef {
     }
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub struct Utxo {
     /// Amount of satoshis in the UTxO
     pub satoshis: u64,

@@ -1,6 +1,6 @@
 use crate::{
     error::Error,
-    storage::kv_store::Task,
+    storage::kv_store::IndexingTask,
     sync::stages::{TransactionWithId, index::worker::context::IndexingContext},
 };
 
@@ -9,7 +9,7 @@ use super::{BlockIndexer, TransactionIndexer};
 pub trait ProcessTransaction {
     fn process_tx(
         &self,
-        task: &mut Task,
+        task: &mut IndexingTask,
         tx: &TransactionWithId,
         tx_block_index: usize,
         ctx: &mut IndexingContext,

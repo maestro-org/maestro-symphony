@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::error::Error;
 use crate::storage::encdec::Decode;
-use crate::storage::kv_store::Task;
+use crate::storage::kv_store::IndexingTask;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::custom::id::ProcessTransaction;
 use crate::sync::stages::index::indexers::types::{TxoRef, Utxo};
@@ -39,7 +39,7 @@ pub struct RunesIndexerConfig {
 impl ProcessTransaction for RunesIndexer {
     fn process_tx(
         &self,
-        task: &mut Task,
+        task: &mut IndexingTask,
         tx: &TransactionWithId,
         tx_block_index: usize,
         ctx: &mut IndexingContext,
@@ -230,7 +230,7 @@ impl ProcessTransaction for RunesIndexer {
 
 /// Discover runes in transaction inputs
 fn unallocated(
-    task: &mut Task,
+    task: &mut IndexingTask,
     tx: &Transaction,
     resolver: &HashMap<TxoRef, Utxo>,
 ) -> Result<HashMap<RuneId, u128>, Error> {
@@ -272,7 +272,7 @@ fn unallocated(
     Ok(unallocated)
 }
 
-fn mint(task: &mut Task, id: RuneId, height: BlockHeight) -> Result<Option<u128>, Error> {
+fn mint(task: &mut IndexingTask, id: RuneId, height: BlockHeight) -> Result<Option<u128>, Error> {
     let Some(terms) = task.get::<RuneInfoByIdKV>(&id)?.map(|x| x.terms).flatten() else {
         return Ok(None);
     };
@@ -366,7 +366,7 @@ fn tx_commits_to_rune(
 }
 
 fn etched(
-    task: &mut Task,
+    task: &mut IndexingTask,
     resolver: &HashMap<TxoRef, Utxo>,
     tx_index: usize,
     tx: &Transaction,
@@ -415,7 +415,7 @@ fn etched(
 }
 
 fn create_rune_entry(
-    task: &mut Task,
+    task: &mut IndexingTask,
     artifact: &Artifact,
     tx_id: &Txid,
     id: RuneId,

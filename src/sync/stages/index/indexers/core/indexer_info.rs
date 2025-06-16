@@ -3,7 +3,7 @@ use maestro_symphony_macros::{Decode, Encode};
 use crate::{
     define_core_table,
     error::Error,
-    storage::{kv_store::Task, table::CoreTable},
+    storage::{kv_store::IndexingTask, table::CoreTable},
 };
 
 use super::CoreIndexer;
@@ -15,7 +15,7 @@ define_core_table! {
     indexer: CoreIndexer::IndexerInfo
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub struct IndexerInfo {
     last_point_height: u64,
     last_point_hash: [u8; 32],
@@ -34,7 +34,7 @@ impl IndexerInfo {
 }
 
 impl IndexerInfoKV {
-    pub fn set_info(task: &mut Task, info: IndexerInfo) -> Result<(), Error> {
+    pub fn set_info(task: &mut IndexingTask, info: IndexerInfo) -> Result<(), Error> {
         task.set::<Self>((), info)?;
 
         Ok(())

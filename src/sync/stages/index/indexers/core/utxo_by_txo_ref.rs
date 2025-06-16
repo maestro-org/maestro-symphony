@@ -18,7 +18,7 @@ use bitcoin::hashes::Hash;
 use crate::{
     define_core_table,
     error::Error,
-    storage::{encdec::Encode, kv_store::Task, table::CoreTable},
+    storage::{encdec::Encode, kv_store::IndexingTask, table::CoreTable},
     sync::stages::{
         BlockTxs,
         index::indexers::types::{TxoRef, Utxo},
@@ -41,7 +41,7 @@ pub struct ResolvedUtxos {
 
 impl UtxoByTxoRefKV {
     pub fn resolve_inputs(
-        task: &Task,
+        task: &IndexingTask,
         txs: &BlockTxs,
         mut cache: Option<UtxoCache>,
     ) -> Result<ResolvedUtxos, Error> {

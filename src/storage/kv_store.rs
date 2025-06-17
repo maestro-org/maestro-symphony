@@ -191,12 +191,12 @@ pub struct FinalizedTask {
 #[derive(Clone)]
 pub struct StorageHandler {
     pub db: Arc<DB>,
-    pub previous_timestamp: Option<Timestamp>,
-    // utxo cache TODO
+    pub previous_timestamp: Option<Timestamp>, // TODO: move?
+    read_only: bool,
 }
 
 impl StorageHandler {
-    pub fn open(path: PathBuf) -> Self {
+    pub fn open(path: PathBuf, read_only: bool) -> Self {
         info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
@@ -213,12 +213,23 @@ impl StorageHandler {
 
         let cfs = vec![ColumnFamilyDescriptor::new(SYMPHONY_CF_NAME, cf_opts)];
 
-        let db = DB::open_cf_descriptors(&db_opts, path, cfs).unwrap();
+        let db = if read_only {
+            let mut secondary_path = path.clone();
+            secondary_path.push("secondary");
+            DB::open_cf_descriptors_as_secondary(&db_opts, path, secondary_path, cfs).unwrap()
+        } else {
+            DB::open_cf_descriptors(&db_opts, path, cfs).unwrap()
+        };
 
         Self {
             db: Arc::new(db),
             previous_timestamp: None, // TODO detect from DB?
+            read_only,
         }
+    }
+
+    pub fn is_read_only(&self) -> bool {
+        self.read_only
     }
 
     pub fn cf_handle(&self) -> &ColumnFamily {
@@ -298,13 +309,12 @@ impl StorageHandler {
         Ok(())
     }
 
-    pub fn iter_kvs<'a, T: Table>(
+    pub fn iter_kvs<T: Table>(
         &self,
-        snapshot: &'a rocksdb::SnapshotWithThreadMode<'a, DB>,
         range: Range<Vec<u8>>,
         ts: Timestamp,
         reverse: bool,
-    ) -> TableIterator<'a, T> {
+    ) -> TableIterator<'_, T> {
         let mut read_opts = ReadOptions::default();
         read_opts.set_timestamp(ts.as_rocksdb_ts());
         read_opts.set_iterate_range(range);
@@ -315,11 +325,19 @@ impl StorageHandler {
             rocksdb::IteratorMode::Start
         };
 
-        let iter = snapshot.iterator_cf_opt(&self.cf_handle(), read_opts, mode);
+        let iter = self.db.iterator_cf_opt(&self.cf_handle(), read_opts, mode);
 
         let table_iter = TableIterator::<T>::new(iter);
 
         table_iter
+    }
+
+    pub fn try_refresh_read_only_data(&mut self) -> Result<(), Error> {
+        if self.read_only {
+            self.db.try_catch_up_with_primary()?
+        }
+
+        Ok(())
     }
 }
 

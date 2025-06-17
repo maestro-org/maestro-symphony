@@ -2,12 +2,12 @@ db_path = "tmp/symphony"
 
 [sync]
 node_address = "localhost:8333"
-network = "mainnet"
+network = "testnet"
 safe_mode = true
 max_rollback = 1
 
 [sync.indexers]
 transaction_indexers = [
     { type = "TxCountByAddress" },
-    { type = "Runes", start_height = 840000 }
+    { type = "Runes", start_height = 30562 }
 ]

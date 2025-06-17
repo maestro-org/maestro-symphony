@@ -2,34 +2,105 @@ _from hash to harmony: an orchestrated Bitcoin indexing suite_
 
 # The Maestro Symphony
 
-State of the project: https://github.com/orgs/maestro-org/projects/16/views/1
+Kanban board: https://github.com/orgs/maestro-org/projects/16/views/1
 
-## Local deployment
+#### Supported networks
 
-Run a node and point to it in the run [config](examples/testnet.toml).
+-   mainnet
+-   testnet4
 
-Sync:
+#### Indexers
 
-```
+-   runes
+-   tx_count_by_address
+-   utxos_by_address
+
+#### Endpoints
+
+-   Addresses
+    -   UTXOs by address: `/addresses/{address}/utxos`
+    -   Rune UTXOs by address: `/addresses/{address}/runes/utxos`
+    -   Rune UTXOs by address and rune: `/addresses/{address}/runes/utxos/{rune}`
+    -   Rune balances by address: `/addresses/{address}/runes/balance`
+    -   Rune balances by address and rune: `/addresses/{address}/runes/balances/{rune}`
+-   Runes
+    -   Rune info: `/runes/{rune}`
+
+## Deployment
+
+### Prequisites
+
+-   Run a node and point to it via the `node_address` parameter in the run [config](examples/testnet.toml)
+
+### Run: Sync + Serve
+
+```bash
 RUST_LOG=info cargo run -- examples/testnet.toml run
 ```
 
-To query you must first stop syncing, but this will change.
+### Sync only
 
-Query Rune etching information:
-
-```
-RUST_LOG=info cargo run -- query 30562:50
-
-rune info for 30562:50:
-RuneInfo { name: 212002398557419859, terms: Some(RuneTerms { amount: Some(100000000), cap: Some(3402823669209384634633746074316), start_height: None, end_height: None }), symbol: Some(643), divisibility: 8, etching_height: 30562, etching_tx: [33, 65, 242, 244, 179, 54, 243, 84, 133, 132, 204, 69, 169, 148, 204, 4, 33, 32, 12, 33, 105, 4, 83, 197, 167, 21, 93, 227, 72, 125, 147, 99], premine: 100000000, spacers: 512 }
+```bash
+RUST_LOG=info cargo run -- examples/testnet.toml sync
 ```
 
-Query address rune UTxOs (divisibility not accounted for in rune amounts):
+### Serve only
 
+```bash
+RUST_LOG=info cargo run -- examples/testnet.toml serve
 ```
-RUST_LOG=info cargo run -- query tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936
 
-utxos containing runes controlled by tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936 (divisibility ignored):
->> 63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121#1 -> 10000 sats + [(RuneId { block: 30562, tx: 50 }, 100000000)]
+### Examples
+
+Rune UTXOs by address:
+
+```bash
+curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936/runes/utxos | jq .
+[
+  {
+    "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+    "output_index": 1,
+    "height": 30562,
+    "satoshis": "10000",
+    "runes": [
+      {
+        "id": "30562:50",
+        "name": "BESTINSLOTXYZ",
+        "spaced_name": "BESTINSLOT•XYZ",
+        "quantity": "1.00000000"
+      }
+    ]
+  }
+]
 ```
+
+Rune info
+
+```bash
+curl -X GET http://localhost:8080/runes/30562:50 | jq .
+{
+  "id": "30562:50",
+  "name": "BESTINSLOTXYZ",
+  "spaced_name": "BESTINSLOT•XYZ",
+  "symbol": "ʃ",
+  "divisibility": 8,
+  "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+  "etching_height": 30562,
+  "terms": {
+    "amount": "1.00000000",
+    "cap": "34028236692093846346337.46074316",
+    "start_height": null,
+    "end_height": null
+  },
+  "premine": "1.00000000"
+}
+```
+
+### Reousrce Requirements
+
+#### Testnet4
+
+-   Disk: 1 GB
+-   CPU: 2 cores
+-   RAM: 4 GB
+-   Approximate sync time: 2 hours

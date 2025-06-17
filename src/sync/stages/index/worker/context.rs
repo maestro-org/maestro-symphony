@@ -10,10 +10,9 @@ use crate::{
         stages::{
             BlockHeight, BlockTxs, Point, TransactionWithId,
             index::indexers::{
-                core::utxo_by_txo_ref::{
-                    ExtendedUtxoData, ResolvedUtxos, TxoRef, Utxo, UtxoByTxoRefKV,
-                },
+                core::utxo_by_txo_ref::{ResolvedUtxos, UtxoByTxoRefKV},
                 custom::TransactionIndexer,
+                types::{ExtendedUtxoData, TxoRef, Utxo},
             },
         },
     },

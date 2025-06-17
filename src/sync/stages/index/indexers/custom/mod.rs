@@ -4,11 +4,14 @@ use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
 use tx_count_by_address::{TxCountByAddressConfig, TxCountByAddressIndexer};
 
-use crate::error::Error;
+use crate::{
+    error::Error, sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressIndexer,
+};
 
 pub mod id;
 pub mod runes;
 pub mod tx_count_by_address;
+pub mod utxos_by_address;
 
 /// Unique u8 for each transaction indexer, used in the key encodings. Do not modify, only add new
 /// variants.
@@ -17,6 +20,7 @@ pub mod tx_count_by_address;
 pub enum TransactionIndexer {
     TxCountByAddress = 0,
     Runes = 1,
+    UtxosByAddress = 2,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -24,6 +28,7 @@ pub enum TransactionIndexer {
 pub enum TransactionIndexerFactory {
     TxCountByAddress(TxCountByAddressConfig),
     Runes(RunesIndexerConfig),
+    UtxosByAddress,
 }
 
 impl TransactionIndexerFactory {
@@ -31,6 +36,7 @@ impl TransactionIndexerFactory {
         match self {
             Self::TxCountByAddress(c) => Ok(Box::new(TxCountByAddressIndexer::new(c)?)),
             Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
+            Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
         }
     }
 }

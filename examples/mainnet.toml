@@ -8,6 +8,6 @@ max_rollback = 1
 
 [sync.indexers]
 transaction_indexers = [
-    { type = "TxCountByAddress" },
+    { type = "UtxosByAddress" },
     { type = "Runes", start_height = 840000 }
 ]

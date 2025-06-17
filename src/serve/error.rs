@@ -4,6 +4,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde_json::json;
+use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;
 
@@ -23,11 +24,11 @@ pub enum ServeError {
     #[error("Users request/query was malformed: {0}")]
     MalformedRequest(String),
 
-    #[error("rocksdb error: {0}")]
-    Rocks(#[from] rocksdb::Error),
-
     #[error("symphony error: {0}")]
     Symphony(#[from] crate::Error),
+
+    #[error("unexpected missing data: {0}")]
+    UnexpectedMissingData(String),
 }
 
 impl ServeError {
@@ -37,6 +38,10 @@ impl ServeError {
 
     pub fn internal(str: impl ToString) -> Self {
         ServeError::Internal(str.to_string())
+    }
+
+    pub fn missing_data(x: impl Debug) -> Self {
+        ServeError::UnexpectedMissingData(format!("{x:?}"))
     }
 }
 
@@ -52,7 +57,7 @@ impl IntoResponse for ServeError {
                 format!("unable to parse request parameters: {e}"),
             ),
             _ => {
-                error!("Internal server error: {}", self);
+                error!("internal server error: {}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     format!("internal server error"),

@@ -1,6 +1,6 @@
 use super::id::ProcessTransaction;
 use crate::error::Error;
-use crate::storage::{kv_store::Task, table::IndexerTable};
+use crate::storage::{kv_store::IndexingTask, table::IndexerTable};
 use crate::sync::stages::TransactionWithId;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::types::TxoRef;
@@ -19,7 +19,7 @@ define_indexer_table! {
     table: 0
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub struct UtxosByAddressKey {
     pub script: ScriptPubKey,
     pub produced_height: u64,
@@ -39,7 +39,7 @@ impl UtxosByAddressIndexer {
 impl ProcessTransaction for UtxosByAddressIndexer {
     fn process_tx(
         &self,
-        task: &mut Task,
+        task: &mut IndexingTask,
         tx: &TransactionWithId,
         _tx_block_index: usize,
         ctx: &mut IndexingContext,

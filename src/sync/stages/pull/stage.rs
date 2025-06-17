@@ -5,7 +5,7 @@ use tokio::time::Instant;
 use tracing::{error, info, warn};
 
 use crate::{
-    storage::kv_store::StorageHandler,
+    storage::{kv_store::StorageHandler, timestamp::Timestamp},
     sync::{
         Network,
         stages::{
@@ -67,16 +67,11 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         // get intersect options from KV store/rollback buffer
 
-        // TODO: cleanup
-        let snapshot = stage.db.db.snapshot();
-        let cf = stage.db.cf_handle();
+        let reader = stage.db.reader(Timestamp::from_u64(u64::MAX)); // TODO ts
 
-        let intersect_options = HashByHeightKV::intersect_options(
-            &snapshot,
-            &cf,
-            stage.network.genesis_block().block_hash(),
-        )
-        .unwrap();
+        let intersect_options =
+            HashByHeightKV::intersect_options(&reader, stage.network.genesis_block().block_hash())
+                .or_panic()?;
 
         // TODO: if no rollback buffer/not mutable, download all the headers (from the current tip in
         // storage) to discover the chain tip (and thus the point at which to become mutable)
@@ -99,7 +94,8 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         // send initial rollback if applicable
         if !self.init {
-            if let Some(_point) = self.cursor.first() {
+            if let Some(point) = self.cursor.first() {
+                // TODO
                 // if point.height != 0 {
                 //     units.push(ChainEvent::RollBack(*point));
                 // }
@@ -197,15 +193,13 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         // else fetch more from db if we dont get many
         if self.cursor.len() < 50 {
-            let snapshot = stage.db.db.snapshot();
-            let cf = stage.db.cf_handle();
+            let reader = stage.db.reader(Timestamp::from_u64(u64::MAX));
 
             let mut options = HashByHeightKV::intersect_options(
-                &snapshot,
-                &cf,
-                stage.network.genesis_block().block_hash(),
+                &reader,
+                stage.network.genesis_block().block_hash(), // TODO dont compute
             )
-            .unwrap(); // TODO
+            .or_panic()?;
 
             if let Some(last) = self.cursor.last() {
                 // don't have multiple points for same height
@@ -224,7 +218,9 @@ impl gasket::framework::Worker<Stage> for Worker {
         }); // cleanup
 
         for ((header, block), height) in headers {
-            if header.block_hash() != block.block_hash() {
+            let header_hash = header.block_hash();
+
+            if header_hash != block.block_hash() {
                 error!("header/block hash mismatch");
                 return Err(WorkerError::Restart);
             }
@@ -235,7 +231,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
             let point = Point {
                 height,
-                hash: header.block_hash(),
+                hash: header_hash,
             };
 
             let block_txs = block

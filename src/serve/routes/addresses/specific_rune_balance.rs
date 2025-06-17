@@ -1,4 +1,5 @@
 use crate::serve::error::ServeError;
+use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::serve::utils::{RuneIdentifier, decimal};
 use crate::storage::encdec::Decode;
@@ -13,7 +14,6 @@ use axum::extract::Path;
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use ordinals::{Rune, RuneId, SpacedRune};
-use rocksdb::ReadOptions;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::str::FromStr;
@@ -30,26 +30,16 @@ pub async fn handler(
     State(state): State<AppState>,
     Path((address, rune)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.read().await;
-    let cf = storage.cf_handle(); // TODO: hide
-
-    let latest_ts = Timestamp::from_u64(u64::MAX); // TODO: use ts from storage
-    let mut read_opts = ReadOptions::default();
-    read_opts.set_timestamp(latest_ts.as_rocksdb_ts());
+    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // cleaner
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
 
     let specified_rune = match RuneIdentifier::parse(rune)? {
         RuneIdentifier::Id(x) => x,
-        RuneIdentifier::Name(n) => {
-            let res = storage
-                .db
-                .get_cf_opt(&cf, RuneIdByNameKV::encode_key(&n), &read_opts)?
-                .ok_or_else(|| ServeError::NotFound)?;
-
-            <RuneIdByNameKV as Table>::Value::decode_all(&res)?
-        }
+        RuneIdentifier::Name(n) => storage
+            .get_maybe::<RuneIdByNameKV>(&n)?
+            .ok_or_else(|| ServeError::NotFound)?,
     };
 
     // TODO: enforce network?
@@ -61,7 +51,7 @@ pub async fn handler(
         Some(&(script_pk, u64::MAX)),
     );
 
-    let iter = storage.iter_kvs::<RuneUtxosByScriptKV>(range, latest_ts, false);
+    let iter = storage.iter_kvs::<RuneUtxosByScriptKV>(range, false);
 
     let mut balances: HashMap<RuneId, u128> = HashMap::new();
 
@@ -69,17 +59,10 @@ pub async fn handler(
     for kv in iter {
         let (key, _) = kv?;
 
-        // Get UTXO data from the database
-        let res = storage
-            .db
-            .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), &read_opts)?
-            .ok_or_else(|| ServeError::internal("missing expected data"))?;
-
-        // Decode UTXO value
-        let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res)?;
+        let utxo = storage.get_expected::<UtxoByTxoRefKV>(&key.txo_ref)?;
 
         // Get runes data from UTXO
-        let utxo_runes_raw = utxo_val
+        let utxo_runes_raw = utxo
             .extended
             .get(&TransactionIndexer::Runes)
             .ok_or_else(|| ServeError::internal("missing expected data"))?;
@@ -94,13 +77,7 @@ pub async fn handler(
 
     let raw_quantity = balances.remove(&specified_rune).unwrap_or_default();
 
-    let raw_rune_info = storage
-        .db
-        .get_cf_opt(&cf, RuneInfoByIdKV::encode_key(&specified_rune), &read_opts)?
-        .ok_or_else(|| ServeError::internal("missing expected data"))?;
-
-    // Decode UTXO value
-    let rune_info = <RuneInfoByIdKV as Table>::Value::decode_all(&raw_rune_info)?;
+    let rune_info = storage.get_expected::<RuneInfoByIdKV>(&specified_rune)?;
 
     let rune = Rune(rune_info.name);
     let spaced = SpacedRune::new(rune, rune_info.spacers);

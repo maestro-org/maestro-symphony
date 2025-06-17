@@ -11,7 +11,7 @@ define_core_table! {
     indexer: CoreIndexer::PointByTimestamp
 }
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub enum PointInfo {
     Block { height: u64, hash: [u8; 32] },
     Mempool(()), // TODO

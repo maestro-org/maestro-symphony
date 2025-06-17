@@ -26,6 +26,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 
 mod error;
+mod reader_wrapper;
 mod routes;
 mod utils;
 
@@ -134,13 +135,11 @@ async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> 
 }
 
 async fn tip(State(state): State<AppState>) -> impl IntoResponse {
-    let storage = state.read().await;
+    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // TODO
 
     let range = HashByHeightKV::encode_range(None::<&()>, None::<&()>);
 
-    let res = storage
-        .iter_kvs::<HashByHeightKV>(range, Timestamp::from_u64(u64::MAX), true)
-        .next();
+    let res = storage.iter_kvs::<HashByHeightKV>(range, true).next();
 
     let json = match res {
         Some(Ok(x)) => Json(json!({

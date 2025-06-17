@@ -3,9 +3,7 @@ use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc, u64};
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
 use maestro_symphony_macros::{Decode, Encode};
-use rocksdb::{
-    ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Snapshot, WriteBatch,
-};
+use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, WriteBatch};
 use tracing::{debug, info};
 
 use crate::{
@@ -27,10 +25,11 @@ static SYMPHONY_CF_NAME: &str = "symphony";
 pub type RawKey = Vec<u8>;
 pub type RawValue = Vec<u8>;
 
-pub struct Task<'a> {
-    pub reader: Snapshot<'a>, // TODO private
+pub struct IndexingTask<'a> {
+    db: Arc<DB>,
     cf_handle: &'a ColumnFamily,
-    read_ts: Option<Timestamp>, // TODO
+    // timestamp at which to read data at (we want data at commit ts of last rollforward/back)
+    read_ts: Timestamp,
     // when we write keys, we do not write to storage, we manipulate here until we flush via write batch
     // when we read, we first check for the key here and if we dont find it we use the snapshot
     write_buffer: HashMap<RawKey, StorageAction>,
@@ -38,7 +37,7 @@ pub struct Task<'a> {
     original_kvs: Option<HashMap<RawKey, PreviousValue>>,
 }
 
-impl<'a> Task<'a> {
+impl<'a> IndexingTask<'a> {
     pub fn get<T>(&self, key: &T::Key) -> Result<Option<T::Value>, Error>
     where
         T: Table,
@@ -59,11 +58,11 @@ impl<'a> Task<'a> {
         debug!("fetching {} from storage", hex::encode(&encoded_key));
 
         let mut read_opts = ReadOptions::default();
-        read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+        read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
 
         // Else read from the database
-        self.reader
-            .get_cf_opt(self.cf_handle, encoded_key, read_opts)?
+        self.db
+            .get_cf_opt(self.cf_handle, encoded_key, &read_opts)?
             .map(|x| T::Value::decode(&x).map(|y| y.0).map_err(|e| e.into()))
             .transpose()
     }
@@ -97,11 +96,11 @@ impl<'a> Task<'a> {
         }
 
         let mut read_opts = ReadOptions::default();
-        read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+        read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
 
-        let fetched = self.reader.multi_get_cf_opt(
+        let fetched = self.db.multi_get_cf_opt(
             to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)),
-            read_opts,
+            &read_opts,
         );
 
         for ((key, _), value) in to_fetch.into_iter().zip_eq(fetched) {
@@ -161,11 +160,11 @@ impl<'a> Task<'a> {
             // Only need to do once per key
             if !original_kvs.contains_key(raw_key) {
                 let mut read_opts = ReadOptions::default();
-                read_opts.set_timestamp(Timestamp::from_u64(u64::MAX).as_rocksdb_ts()); // TODO
+                read_opts.set_timestamp(self.read_ts.as_rocksdb_ts()); // TODO
 
                 let original_value = self
-                    .reader
-                    .get_cf_opt(self.cf_handle, raw_key.clone(), read_opts)
+                    .db
+                    .get_cf_opt(self.cf_handle, raw_key.clone(), &read_opts)
                     .map(|x| x.into())?;
 
                 original_kvs.insert(raw_key.clone(), original_value);
@@ -236,12 +235,14 @@ impl StorageHandler {
         self.db.cf_handle(SYMPHONY_CF_NAME).expect("cf missing")
     }
 
-    pub fn begin_task(&mut self, mutable: bool) -> Task {
+    pub fn begin_indexing_task(&mut self, mutable: bool) -> IndexingTask {
         let cf = self.cf_handle();
 
-        Task {
-            reader: self.db.snapshot(),
-            read_ts: self.previous_timestamp.clone(),
+        IndexingTask {
+            db: self.db.clone(),
+            read_ts: self
+                .previous_timestamp
+                .unwrap_or(Timestamp::from_u64(u64::MAX)), // TODO
             cf_handle: cf,
             write_buffer: HashMap::new(),
             original_kvs: mutable.then_some(HashMap::new()),
@@ -250,7 +251,7 @@ impl StorageHandler {
 
     /// Finish the task, by flushing all the pending writes to storage, along with the original KVs
     /// into the rollback buffer
-    pub fn apply_task(
+    pub fn apply_indexing_task(
         &mut self,
         task: FinalizedTask,
         point: &Point,
@@ -309,27 +310,15 @@ impl StorageHandler {
         Ok(())
     }
 
-    pub fn iter_kvs<T: Table>(
-        &self,
-        range: Range<Vec<u8>>,
-        ts: Timestamp,
-        reverse: bool,
-    ) -> TableIterator<'_, T> {
+    pub fn reader(&self, timestamp: Timestamp) -> Reader {
         let mut read_opts = ReadOptions::default();
-        read_opts.set_timestamp(ts.as_rocksdb_ts());
-        read_opts.set_iterate_range(range);
+        read_opts.set_timestamp(timestamp.as_rocksdb_ts());
 
-        let mode = if reverse {
-            rocksdb::IteratorMode::End
-        } else {
-            rocksdb::IteratorMode::Start
-        };
-
-        let iter = self.db.iterator_cf_opt(&self.cf_handle(), read_opts, mode);
-
-        let table_iter = TableIterator::<T>::new(iter);
-
-        table_iter
+        Reader {
+            db: self.db.clone(),
+            timestamp,
+            read_opts,
+        }
     }
 
     pub fn try_refresh_read_only_data(&mut self) -> Result<(), Error> {
@@ -338,6 +327,53 @@ impl StorageHandler {
         }
 
         Ok(())
+    }
+}
+
+// Pseudo-snapshot, which just reads data as of the specified timestamp
+pub struct Reader {
+    db: Arc<DB>,
+    timestamp: Timestamp,
+    read_opts: ReadOptions,
+}
+
+impl Reader {
+    pub fn get<T>(&self, key: &T::Key) -> Result<Option<T::Value>, Error>
+    where
+        T: Table,
+    {
+        let res = self.db.get_cf_opt(
+            self.db.cf_handle(SYMPHONY_CF_NAME).unwrap(),
+            T::encode_key(&key),
+            &self.read_opts,
+        )?;
+
+        match res {
+            Some(bytes) => Ok(Some(<T>::Value::decode_all(&bytes)?)),
+            None => Ok(None),
+        }
+    }
+
+    pub fn iter_kvs<T: Table>(&self, range: Range<Vec<u8>>, reverse: bool) -> TableIterator<'_, T> {
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(self.timestamp.as_rocksdb_ts());
+        read_opts.set_iterate_range(range);
+
+        let mode = if reverse {
+            rocksdb::IteratorMode::End
+        } else {
+            rocksdb::IteratorMode::Start
+        };
+
+        let iter = self.db.iterator_cf_opt(
+            self.db.cf_handle(SYMPHONY_CF_NAME).unwrap(),
+            read_opts,
+            mode,
+        );
+
+        let table_iter = TableIterator::<T>::new(iter);
+
+        table_iter
     }
 }
 

@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use std::{marker::PhantomData, ops::Range};
 
 use rocksdb::DB;
@@ -13,9 +14,9 @@ pub const CUSTOM_INDEXER_TAG: u8 = b'U';
 pub trait Table {
     const PREFIX_LEN: usize;
     /// Key type for the table.
-    type Key: Encode + Decode;
+    type Key: Encode + Decode + Debug;
     /// Value type for the table.
-    type Value: Encode + Decode;
+    type Value: Encode + Decode + Debug;
     /// Encodes the full key including necessary prefixes
     fn encode_key(key: &Self::Key) -> Vec<u8>;
     /// Encodes a range with optional start and end bounds

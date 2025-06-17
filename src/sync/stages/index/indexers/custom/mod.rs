@@ -15,7 +15,7 @@ pub mod utxos_by_address;
 
 /// Unique u8 for each transaction indexer, used in the key encodings. Do not modify, only add new
 /// variants.
-#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, std::hash::Hash)]
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, std::hash::Hash, Debug)]
 #[repr(u8)]
 pub enum TransactionIndexer {
     TxCountByAddress = 0,

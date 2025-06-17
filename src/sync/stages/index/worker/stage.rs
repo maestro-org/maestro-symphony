@@ -108,7 +108,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         match unit {
             ChainEvent::RollForward(point, _header, txs) => {
-                let mut task = stage.db.begin_task(mutable);
+                let mut task = stage.db.begin_indexing_task(mutable);
 
                 info!("indexing {point:?}...");
 
@@ -138,10 +138,8 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 stage
                     .db
-                    .apply_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
+                    .apply_indexing_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
                     .or_restart()?;
-
-                stage.db.db.flush().or_panic()?;
 
                 // TODO, move into stage.apply_task or something?
                 if let Some(original_kvs) = original_kvs {

@@ -164,7 +164,9 @@ impl RollbackBuffer {
 
         let range = <RollbackBufferKV>::encode_range(None::<&()>, None::<&()>);
 
-        let iter = db.iter_kvs::<RollbackBufferKV>(range, Timestamp::from_u64(u64::MAX), false); // TODO: ts
+        let reader = db.reader(Timestamp::from_u64(u64::MAX)); // TODO ts
+
+        let iter = reader.iter_kvs::<RollbackBufferKV>(range, false);
 
         for kv in iter {
             let (k, v) = kv?;

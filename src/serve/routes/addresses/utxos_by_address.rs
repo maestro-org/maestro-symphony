@@ -1,6 +1,6 @@
 use crate::serve::error::ServeError;
+use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
 use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
@@ -10,7 +10,6 @@ use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
-use rocksdb::ReadOptions;
 use serde::Serialize;
 use std::str::FromStr;
 
@@ -26,8 +25,7 @@ pub async fn handler(
     State(state): State<AppState>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.read().await;
-    let cf = storage.cf_handle(); // TODO: hide
+    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // cleaner
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
@@ -45,11 +43,7 @@ pub async fn handler(
         Some(&(script_pk, to_height.saturating_add(1))),
     );
 
-    let latest_ts = Timestamp::from_u64(u64::MAX); // TODO: use ts from storage
-    let iter = storage.iter_kvs::<UtxosByAddressKV>(range, latest_ts, false);
-
-    let mut read_opts = ReadOptions::default();
-    read_opts.set_timestamp(latest_ts.as_rocksdb_ts());
+    let iter = storage.iter_kvs::<UtxosByAddressKV>(range, false);
 
     let mut utxos = Vec::new();
 
@@ -57,21 +51,14 @@ pub async fn handler(
     for kv in iter {
         let (key, _) = kv?;
 
-        // Get UTXO data from the database
-        let res = storage
-            .db
-            .get_cf_opt(&cf, UtxoByTxoRefKV::encode_key(&key.txo_ref), &read_opts)?
-            .ok_or_else(|| ServeError::internal("missing expected data"))?;
-
-        // Decode UTXO value
-        let utxo_val = <UtxoByTxoRefKV as Table>::Value::decode_all(&res)?;
+        let utxo = storage.get_expected::<UtxoByTxoRefKV>(&key.txo_ref)?;
 
         // Create UTXO entry for response
         utxos.push(AddressUtxo {
             tx_hash: Txid::from_byte_array(key.txo_ref.tx_hash).to_string(),
             output_index: key.txo_ref.txo_index,
             height: key.produced_height,
-            satoshis: utxo_val.satoshis.to_string(),
+            satoshis: utxo.satoshis.to_string(),
         });
     }
 

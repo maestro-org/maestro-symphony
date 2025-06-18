@@ -5,6 +5,7 @@ use tokio::time::Instant;
 use tracing::{error, info, warn};
 
 use crate::{
+    error::Error,
     storage::{kv_store::StorageHandler, timestamp::Timestamp},
     sync::{
         Network,
@@ -55,7 +56,7 @@ impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
         info!("connecting to node {}...", stage.node_address);
 
-        let peer_session = Peer::connect(&stage.node_address, stage.network.magic())
+        let mut peer_session = Peer::connect(&stage.node_address, stage.network.magic())
             .await
             .or_retry()?;
 
@@ -73,14 +74,18 @@ impl gasket::framework::Worker<Stage> for Worker {
             HashByHeightKV::intersect_options(&reader, stage.network.genesis_block().block_hash())
                 .or_panic()?;
 
-        // TODO: if no rollback buffer/not mutable, download all the headers (from the current tip in
-        // storage) to discover the chain tip (and thus the point at which to become mutable)
+        let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
+            .await
+            .or_panic()?;
+
+        info!("got tip estimate {tip_estimate:?}");
 
         Ok(Worker {
             peer_session,
             cursor: intersect_options,
             init: false,
             stats: PullStats::new(),
+            tip: tip_estimate,
         })
     }
 
@@ -159,7 +164,6 @@ impl gasket::framework::Worker<Stage> for Worker {
             // send a rollback to the intersect if it was behind our tip
             if let Some(cursor_tip_height) = cursor_tip {
                 if *intersect_height != cursor_tip_height {
-                    info!("rollbacks unimplemented");
                     units.push(ChainEvent::RollBack(Point {
                         height: *intersect_height,
                         hash: first.prev_blockhash,
@@ -225,9 +229,12 @@ impl gasket::framework::Worker<Stage> for Worker {
                 return Err(WorkerError::Restart);
             }
 
-            // if height > self.tip.0 {
-            //     self.tip = (height, header.block_hash());
-            // }
+            if height > self.tip.height {
+                self.tip = Point {
+                    height,
+                    hash: header_hash,
+                }
+            }
 
             let point = Point {
                 height,
@@ -243,7 +250,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                 })
                 .collect();
 
-            units.push(ChainEvent::RollForward(point, header, block_txs));
+            units.push(ChainEvent::RollForward(point, header, block_txs, self.tip));
         }
 
         Ok(WorkSchedule::Unit(units))
@@ -274,6 +281,7 @@ pub struct Worker {
     cursor: Vec<Point>,
     init: bool,
     stats: PullStats,
+    tip: Point,
 }
 
 impl Worker {
@@ -351,4 +359,31 @@ impl PullStats {
             );
         }
     }
+}
+
+// Download all headers after the provided point until we find the tip or encounter a rollback
+// TODO: improve so we can reuse these fetched headers instead of fetching again
+pub async fn estimate_tip(peer: &mut Peer, after: Point) -> Result<Point, Error> {
+    info!("estimating tip (starting from {after:?}");
+    let mut greatest = after;
+
+    loop {
+        let batch = peer.get_new_headers(vec![greatest.hash]).await?;
+
+        let Some(batch_greatest) = batch.last() else {
+            break;
+        };
+
+        // there was a rollback
+        if batch[0].prev_blockhash != greatest.hash {
+            break;
+        }
+
+        greatest = Point {
+            height: greatest.height + batch.len() as u64,
+            hash: batch_greatest.block_hash(),
+        }
+    }
+
+    Ok(greatest)
 }

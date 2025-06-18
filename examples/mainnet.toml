@@ -11,3 +11,6 @@ transaction_indexers = [
     { type = "UtxosByAddress" },
     { type = "Runes", start_height = 840000 }
 ]
+
+[server]
+address = "0.0.0.0:8080"

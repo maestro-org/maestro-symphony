@@ -17,7 +17,7 @@ use crate::{
                     },
                     custom::id::ProcessTransaction,
                 },
-                rollback::buffer::RollbackBuffer,
+                rollback::buffer::{DEFAULT_MAX_ROLLBACK, RollbackBuffer},
                 worker::context::IndexingContext,
             },
         },
@@ -46,6 +46,7 @@ pub struct Stage {
     indexers: IndexersConfig,
     network: sync::Network,
     rollback_buffer: RollbackBuffer,
+    max_rollbacks: u64,
     safe_mode: bool,
 
     // custom indexers
@@ -65,6 +66,7 @@ impl Stage {
             network: config.network,
             indexers: config.indexers,
             rollback_buffer,
+            max_rollbacks: config.max_rollback.unwrap_or(DEFAULT_MAX_ROLLBACK) as u64,
             safe_mode,
 
             upstream: Default::default(),
@@ -75,9 +77,8 @@ impl Stage {
 
 pub struct Worker {
     indexers: Vec<Box<dyn ProcessTransaction>>,
+    mutable: bool,
 }
-
-impl Worker {}
 
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
@@ -91,7 +92,10 @@ impl gasket::framework::Worker<Stage> for Worker {
             .collect::<Result<Vec<_>, _>>()
             .or_panic()?;
 
-        Ok(Worker { indexers })
+        Ok(Worker {
+            indexers,
+            mutable: !stage.rollback_buffer.is_empty(),
+        })
     }
 
     async fn schedule(
@@ -104,13 +108,13 @@ impl gasket::framework::Worker<Stage> for Worker {
     }
 
     async fn execute(&mut self, unit: &ChainEvent, stage: &mut Stage) -> Result<(), WorkerError> {
-        let mutable = false; // TODO
-
         match unit {
-            ChainEvent::RollForward(point, _header, txs) => {
-                let mut task = stage.db.begin_indexing_task(mutable);
+            ChainEvent::RollForward(point, _header, txs, tip) => {
+                self.mutable |= point.height > (tip.height.saturating_sub(stage.max_rollbacks));
 
-                info!("indexing {point:?}...");
+                let mut task = stage.db.begin_indexing_task(self.mutable);
+
+                info!("indexing {point:?} (mutable: {})...", self.mutable);
 
                 let mut ctx =
                     IndexingContext::new(&mut task, txs, *point, stage.network).or_restart()?;
@@ -138,7 +142,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 stage
                     .db
-                    .apply_indexing_task(task, point, stage.rollback_buffer.capacity() - 1) // TODO cleaner
+                    .apply_indexing_task(task, point, stage.max_rollbacks)
                     .or_restart()?;
 
                 // TODO, move into stage.apply_task or something?

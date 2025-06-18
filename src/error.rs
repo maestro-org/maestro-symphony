@@ -1,6 +1,9 @@
 use thiserror::Error;
 
-use crate::{storage::encdec::DecodingError, sync::stages::Point};
+use crate::{
+    storage::encdec::DecodingError,
+    sync::stages::{Point, pull::peer::P2PError},
+};
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -18,6 +21,9 @@ pub enum Error {
 
     #[error("{0}")]
     Custom(String),
+
+    #[error("{0}")]
+    P2P(#[from] P2PError),
 }
 
 impl Error {

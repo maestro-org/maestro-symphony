@@ -1,10 +1,9 @@
-use crate::serve::AppState;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::utils::{RuneIdentifier, decimal};
-use crate::storage::timestamp::Timestamp;
+use crate::serve::{AppState, QueryParams};
 use crate::sync::stages::index::indexers::custom::runes::tables::{RuneIdByNameKV, RuneInfoByIdKV};
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
@@ -35,9 +34,14 @@ pub struct RuneTerms {
 
 pub async fn handler(
     State(state): State<AppState>,
+    Query(params): Query<QueryParams>,
     Path(rune): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // cleaner
+    let storage = if params.mempool.unwrap_or(false) {
+        state.start_reader_mempool().await?
+    } else {
+        state.start_reader_confirmed().await?
+    };
 
     let rune_id = match RuneIdentifier::parse(rune)? {
         RuneIdentifier::Id(x) => x,

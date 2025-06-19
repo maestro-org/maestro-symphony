@@ -1,9 +1,12 @@
 use crate::error::Error;
+use crate::serve::error::ServeError;
+use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::storage::encdec::prefix_key_range;
-use crate::storage::kv_store::StorageHandler;
+use crate::storage::kv_store::{Reader, StorageHandler};
 use crate::storage::table::Table;
 use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::core::hash_by_height::HashByHeightKV;
+use crate::sync::stages::index::indexers::core::timestamps::{PointKind, TimestampsKV};
 use axum::body::Body;
 use axum::extract::Query;
 use axum::http::Request;
@@ -37,7 +40,48 @@ pub struct ServerConfig {
     pub address: Option<String>,
 }
 
-pub type AppState = Arc<RwLock<StorageHandler>>;
+#[derive(Clone)]
+pub struct AppState(Arc<RwLock<StorageHandler>>);
+
+impl AppState {
+    pub async fn start_reader_confirmed(&self) -> Result<Reader, ServeError> {
+        let storage = self.0.read().await;
+
+        let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
+
+        let confirmed_point = latest_reader.get_expected::<TimestampsKV>(&PointKind::Confirmed)?;
+
+        let confirmed_reader = storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
+
+        Ok(confirmed_reader)
+    }
+
+    pub async fn start_reader_mempool(&self) -> Result<Reader, ServeError> {
+        let storage = self.0.read().await;
+
+        let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
+
+        let confirmed_point = latest_reader.get_expected::<TimestampsKV>(&PointKind::Confirmed)?;
+        let mempool_point = latest_reader.get_maybe::<TimestampsKV>(&PointKind::Mempool)?;
+
+        if let Some(mempool_point) = mempool_point {
+            if mempool_point.tip_hash != confirmed_point.tip_hash {
+                let confirmed_reader =
+                    storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
+
+                Ok(confirmed_reader)
+            } else {
+                let mempool_reader = storage.reader(Timestamp::from_u64(mempool_point.timestamp));
+
+                Ok(mempool_reader)
+            }
+        } else {
+            let confirmed_reader = storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
+
+            Ok(confirmed_reader)
+        }
+    }
+}
 
 async fn auto_refresh(
     State(state): State<AppState>,
@@ -46,10 +90,10 @@ async fn auto_refresh(
 ) -> impl IntoResponse {
     // Try to refresh the database if in read-only mode (secondary rocksdb instance
     // need to be manually told to catch up to the primary)
-    let should_refresh = state.read().await.is_read_only();
+    let should_refresh = state.0.read().await.is_read_only();
 
     if should_refresh {
-        let mut storage_handler = state.write().await;
+        let mut storage_handler = state.0.write().await;
 
         if let Err(e) = storage_handler.try_refresh_read_only_data() {
             // Log warning but continue with potentially stale data
@@ -65,7 +109,7 @@ async fn auto_refresh(
 }
 
 pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
-    let app_state = Arc::new(RwLock::new(db));
+    let app_state = AppState(Arc::new(RwLock::new(db)));
 
     let app = Router::new()
         .route("/", get(root))
@@ -108,7 +152,7 @@ pub struct DumpParam {
 
 // Dump all KVs (temporary debugging)
 async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> impl IntoResponse {
-    let storage_handler = state.read().await;
+    let storage_handler = state.0.read().await;
     let cf = storage_handler.cf_handle();
 
     let mut read_opts = ReadOptions::default();
@@ -135,7 +179,7 @@ async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> 
 }
 
 async fn tip(State(state): State<AppState>) -> impl IntoResponse {
-    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // TODO
+    let storage = state.0.read().await.reader(Timestamp::from_u64(u64::MAX)); // TODO
 
     let range = HashByHeightKV::encode_range(None::<&()>, None::<&()>);
 
@@ -150,4 +194,9 @@ async fn tip(State(state): State<AppState>) -> impl IntoResponse {
     };
 
     json.into_response()
+}
+
+#[derive(Deserialize)]
+pub struct QueryParams {
+    mempool: Option<bool>,
 }

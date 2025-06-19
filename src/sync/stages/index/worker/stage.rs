@@ -282,7 +282,11 @@ impl gasket::framework::Worker<Stage> for Worker {
                     stage.rollback_buffer.add_block(*point, original_kvs);
                 }
             }
-            ChainEvent::RollBack(rb_point) => stage.rollback_to_point(rb_point)?,
+            ChainEvent::RollBack(rb_point) => {
+                info!("rolling back to {rb_point:?}...");
+
+                stage.rollback_to_point(rb_point)?
+            }
             ChainEvent::MempoolBlocks(info, mempool_blocks) => {
                 // -- first rollback previous mempool blocks
 
@@ -307,7 +311,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                 }
 
                 info!(
-                    "indexing {} mempool blocks with snapshot ts {}",
+                    "indexing {} mempool blocks (snapshot: {})...",
                     mempool_blocks.len(),
                     info.timestamp
                 );
@@ -327,7 +331,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                 for (i, txs) in mempool_blocks.iter().enumerate() {
                     let pseudo_point = Point {
                         height: stage.last_processed.height + 1 + i as u64,
-                        hash: BlockHash::from_byte_array([0; 32]),
+                        hash: stage.last_processed.hash,
                     };
 
                     // we will use the same indexing context, but we need to update the point
@@ -363,7 +367,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let mempool_rbbuf_point = Point {
                     height: u64::MAX,
-                    hash: BlockHash::from_byte_array([0; 32]),
+                    hash: stage.last_processed.hash,
                 };
 
                 stage

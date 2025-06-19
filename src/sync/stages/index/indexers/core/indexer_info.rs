@@ -17,18 +17,17 @@ define_core_table! {
 
 #[derive(Encode, Decode, Debug)]
 pub struct IndexerInfo {
-    last_point_height: u64,
-    last_point_hash: [u8; 32],
-    mempool_info: u64, // TODO
+    pub last_point_height: u64,
+    pub last_point_hash: [u8; 32],
+    pub mempool: bool,
 }
 
 impl IndexerInfo {
-    // TODO
-    pub fn new() -> Self {
+    pub fn new(height: u64, hash: [u8; 32], mempool: bool) -> Self {
         IndexerInfo {
-            last_point_height: 0,
-            last_point_hash: [0; 32],
-            mempool_info: 0,
+            last_point_height: height,
+            last_point_hash: hash,
+            mempool,
         }
     }
 }

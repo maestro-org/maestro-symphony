@@ -8,6 +8,9 @@ pub mod stages;
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub node_address: String,
+    pub node_rpc_address: String,
+    pub node_rpc_user: String,
+    pub node_rpc_pass: String,
     pub network: Network,
 
     pub block_page_size: Option<usize>,

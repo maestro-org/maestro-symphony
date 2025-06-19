@@ -1,5 +1,6 @@
 use std::time::Duration;
 
+use bitcoincore_rpc::Auth;
 use gasket::messaging::{RecvPort, SendPort};
 
 use crate::{error::Error, storage::kv_store::StorageHandler, sync::stages::index};
@@ -30,11 +31,19 @@ fn gasket_policy(stage_timeout: u64) -> gasket::runtime::Policy {
 pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Daemon, Error> {
     // * use db to find cursor / rollback buffer, pass to both stages where relevant
 
-    // create Pull stage for pulling blocks/mempool from node
-    let mut pull = pull::Stage::new(&config.node_address, config.network, db.clone());
-
     // create Index stage for processing blocks and storing data
-    let mut index = index::worker::stage::Stage::new(config.clone(), db)?;
+    let mut index = index::worker::stage::Stage::new(config.clone(), db.clone())?;
+
+    let rpc_auth = Auth::UserPass(config.node_rpc_user, config.node_rpc_pass);
+
+    // create Pull stage for pulling blocks/mempool from node
+    let mut pull = pull::Stage::new(
+        config.node_address,
+        config.node_rpc_address,
+        rpc_auth,
+        config.network,
+        db,
+    );
 
     // // create Health stage for exposing health info
     // let mut health = health::Stage::new();

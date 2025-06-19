@@ -1,4 +1,7 @@
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    u64,
+};
 
 use bitcoin::{BlockHash, hashes::Hash};
 use tracing::{info, warn};
@@ -44,7 +47,7 @@ impl RollbackBuffer {
     pub fn new(size: usize, safe_mode: bool) -> Self {
         Self {
             points: VecDeque::new(),
-            size: size + 1, // for a rollback of size X we need X+1 entries to find the rb point
+            size: size + 2, // +1 to include rb point, +1 to include mempool psuedo point
             safe_mode,
         }
     }

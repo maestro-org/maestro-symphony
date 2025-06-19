@@ -22,9 +22,11 @@ pub type BlockTxs = Vec<TransactionWithId>;
 
 #[derive(Debug, Clone)]
 pub struct MempoolSnapshotInfo {
-    fingerprint: [u8; 32],
+    // fingerprint: [u8; 32],
+    /// timestamp when snapshot created
     timestamp: u64,
-    tip: Point,
+    /// hash of chain tip block that mempool blocks chained on
+    tip: BlockHash,
 }
 
 pub type TipEstimate = Point;

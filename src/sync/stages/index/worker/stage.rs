@@ -306,7 +306,11 @@ impl gasket::framework::Worker<Stage> for Worker {
                     return Ok(());
                 }
 
-                info!("indexing {} mempool blocks with snapshot ts {}", mempool_blocks.len(), info.timestamp);
+                info!(
+                    "indexing {} mempool blocks with snapshot ts {}",
+                    mempool_blocks.len(),
+                    info.timestamp
+                );
 
                 let mut task = stage.db.begin_mempool_indexing_task();
 

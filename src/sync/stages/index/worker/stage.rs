@@ -89,15 +89,26 @@ impl Stage {
             }
         };
 
-        // if let Some(rbbuf_latest) = rollback_buffer.latest() {
-        //     // check rollback buffer tip matches cursor TODO: doesnt work with mempool
-        //     assert_eq!(rbbuf_latest.point, last_processed);
-        // }
+        let indexer_info = storage.get::<IndexerInfoKV>(&())?;
 
-        let processed_mempool = storage
-            .get::<IndexerInfoKV>(&())?
-            .map(|x| x.mempool)
-            .unwrap_or_default();
+        let processed_mempool = indexer_info.as_ref().map(|x| x.mempool).unwrap_or(false);
+
+        if let Some(info) = indexer_info {
+            let info_cursor = Point {
+                height: info.last_point_height,
+                hash: BlockHash::from_byte_array(info.last_point_hash),
+            };
+
+            if let Some(rbbuf_latest) = rollback_buffer.latest() {
+                if info.mempool {
+                    assert_eq!(rbbuf_latest.point.hash, info_cursor.hash);
+                    assert_eq!(rbbuf_latest.point.hash, last_processed.hash);
+                } else {
+                    assert_eq!(rbbuf_latest.point, last_processed);
+                    assert_eq!(rbbuf_latest.point, info_cursor);
+                }
+            }
+        }
 
         info!(
             "starting indexer stage (last processed: {last_processed:?}, rollback buffer len: {})",

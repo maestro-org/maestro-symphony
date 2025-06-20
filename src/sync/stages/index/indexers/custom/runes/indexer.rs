@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+#[cfg(feature = "tx-rune-log")]
+use std::collections::VecDeque;
 
 use crate::error::Error;
 use crate::storage::encdec::Decode;
@@ -17,6 +19,18 @@ use super::tables::{
     RuneIdByNameKV, RuneInfo, RuneInfoByIdKV, RuneMintsByIdKV, RuneTerms, RuneUtxosByScriptKV,
     RuneUtxosByScriptKey, UtxoRunes,
 };
+
+// Only import logging structs when feature enabled
+#[cfg(feature = "tx-rune-log")]
+use super::tables::{RuneOp, RuneOpsByTxKV, RuneOpsByTxKey};
+
+/// Represents a slice of a rune balance coming from a specific input script (only used with logging).
+#[cfg(feature = "tx-rune-log")]
+#[derive(Clone)]
+struct RuneAddressAmount {
+    script: Vec<u8>,
+    amount: u128,
+}
 
 pub struct RunesIndexer {
     start_height: u64,
@@ -56,6 +70,8 @@ impl ProcessTransaction for RunesIndexer {
         let mut unallocated = unallocated(task, tx, ctx.resolver())?;
 
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
+
+        // Initialize (empty) map for input rune chunks. Will be populated later after artifact checks.
 
         if let Some(artifact) = &artifact {
             if let Some(id) = artifact.mint() {
@@ -200,6 +216,13 @@ impl ProcessTransaction for RunesIndexer {
         }
 
         // allocated contains runes for each output (may be empty)
+        // We'll also record rune operations (movements) for logging
+        #[cfg(feature = "tx-rune-log")]
+        let mut input_runes = collect_input_runes(tx, ctx)?;
+
+        #[cfg(feature = "tx-rune-log")]
+        let mut seq_counter: u16 = 0;
+
         for ((output_index, output), output_runes) in tx.output.iter().enumerate().zip(allocated) {
             let txo_ref = TxoRef {
                 tx_hash: tx_id.to_byte_array(),
@@ -208,8 +231,12 @@ impl ProcessTransaction for RunesIndexer {
 
             if !output_runes.is_empty() {
                 // attach runes to utxo metadata so we can resolve them
-                let output_runes: UtxoRunes = output_runes.into_iter().collect::<Vec<_>>();
-                ctx.attach_utxo_metadata(txo_ref, TransactionIndexer::Runes, output_runes);
+                let output_runes_vec: UtxoRunes = output_runes.into_iter().collect();
+                ctx.attach_utxo_metadata(
+                    txo_ref,
+                    TransactionIndexer::Runes,
+                    output_runes_vec.clone(),
+                );
 
                 // TODO: helper
                 // add kv for address utxo containing runes
@@ -221,6 +248,19 @@ impl ProcessTransaction for RunesIndexer {
                 };
 
                 task.set::<RuneUtxosByScriptKV>(key, ())?;
+
+                // Record rune movements for this output
+                #[cfg(feature = "tx-rune-log")]
+                {
+                    log_rune_transfers(
+                        task,
+                        &mut seq_counter,
+                        tx_id.to_byte_array(),
+                        output.script_pubkey.as_bytes(),
+                        &output_runes_vec,
+                        &mut input_runes,
+                    )?;
+                }
             }
         }
 
@@ -504,4 +544,134 @@ fn create_rune_entry(
     task.set::<RuneInfoByIdKV>(id, info)?;
 
     Ok(())
+}
+
+/// Helper that writes `RuneOp` entries for all rune quantities transferred into the
+/// current output. It pairs amounts coming from inputs (if any) with the amount
+/// assigned to this output, creating one `RuneOp` per movement. Any remainder that
+/// cannot be matched to an input is treated as a mint and logged with an empty
+/// `from_script`.
+#[cfg(feature = "tx-rune-log")]
+fn log_rune_transfers(
+    task: &mut IndexingTask,
+    seq_counter: &mut u16,
+    tx_hash: [u8; 32],
+    to_script: &[u8],
+    output_runes: &[(RuneId, u128)],
+    input_runes: &mut HashMap<RuneId, VecDeque<RuneAddressAmount>>,
+) -> Result<(), Error> {
+    for (rune_id, amount_out) in output_runes.iter() {
+        let mut remaining = *amount_out;
+
+        if let Some(sources) = input_runes.get_mut(rune_id) {
+            while remaining > 0 {
+                match sources.front_mut() {
+                    Some(chunk) if chunk.amount > 0 => {
+                        let transfer_amt = remaining.min(chunk.amount);
+                        chunk.amount -= transfer_amt;
+                        remaining -= transfer_amt;
+
+                        write_rune_op(
+                            task,
+                            seq_counter,
+                            tx_hash,
+                            chunk.script.clone(),
+                            to_script,
+                            *rune_id,
+                            transfer_amt,
+                        )?;
+
+                        if chunk.amount == 0 {
+                            sources.pop_front();
+                        }
+                    }
+                    _ => break, // no more usable chunks
+                }
+            }
+        }
+
+        // Any remainder is considered minted.
+        if remaining > 0 {
+            write_rune_op(
+                task,
+                seq_counter,
+                tx_hash,
+                Vec::new(),
+                to_script,
+                *rune_id,
+                remaining,
+            )?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Convenience wrapper for emitting a single `RuneOp` and advancing the sequence counter.
+#[cfg(feature = "tx-rune-log")]
+fn write_rune_op(
+    task: &mut IndexingTask,
+    seq_counter: &mut u16,
+    tx_hash: [u8; 32],
+    from_script: Vec<u8>,
+    to_script: &[u8],
+    rune_id: RuneId,
+    amount: u128,
+) -> Result<(), Error> {
+    let op = RuneOp {
+        rune_id,
+        from_script,
+        to_script: to_script.to_vec(),
+        amount,
+    };
+
+    let key = RuneOpsByTxKey {
+        tx_hash,
+        seq: *seq_counter,
+    };
+
+    *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
+    task.set::<RuneOpsByTxKV>(key, op)?;
+
+    Ok(())
+}
+
+/// Scans all inputs of `tx` and returns a map from `RuneId` to queued chunks of
+/// that rune coming from input scripts. Skips coinbase transactions and ignores
+/// inputs without rune metadata.
+#[cfg(feature = "tx-rune-log")]
+fn collect_input_runes(
+    tx: &Transaction,
+    ctx: &IndexingContext,
+) -> Result<HashMap<RuneId, VecDeque<RuneAddressAmount>>, Error> {
+    let mut map: HashMap<RuneId, VecDeque<RuneAddressAmount>> = HashMap::new();
+
+    // Coinbase tx never provides spendable rune inputs.
+    if tx.is_coinbase() {
+        return Ok(map);
+    }
+
+    for input in &tx.input {
+        // Skip null out-point (shouldn't happen in non-coinbase txs but keep it robust).
+        if input.previous_output.is_null() {
+            continue;
+        }
+
+        let txo_ref = input.previous_output.into();
+        let Some(utxo) = ctx.resolve_input(&txo_ref) else {
+            continue;
+        }; // orphaned input
+        let Some(raw) = utxo.extended.get(&TransactionIndexer::Runes) else {
+            continue;
+        }; // no rune data
+
+        for (id, qty) in UtxoRunes::decode_all(raw)? {
+            map.entry(id).or_default().push_back(RuneAddressAmount {
+                script: utxo.script.clone(),
+                amount: qty,
+            });
+        }
+    }
+
+    Ok(map)
 }

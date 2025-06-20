@@ -21,6 +21,8 @@ pub enum RunesTables {
     RuneIdByName = 1,
     RuneMintsById = 2,
     RuneUtxosByScript = 3,
+    #[cfg(feature = "tx-rune-log")]
+    RuneOpsByTx = 4,
 }
 
 // ---
@@ -61,6 +63,16 @@ define_indexer_table! {
     table: RunesTables::RuneUtxosByScript
 }
 
+// Table to log rune operations inside each transaction (optional)
+#[cfg(feature = "tx-rune-log")]
+define_indexer_table! {
+    name: RuneOpsByTxKV,
+    key_type: RuneOpsByTxKey,
+    value_type: RuneOp,
+    indexer: TransactionIndexer::Runes,
+    table: RunesTables::RuneOpsByTx
+}
+
 // ---
 
 #[derive(Encode, Decode, Debug)]
@@ -88,6 +100,26 @@ pub struct RuneInfo {
     pub etching_tx: [u8; 32],
     pub premine: u128,
     pub spacers: u32,
+}
+
+#[cfg(feature = "tx-rune-log")]
+#[derive(Encode, Decode, Debug, Clone)]
+pub struct RuneOpsByTxKey {
+    /// Transaction hash
+    pub tx_hash: [u8; 32],
+    /// monotonically-increasing sequence number inside the tx to keep keys unique and ordered
+    pub seq: u16,
+}
+
+#[cfg(feature = "tx-rune-log")]
+#[derive(Encode, Decode, Debug, Clone)]
+pub struct RuneOp {
+    pub rune_id: RuneId,
+    /// Script of the address sending the rune. Empty if newly minted (no input owner).
+    pub from_script: ScriptPubKey,
+    /// Script of the address receiving the rune.
+    pub to_script: ScriptPubKey,
+    pub amount: u128,
 }
 
 // ---

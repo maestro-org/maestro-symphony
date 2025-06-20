@@ -34,7 +34,7 @@ pub type DownstreamPort = gasket::messaging::tokio::OutputPort<ChainEvent>;
 #[derive(Stage)]
 #[stage(name = "pull", unit = "Vec<ChainEvent>", worker = "Worker")]
 pub struct Stage {
-    node_address: String,
+    node_p2p_address: String,
     node_rpc_address: String,
     node_rpc_auth: RpcAuth,
     network: Network,
@@ -47,14 +47,14 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(
-        node_address: String,
+        node_p2p_address: String,
         node_rpc_address: String,
         node_rpc_auth: RpcAuth,
         network: Network,
         db: StorageHandler,
     ) -> Self {
         Self {
-            node_address,
+            node_p2p_address,
             node_rpc_address,
             node_rpc_auth,
             network,
@@ -68,14 +68,14 @@ impl Stage {
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
-        info!("connecting to node {}...", stage.node_address);
+        info!("connecting to node {}...", stage.node_p2p_address);
 
-        let peer_session = Peer::connect(&stage.node_address, stage.network.magic())
+        let peer_session = Peer::connect(&stage.node_p2p_address, stage.network.magic())
             .await
             .or_retry()?;
 
         info!(
-            node = stage.node_address,
+            node = stage.node_p2p_address,
             network = ?stage.network,
             "connected to upstream node"
         );

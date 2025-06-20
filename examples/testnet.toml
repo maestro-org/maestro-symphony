@@ -1,10 +1,12 @@
 db_path = "tmp/symphony"
 
+[sync.node]
+p2p_address = "localhost:8333"
+rpc_address = "http://localhost:8332"
+rpc_user = "maestro"
+rpc_pass = "maestro"
+
 [sync]
-node_address = "localhost:8333"
-node_rpc_address = "http://localhost:8332"
-node_rpc_user = "..."
-node_rpc_pass = "..."
 network = "testnet"
 safe_mode = true
 max_rollback = 32

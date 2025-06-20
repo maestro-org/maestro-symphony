@@ -34,12 +34,12 @@ pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Da
     // create Index stage for processing blocks and storing data
     let mut index = index::worker::stage::Stage::new(config.clone(), db.clone())?;
 
-    let rpc_auth = Auth::UserPass(config.node_rpc_user, config.node_rpc_pass);
+    let rpc_auth = Auth::UserPass(config.node.rpc_user, config.node.rpc_pass);
 
     // create Pull stage for pulling blocks/mempool from node
     let mut pull = pull::Stage::new(
-        config.node_address,
-        config.node_rpc_address,
+        config.node.p2p_address,
+        config.node.rpc_address,
         rpc_auth,
         config.network,
         db,

@@ -1,7 +1,7 @@
 db_path = "tmp/symphony"
 
 [sync]
-node_address = "localhost:8333"
+node_p2p_address = "localhost:8333"
 node_rpc_address = "http://localhost:8332"
 node_rpc_user = "..."
 node_rpc_pass = "..."

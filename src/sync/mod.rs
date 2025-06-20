@@ -7,10 +7,7 @@ pub mod stages;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
-    pub node_address: String,
-    pub node_rpc_address: String,
-    pub node_rpc_user: String,
-    pub node_rpc_pass: String,
+    pub node: NodeConfig,
     pub network: Network,
 
     pub block_page_size: Option<usize>,
@@ -25,6 +22,14 @@ pub struct Config {
     // TODO
     // utxo cache
     // mempool
+}
+
+#[derive(Deserialize, Debug, Clone)]
+pub struct NodeConfig {
+    pub p2p_address: String,
+    pub rpc_address: String,
+    pub rpc_user: String,
+    pub rpc_pass: String,
 }
 
 #[derive(Debug, Deserialize, Clone)]

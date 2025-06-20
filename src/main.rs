@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::error::Error;
 use crate::serve::{DEFAULT_SERVE_ADDRESS, ServerConfig};
 use clap::{Parser, Subcommand};
@@ -123,6 +125,9 @@ async fn main() -> Result<(), ()> {
                 let sync_task = sync::pipeline::pipeline(config.sync, sync_db).unwrap();
                 sync_task.block();
                 warn!("sync side ended, telling serve side to stop...");
+
+                tokio::time::sleep(Duration::from_secs(3)).await;
+
                 let _ = tx1.send(());
             });
 
@@ -133,6 +138,9 @@ async fn main() -> Result<(), ()> {
                     "serve task ended with result: {:?}, telling sync side to stop...",
                     res
                 );
+
+                tokio::time::sleep(Duration::from_secs(3)).await;
+
                 let _ = tx2.send(());
             });
 

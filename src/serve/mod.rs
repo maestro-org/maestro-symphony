@@ -44,42 +44,35 @@ pub struct ServerConfig {
 pub struct AppState(Arc<RwLock<StorageHandler>>);
 
 impl AppState {
-    pub async fn start_reader_confirmed(&self) -> Result<Reader, ServeError> {
+    pub async fn start_reader(&self, mempool: bool) -> Result<Reader, ServeError> {
         let storage = self.0.read().await;
 
         let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
 
         let confirmed_point = latest_reader.get_expected::<TimestampsKV>(&PointKind::Confirmed)?;
 
-        let confirmed_reader = storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
+        // use mempool timestamp if mempool true && mempool timestamp found && mempool point
+        // is chained on current confirmed tip
+        let reader = if mempool {
+            let mempool_point = latest_reader.get_maybe::<TimestampsKV>(&PointKind::Mempool)?;
 
-        Ok(confirmed_reader)
-    }
-
-    pub async fn start_reader_mempool(&self) -> Result<Reader, ServeError> {
-        let storage = self.0.read().await;
-
-        let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
-
-        let confirmed_point = latest_reader.get_expected::<TimestampsKV>(&PointKind::Confirmed)?;
-        let mempool_point = latest_reader.get_maybe::<TimestampsKV>(&PointKind::Mempool)?;
-
-        if let Some(mempool_point) = mempool_point {
-            if mempool_point.tip_hash != confirmed_point.tip_hash {
-                let confirmed_reader =
-                    storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
-
-                Ok(confirmed_reader)
+            if let Some(mempool_point) = mempool_point {
+                if mempool_point.tip_hash != confirmed_point.tip_hash {
+                    // mempool blocks not chained on current confirmed tip
+                    storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
+                } else {
+                    storage.reader(Timestamp::from_u64(mempool_point.timestamp))
+                }
             } else {
-                let mempool_reader = storage.reader(Timestamp::from_u64(mempool_point.timestamp));
-
-                Ok(mempool_reader)
+                // no mempool timestamp found
+                storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
             }
         } else {
-            let confirmed_reader = storage.reader(Timestamp::from_u64(confirmed_point.timestamp));
+            // mempool: false
+            storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
+        };
 
-            Ok(confirmed_reader)
-        }
+        Ok(reader)
     }
 }
 
@@ -198,5 +191,6 @@ async fn tip(State(state): State<AppState>) -> impl IntoResponse {
 
 #[derive(Deserialize)]
 pub struct QueryParams {
-    mempool: Option<bool>,
+    #[serde(default)]
+    mempool: bool,
 }

@@ -17,7 +17,6 @@ enum Command {
     Sync(SyncArgs),
     Serve(ServeArgs),
     Run(RunArgs),
-    Compact,
 }
 
 #[derive(Debug, clap::Args)]
@@ -150,16 +149,6 @@ async fn main() -> Result<(), ()> {
             }
 
             info!("symphony stopping...");
-        }
-        Command::Compact => {
-            let db = StorageHandler::open(db_path.into(), false);
-
-            info!("compacting db...");
-
-            db.db
-                .compact_range_cf(db.cf_handle(), None::<Vec<_>>, None::<Vec<_>>);
-
-            info!("finished compacting");
         }
     }
 

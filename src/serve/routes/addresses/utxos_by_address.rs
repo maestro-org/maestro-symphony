@@ -26,11 +26,7 @@ pub async fn handler(
     Query(params): Query<QueryParams>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = if params.mempool.unwrap_or(false) {
-        state.start_reader_mempool().await?
-    } else {
-        state.start_reader_confirmed().await?
-    };
+    let storage = state.start_reader(params.mempool).await?;
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;

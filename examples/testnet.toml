@@ -3,13 +3,14 @@ db_path = "tmp/symphony"
 [sync.node]
 p2p_address = "localhost:8333"
 rpc_address = "http://localhost:8332"
-rpc_user = "maestro"
-rpc_pass = "maestro"
+rpc_user = ""
+rpc_pass = ""
 
 [sync]
 network = "testnet"
 safe_mode = true
 max_rollback = 32
+mempool = true
 
 [sync.indexers]
 transaction_indexers = [

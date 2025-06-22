@@ -42,6 +42,7 @@ pub fn pipeline(config: Config, db: StorageHandler) -> Result<gasket::daemon::Da
         config.node.rpc_address,
         rpc_auth,
         config.network,
+        config.mempool,
         db,
     );
 

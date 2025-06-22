@@ -38,6 +38,7 @@ pub struct Stage {
     node_rpc_address: String,
     node_rpc_auth: RpcAuth,
     network: Network,
+    mempool_enabled: bool,
 
     db: StorageHandler,
 
@@ -51,6 +52,7 @@ impl Stage {
         node_rpc_address: String,
         node_rpc_auth: RpcAuth,
         network: Network,
+        mempool_enabled: bool,
         db: StorageHandler,
     ) -> Self {
         Self {
@@ -58,6 +60,7 @@ impl Stage {
             node_rpc_address,
             node_rpc_auth,
             network,
+            mempool_enabled,
             db,
             downstream: Default::default(),
             health_downstream: Default::default(),
@@ -171,7 +174,7 @@ impl gasket::framework::Worker<Stage> for Worker {
             units.extend(new_actions);
 
             // Try fetch mempool (TODO: temporary mempool logic)
-            if true {
+            if stage.mempool_enabled {
                 let timestamp = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .expect("Time went backwards")

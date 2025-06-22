@@ -9,6 +9,7 @@ pub mod stages;
 pub struct Config {
     pub node: NodeConfig,
     pub network: Network,
+    pub mempool: bool,
 
     pub block_page_size: Option<usize>,
 

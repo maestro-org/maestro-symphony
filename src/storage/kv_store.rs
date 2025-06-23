@@ -279,6 +279,7 @@ impl StorageHandler {
         task: FinalizedTask,
         point: &Point,
         max_rollback: u64,
+        mempool_timestamp: Option<u64>,
     ) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
@@ -303,8 +304,11 @@ impl StorageHandler {
         // write rollback buffer keys (TODO cleaner)
         if let Some(original_kvs) = task.original_kvs {
             for (key, original) in original_kvs {
+                // use u64::MAX as height for mempool rbbuf entry
+                let height = if task.mempool { u64::MAX } else { point.height };
+
                 let rollback_key = RollbackBufferKV::encode_key(&RollbackKey {
-                    height: point.height,
+                    height,
                     hash: point.hash.to_byte_array(),
                     key,
                 });
@@ -338,7 +342,8 @@ impl StorageHandler {
             TimestampEntry {
                 tip_height: point.height,
                 tip_hash: point.hash.to_byte_array(),
-                timestamp: commit_ts.as_u64(),
+                rocks_timestamp: commit_ts.as_u64(),
+                mempool_timestamp,
             }
             .encode(),
         );

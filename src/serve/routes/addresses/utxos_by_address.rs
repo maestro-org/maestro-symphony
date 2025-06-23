@@ -2,6 +2,7 @@ use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
+use crate::serve::types::ServeResponse;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressKV;
@@ -26,7 +27,7 @@ pub async fn handler(
     Query(params): Query<QueryParams>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.start_reader(params.mempool).await?;
+    let (storage, indexer_info) = state.start_reader(params.mempool).await?;
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
@@ -63,5 +64,10 @@ pub async fn handler(
         });
     }
 
-    Ok((StatusCode::OK, Json(utxos)))
+    let out = ServeResponse {
+        data: utxos,
+        indexer_info,
+    };
+
+    Ok((StatusCode::OK, Json(out)))
 }

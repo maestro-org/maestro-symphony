@@ -24,5 +24,12 @@ pub enum PointKind {
 pub struct TimestampEntry {
     pub tip_height: u64,
     pub tip_hash: [u8; 32],
-    pub timestamp: u64,
+    pub rocks_timestamp: u64,
+    pub mempool_timestamp: Option<u64>,
+}
+
+#[derive(Encode, Decode, Debug)]
+pub struct MempoolSnapshotInfo {
+    pub blocks: u16,
+    pub snapshot_timestamp: u64,
 }

@@ -283,7 +283,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 stage
                     .db
-                    .apply_indexing_task(task, point, stage.max_rollbacks)
+                    .apply_indexing_task(task, point, stage.max_rollbacks, None)
                     .or_restart()?;
 
                 stage.last_processed = *point;
@@ -331,6 +331,8 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let mempool_txs = mempool_blocks.iter().cloned().flatten().collect();
 
+                let mut mempool_tip_height = stage.last_processed.height;
+
                 let mut ctx = IndexingContext::new(
                     &mut task,
                     &mempool_txs,
@@ -340,8 +342,10 @@ impl gasket::framework::Worker<Stage> for Worker {
                 .or_restart()?;
 
                 for (i, txs) in mempool_blocks.iter().enumerate() {
+                    mempool_tip_height = stage.last_processed.height + 1 + i as u64;
+
                     let pseudo_point = Point {
-                        height: stage.last_processed.height + 1 + i as u64,
+                        height: mempool_tip_height,
                         hash: stage.last_processed.hash,
                     };
 
@@ -376,20 +380,30 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let original_kvs = task.original_kvs.clone();
 
-                let mempool_rbbuf_point = Point {
-                    height: u64::MAX,
+                let pseudo_point = Point {
+                    height: mempool_tip_height,
                     hash: stage.last_processed.hash,
                 };
 
                 stage
                     .db
-                    .apply_indexing_task(task, &mempool_rbbuf_point, stage.max_rollbacks)
+                    .apply_indexing_task(
+                        task,
+                        &pseudo_point,
+                        stage.max_rollbacks,
+                        Some(info.timestamp),
+                    )
                     .or_restart()?;
 
                 stage.processed_mempool = true;
 
                 // TODO, move into stage.apply_task or something?
                 if let Some(original_kvs) = original_kvs {
+                    let mempool_rbbuf_point = Point {
+                        height: u64::MAX,
+                        hash: stage.last_processed.hash,
+                    };
+
                     stage
                         .rollback_buffer
                         .add_block(mempool_rbbuf_point, original_kvs);

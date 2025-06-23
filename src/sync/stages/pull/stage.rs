@@ -5,7 +5,10 @@ use bitcoincore_rpc::{
     json::{GetBlockTemplateModes, GetBlockTemplateRules},
 };
 use gasket::framework::*;
-use tokio::time::{Instant, timeout};
+use tokio::{
+    sync::{mpsc, oneshot::Receiver},
+    time::{Instant, timeout},
+};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -42,6 +45,9 @@ pub struct Stage {
 
     db: StorageHandler,
 
+    should_shutdown: Option<Receiver<()>>,
+    has_shutdown: Option<mpsc::Sender<()>>,
+
     pub downstream: DownstreamPort,
     pub health_downstream: DownstreamPort,
 }
@@ -54,7 +60,13 @@ impl Stage {
         network: Network,
         mempool_enabled: bool,
         db: StorageHandler,
+        shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
     ) -> Self {
+        let (should_shutdown, has_shutdown) = match shutdown_signals {
+            Some((x, y)) => (Some(x), Some(y)),
+            None => (None, None),
+        };
+
         Self {
             node_p2p_address,
             node_rpc_address,
@@ -62,6 +74,8 @@ impl Stage {
             network,
             mempool_enabled,
             db,
+            should_shutdown,
+            has_shutdown,
             downstream: Default::default(),
             health_downstream: Default::default(),
         }
@@ -125,6 +139,7 @@ impl gasket::framework::Worker<Stage> for Worker {
             init: false,
             stats: PullStats::new(),
             tip_reached: false,
+            has_shutdown: stage.has_shutdown.clone(),
 
             tip,
         })
@@ -134,6 +149,16 @@ impl gasket::framework::Worker<Stage> for Worker {
         &mut self,
         stage: &mut Stage,
     ) -> Result<WorkSchedule<Vec<ChainEvent>>, WorkerError> {
+        if stage
+            .should_shutdown
+            .as_mut()
+            .map(|x| x.try_recv().is_ok())
+            .unwrap_or_default()
+        {
+            info!("sync received shutdown signal");
+            return Ok(WorkSchedule::Done);
+        };
+
         // TODO: timed stats
 
         let mut units = vec![];
@@ -232,6 +257,10 @@ impl gasket::framework::Worker<Stage> for Worker {
     async fn teardown(&mut self) -> Result<(), WorkerError> {
         self.peer_session.handler.abort();
 
+        if let Some(x) = &self.has_shutdown {
+            x.send(()).await.or_panic()?
+        };
+
         Ok(())
     }
 }
@@ -244,6 +273,7 @@ pub struct Worker {
     stats: PullStats,
     tip: Point,
     tip_reached: bool,
+    has_shutdown: Option<mpsc::Sender<()>>,
 }
 
 impl Worker {

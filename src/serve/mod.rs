@@ -129,7 +129,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
     Server::bind(addr)
         .serve(app.into_make_service())
         .await
-        .unwrap();
+        .map_err(|e| Error::Config(e.to_string()))?;
 
     Ok(())
 }

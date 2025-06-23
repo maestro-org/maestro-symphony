@@ -1,7 +1,14 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
+use bitcoincore_rpc::{
+    Auth as RpcAuth, Client as RpcClient, RpcApi,
+    json::{GetBlockTemplateModes, GetBlockTemplateRules},
+};
 use gasket::framework::*;
-use tokio::time::Instant;
+use tokio::{
+    sync::{mpsc, oneshot::Receiver},
+    time::{Instant, timeout},
+};
 use tracing::{error, info, warn};
 
 use crate::{
@@ -10,7 +17,7 @@ use crate::{
     sync::{
         Network,
         stages::{
-            ChainEvent, Point, TransactionWithId,
+            ChainEvent, MempoolSnapshotInfo, Point, TransactionWithId,
             index::indexers::core::hash_by_height::HashByHeightKV,
         },
     },
@@ -30,21 +37,45 @@ pub type DownstreamPort = gasket::messaging::tokio::OutputPort<ChainEvent>;
 #[derive(Stage)]
 #[stage(name = "pull", unit = "Vec<ChainEvent>", worker = "Worker")]
 pub struct Stage {
-    node_address: String,
+    node_p2p_address: String,
+    node_rpc_address: String,
+    node_rpc_auth: RpcAuth,
     network: Network,
+    mempool_enabled: bool,
 
     db: StorageHandler,
+
+    should_shutdown: Option<Receiver<()>>,
+    has_shutdown: Option<mpsc::Sender<()>>,
 
     pub downstream: DownstreamPort,
     pub health_downstream: DownstreamPort,
 }
 
 impl Stage {
-    pub fn new(node_address: &String, network: Network, db: StorageHandler) -> Self {
+    pub fn new(
+        node_p2p_address: String,
+        node_rpc_address: String,
+        node_rpc_auth: RpcAuth,
+        network: Network,
+        mempool_enabled: bool,
+        db: StorageHandler,
+        shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
+    ) -> Self {
+        let (should_shutdown, has_shutdown) = match shutdown_signals {
+            Some((x, y)) => (Some(x), Some(y)),
+            None => (None, None),
+        };
+
         Self {
-            node_address: node_address.clone(),
+            node_p2p_address,
+            node_rpc_address,
+            node_rpc_auth,
             network,
+            mempool_enabled,
             db,
+            should_shutdown,
+            has_shutdown,
             downstream: Default::default(),
             health_downstream: Default::default(),
         }
@@ -54,14 +85,14 @@ impl Stage {
 #[async_trait::async_trait(?Send)]
 impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
-        info!("connecting to node {}...", stage.node_address);
+        info!("connecting to node {}...", stage.node_p2p_address);
 
-        let mut peer_session = Peer::connect(&stage.node_address, stage.network.magic())
+        let peer_session = Peer::connect(&stage.node_p2p_address, stage.network.magic())
             .await
             .or_retry()?;
 
         info!(
-            node = stage.node_address,
+            node = stage.node_p2p_address,
             network = ?stage.network,
             "connected to upstream node"
         );
@@ -70,22 +101,47 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         let reader = stage.db.reader(Timestamp::from_u64(u64::MAX)); // TODO ts
 
+        // TODO move into stage? so that we dont send duplicate chain actions
         let intersect_options =
             HashByHeightKV::intersect_options(&reader, stage.network.genesis_block().block_hash())
                 .or_panic()?;
 
-        let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
-            .await
-            .or_panic()?;
+        // let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
+        //     .await
+        //     .or_panic()?;
 
-        info!("got tip estimate {tip_estimate:?}");
+        // info!("got tip estimate {tip_estimate:?}");
+
+        let peer_rpc =
+            RpcClient::new(&stage.node_rpc_address, stage.node_rpc_auth.clone()).or_panic()?;
+
+        let tip = peer_rpc
+            .get_chain_tips()
+            .or_restart()?
+            .into_iter()
+            .max_by_key(|x| x.height)
+            .ok_or_else(|| {
+                error!("No chaintip found");
+                WorkerError::Restart
+            })?;
+
+        let tip = Point {
+            height: tip.height,
+            hash: tip.hash,
+        };
+
+        info!("bootstrapped pull stage (tip: {tip:?})");
 
         Ok(Worker {
             peer_session,
+            peer_rpc,
             cursor: intersect_options,
             init: false,
             stats: PullStats::new(),
-            tip: tip_estimate,
+            tip_reached: false,
+            has_shutdown: stage.has_shutdown.clone(),
+
+            tip,
         })
     }
 
@@ -93,6 +149,16 @@ impl gasket::framework::Worker<Stage> for Worker {
         &mut self,
         stage: &mut Stage,
     ) -> Result<WorkSchedule<Vec<ChainEvent>>, WorkerError> {
+        if stage
+            .should_shutdown
+            .as_mut()
+            .map(|x| x.try_recv().is_ok())
+            .unwrap_or_default()
+        {
+            info!("sync received shutdown signal");
+            return Ok(WorkSchedule::Done);
+        };
+
         // TODO: timed stats
 
         let mut units = vec![];
@@ -108,6 +174,132 @@ impl gasket::framework::Worker<Stage> for Worker {
             }
         }
 
+        // if we have not reached the tip
+        if !self.tip_reached {
+            let new_actions = self.fetch_chain_actions(stage).await?;
+
+            if new_actions.is_empty() {
+                // peer returned no headers, so we must be at tip
+                // await new block or mempool refresh
+                self.tip_reached = true;
+            }
+
+            units.extend(new_actions);
+        }
+
+        if self.tip_reached {
+            // Wait for a new block notification with a 5-second timeout TODO config
+            let _ = timeout(
+                Duration::from_secs(5),
+                self.peer_session.new_block_notification.notified(),
+            )
+            .await;
+
+            let new_actions = self.fetch_chain_actions(stage).await?;
+            units.extend(new_actions);
+
+            // Try fetch mempool (TODO: temporary mempool logic)
+            if stage.mempool_enabled {
+                let timestamp = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .expect("Time went backwards")
+                    .as_secs();
+
+                let block_template = self
+                    .peer_rpc
+                    .get_block_template(
+                        GetBlockTemplateModes::Template,
+                        &[
+                            GetBlockTemplateRules::SegWit,
+                            GetBlockTemplateRules::Taproot,
+                        ],
+                        &[],
+                    )
+                    .or_restart()?;
+
+                let prev_bh = block_template.previous_block_hash;
+
+                let block_txs = block_template
+                    .transactions
+                    .into_iter()
+                    .map(|x| TransactionWithId {
+                        tx_id: x.txid,
+                        tx: x.transaction().unwrap(),
+                    })
+                    .collect::<Vec<_>>();
+
+                units.push(ChainEvent::MempoolBlocks(
+                    MempoolSnapshotInfo {
+                        timestamp,
+                        tip: prev_bh,
+                    },
+                    vec![block_txs],
+                ));
+            }
+        }
+
+        Ok(WorkSchedule::Unit(units))
+    }
+
+    async fn execute(
+        &mut self,
+        unit: &Vec<ChainEvent>,
+        stage: &mut Stage,
+    ) -> Result<(), WorkerError> {
+        for u in unit {
+            self.process_action(stage, u).await.or_panic()?;
+            self.stats.unit_processed();
+        }
+
+        Ok(())
+    }
+
+    async fn teardown(&mut self) -> Result<(), WorkerError> {
+        self.peer_session.handler.abort();
+
+        if let Some(x) = &self.has_shutdown {
+            x.send(()).await.or_panic()?
+        };
+
+        Ok(())
+    }
+}
+
+pub struct Worker {
+    peer_session: Peer,
+    peer_rpc: RpcClient,
+    cursor: Vec<Point>,
+    init: bool,
+    stats: PullStats,
+    tip: Point,
+    tip_reached: bool,
+    has_shutdown: Option<mpsc::Sender<()>>,
+}
+
+impl Worker {
+    async fn send(&mut self, stage: &mut Stage, event: ChainEvent) -> Result<(), WorkerError> {
+        stage
+            .downstream
+            .send(event.clone().into())
+            .await
+            .or_panic()?;
+
+        // TODO
+        // stage
+        //     .health_downstream
+        //     .send(event.into())
+        //     .await
+        //     .or_panic()?;
+
+        Ok(())
+    }
+
+    async fn fetch_chain_actions(
+        &mut self,
+        stage: &mut Stage,
+    ) -> Result<Vec<ChainEvent>, WorkerError> {
+        let mut units = vec![];
+
         // fetch new headers using cursor
         let mut headers = self
             .peer_session
@@ -115,19 +307,12 @@ impl gasket::framework::Worker<Stage> for Worker {
             .await
             .or_restart()?;
 
+        let Some(first_header) = headers.first().cloned() else {
+            return Ok(vec![]);
+        };
+
         // fetch configurable amount of blocks at once
         headers.truncate(10); // TODO: config
-
-        // if no new headers, wait for new block or do mempool refreshing ..
-        while headers.is_empty() {
-            self.peer_session.new_block_notification.notified().await;
-
-            headers = self
-                .peer_session
-                .get_new_headers(self.cursor.iter().map(|x| x.hash).collect())
-                .await
-                .or_restart()?;
-        }
 
         // fetch blocks for headers
         let blocks = self
@@ -151,38 +336,32 @@ impl gasket::framework::Worker<Stage> for Worker {
 
         let cursor_tip = self.cursor.first().map(|x| x.height);
 
-        let headers = if let Some((first, _)) = headers.first() {
-            // find the height of the first returned header using the cursor
-            let intersect_height = cursor_map.get(&first.prev_blockhash).ok_or_else(|| {
+        // find the height of the first returned header using the cursor
+        let intersect_height = cursor_map
+            .get(&first_header.prev_blockhash)
+            .ok_or_else(|| {
                 warn!(
                     "could not find intersect height for {:?}",
-                    first.prev_blockhash
+                    first_header.prev_blockhash
                 );
                 WorkerError::Restart
             })?;
 
-            // send a rollback to the intersect if it was behind our tip
-            if let Some(cursor_tip_height) = cursor_tip {
-                if *intersect_height != cursor_tip_height {
-                    units.push(ChainEvent::RollBack(Point {
-                        height: *intersect_height,
-                        hash: first.prev_blockhash,
-                    }))
-                }
+        // send a rollback to the intersect if it was behind our tip
+        if let Some(cursor_tip_height) = cursor_tip {
+            if *intersect_height != cursor_tip_height {
+                units.push(ChainEvent::RollBack(Point {
+                    height: *intersect_height,
+                    hash: first_header.prev_blockhash,
+                }))
             }
+        }
 
-            // assign heights to the received headers using the intersect height
-            headers
-                .into_iter()
-                .zip((*intersect_height + 1)..)
-                .collect::<Vec<_>>()
-        } else {
-            warn!(
-                "no headers returned from peer with cursors: {:?}",
-                self.cursor
-            );
-            return Ok(WorkSchedule::Idle);
-        };
+        // assign heights to the received headers using the intersect height
+        let headers = headers
+            .into_iter()
+            .zip((*intersect_height + 1)..)
+            .collect::<Vec<_>>();
 
         // try use just processed headers as intersects
         self.cursor = headers
@@ -253,53 +432,7 @@ impl gasket::framework::Worker<Stage> for Worker {
             units.push(ChainEvent::RollForward(point, header, block_txs, self.tip));
         }
 
-        Ok(WorkSchedule::Unit(units))
-    }
-
-    async fn execute(
-        &mut self,
-        unit: &Vec<ChainEvent>,
-        stage: &mut Stage,
-    ) -> Result<(), WorkerError> {
-        for u in unit {
-            self.process_action(stage, u).await.or_panic()?;
-            self.stats.unit_processed();
-        }
-
-        Ok(())
-    }
-
-    async fn teardown(&mut self) -> Result<(), WorkerError> {
-        self.peer_session.handler.abort();
-
-        Ok(())
-    }
-}
-
-pub struct Worker {
-    peer_session: Peer,
-    cursor: Vec<Point>,
-    init: bool,
-    stats: PullStats,
-    tip: Point,
-}
-
-impl Worker {
-    async fn send(&mut self, stage: &mut Stage, event: ChainEvent) -> Result<(), WorkerError> {
-        stage
-            .downstream
-            .send(event.clone().into())
-            .await
-            .or_panic()?;
-
-        // TODO
-        // stage
-        //     .health_downstream
-        //     .send(event.into())
-        //     .await
-        //     .or_panic()?;
-
-        Ok(())
+        Ok(units)
     }
 
     async fn process_action(
@@ -363,7 +496,7 @@ impl PullStats {
 
 // Download all headers after the provided point until we find the tip or encounter a rollback
 // TODO: improve so we can reuse these fetched headers instead of fetching again
-pub async fn estimate_tip(peer: &mut Peer, after: Point) -> Result<Point, Error> {
+async fn estimate_tip(peer: &mut Peer, after: Point) -> Result<Point, Error> {
     info!("estimating tip (starting from {after:?}");
     let mut greatest = after;
 

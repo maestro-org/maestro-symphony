@@ -1,11 +1,11 @@
+use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::storage::table::Table;
-use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressKV;
-use axum::extract::Path;
+use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
@@ -23,9 +23,10 @@ pub struct AddressUtxo {
 
 pub async fn handler(
     State(state): State<AppState>,
+    Query(params): Query<QueryParams>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX)); // cleaner
+    let storage = state.start_reader(params.mempool).await?;
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;

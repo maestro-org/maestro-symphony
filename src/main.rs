@@ -92,7 +92,9 @@ async fn main() -> Result<(), ()> {
                 config.sync
             );
 
-            sync::pipeline::pipeline(config.sync, db).unwrap().block()
+            sync::pipeline::pipeline(config.sync, db, None)
+                .unwrap()
+                .block()
         }
         Command::Serve(_) => {
             let db = StorageHandler::open(db_path.into(), true);
@@ -114,39 +116,47 @@ async fn main() -> Result<(), ()> {
 
             let sync_db = db.clone();
 
-            // Create a channel for task completion notification
-            let (tx1, rx1) = tokio::sync::oneshot::channel();
-            let (tx2, rx2) = tokio::sync::oneshot::channel();
+            // Create channels to stop and start the sync and serve tasks
+            let (sync_ended_tx, mut sync_ended_rx) = tokio::sync::mpsc::channel(1);
+            let (serve_ended_tx, serve_ended_rx) = tokio::sync::oneshot::channel();
+            let (start_sync_tx, start_sync_rx) = tokio::sync::oneshot::channel();
+            let (start_serve_tx, start_serve_rx) = tokio::sync::oneshot::channel();
 
             // Spawn the sync task
-            let sync_handle = tokio::spawn(async move {
-                let sync_task = sync::pipeline::pipeline(config.sync, sync_db).unwrap();
-                sync_task.block();
-                warn!("sync side ended, telling serve side to stop...");
-                let _ = tx1.send(());
+            let _sync_handle = tokio::spawn(async move {
+                let _ = start_sync_rx.await;
+
+                info!("starting sync side...");
+
+                let _ = sync::pipeline::pipeline(
+                    config.sync,
+                    sync_db,
+                    Some((serve_ended_rx, sync_ended_tx)),
+                )
+                .unwrap();
             });
 
             // Spawn the serve task
             let serve_handle = tokio::spawn(async move {
+                let _ = start_serve_rx.await;
+
+                info!("starting serve side...");
+
                 let res = serve::run(db, &serve_address).await;
                 warn!(
                     "serve task ended with result: {:?}, telling sync side to stop...",
                     res
                 );
-                let _ = tx2.send(());
+
+                let _ = serve_ended_tx.send(());
             });
 
-            // Wait for either task to end
-            tokio::select! {
-                _ = rx1 => {
-                    info!("stopping serve side...");
-                    serve_handle.abort();
-                },
-                _ = rx2 => {
-                    info!("stopping sync side...");
-                    sync_handle.abort();
-                }
-            }
+            let _ = start_sync_tx.send(());
+            let _ = start_serve_tx.send(());
+
+            let _ = sync_ended_rx.recv().await;
+
+            serve_handle.abort();
 
             info!("symphony stopping...");
         }

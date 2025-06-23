@@ -127,4 +127,8 @@ impl IndexingContext {
 
         Ok(())
     }
+
+    pub(super) fn update_point(&mut self, point: Point) {
+        self.point = point
+    }
 }

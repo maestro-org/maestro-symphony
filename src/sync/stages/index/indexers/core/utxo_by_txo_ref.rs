@@ -50,9 +50,20 @@ impl UtxoByTxoRefKV {
             .map(|x| x.tx_id.to_byte_array())
             .collect::<HashSet<_>>();
 
+        // skip first tx if it is coinbase (mempool block txs dont have one)
+        let skip = if txs
+            .first()
+            .map(|tx| tx.tx.is_coinbase())
+            .unwrap_or_default()
+        {
+            1
+        } else {
+            0
+        };
+
         let input_refs = txs
             .iter()
-            .skip(1) // skip coinbase
+            .skip(skip) // skip coinbase if applicable
             .flat_map(|x| x.tx.input.iter())
             .map(|x| TxoRef {
                 tx_hash: x.previous_output.txid.to_byte_array(),

@@ -10,7 +10,10 @@ use crate::{
     error::Error,
     sync::stages::{
         Point,
-        index::indexers::core::rollback_buffer::{RollbackBufferKV, RollbackKey},
+        index::indexers::core::{
+            rollback_buffer::{RollbackBufferKV, RollbackKey},
+            timestamps::{PointKind, TimestampEntry, TimestampsKV},
+        },
     },
 };
 
@@ -35,6 +38,8 @@ pub struct IndexingTask<'a> {
     write_buffer: HashMap<RawKey, StorageAction>,
     // when we are maintaining a rollback buffer, we need to store original KVs for any modified keys
     original_kvs: Option<HashMap<RawKey, PreviousValue>>,
+    // is this indexing task for mempool blocks
+    mempool: bool,
 }
 
 impl<'a> IndexingTask<'a> {
@@ -178,6 +183,7 @@ impl<'a> IndexingTask<'a> {
         FinalizedTask {
             write_buffer: self.write_buffer,
             original_kvs: self.original_kvs,
+            mempool: self.mempool,
         }
     }
 }
@@ -185,6 +191,7 @@ impl<'a> IndexingTask<'a> {
 pub struct FinalizedTask {
     pub write_buffer: HashMap<RawKey, StorageAction>,
     pub original_kvs: Option<HashMap<RawKey, PreviousValue>>,
+    pub mempool: bool,
 }
 
 #[derive(Clone)]
@@ -246,6 +253,22 @@ impl StorageHandler {
             cf_handle: cf,
             write_buffer: HashMap::new(),
             original_kvs: mutable.then_some(HashMap::new()),
+            mempool: false,
+        }
+    }
+
+    pub fn begin_mempool_indexing_task(&mut self) -> IndexingTask {
+        let cf = self.cf_handle();
+
+        IndexingTask {
+            db: self.db.clone(),
+            read_ts: self
+                .previous_timestamp
+                .unwrap_or(Timestamp::from_u64(u64::MAX)), // TODO
+            cf_handle: cf,
+            write_buffer: HashMap::new(),
+            original_kvs: Some(HashMap::new()),
+            mempool: true,
         }
     }
 
@@ -289,21 +312,46 @@ impl StorageHandler {
                 wb.put_cf_with_ts(cf, rollback_key, ts, original.encode())
             }
 
-            // remove old entries from persistent rollback buffer (maintain at most MAX_ROLLBACK
-            // entries)
-            let remove_before = point.height.saturating_sub(max_rollback);
-            let rbbuf_gc_range = RollbackBufferKV::encode_range(None::<&()>, Some(&remove_before));
+            if !task.mempool {
+                // remove old entries from persistent rollback buffer (maintain at most MAX_ROLLBACK
+                // entries)
+                let remove_before = point.height.saturating_sub(max_rollback);
+                let rbbuf_gc_range =
+                    RollbackBufferKV::encode_range(None::<&()>, Some(&remove_before));
 
-            wb.delete_range_cf(cf, rbbuf_gc_range.start, rbbuf_gc_range.end);
+                wb.delete_range_cf(cf, rbbuf_gc_range.start, rbbuf_gc_range.end);
+            }
         };
+
+        let timestamps_key = if task.mempool {
+            PointKind::Mempool
+        } else {
+            PointKind::Confirmed
+        };
+
+        // TODO: better to only update confirmed ts if point height is greater. if we do that, then
+        // consider the timestamp low setting below will need to change
+        wb.put_cf_with_ts(
+            cf,
+            TimestampsKV::encode_key(&timestamps_key),
+            ts,
+            TimestampEntry {
+                tip_height: point.height,
+                tip_hash: point.hash.to_byte_array(),
+                timestamp: commit_ts.as_u64(),
+            }
+            .encode(),
+        );
 
         // TODO: hide within write batch wrapper? or use tx?
         wb.update_timestamps_with_size(ts, U64Timestamp::SIZE)?;
 
         self.db.write(wb)?;
 
-        // allow data for previous blocks to be GC'd
-        self.db.increase_full_history_ts_low(cf, ts)?;
+        if !task.mempool {
+            // allow data for blocks before this confirmed block to be GC'd
+            self.db.increase_full_history_ts_low(cf, ts)?;
+        }
 
         self.previous_timestamp = Some(commit_ts);
 

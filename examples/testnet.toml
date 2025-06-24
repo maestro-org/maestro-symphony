@@ -9,7 +9,7 @@ max_rollback = 1
 [sync.indexers]
 transaction_indexers = [
     { type = "UtxosByAddress" },
-    { type = "Runes", start_height = 30562 }
+    { type = "Runes", start_height = 30562, index_activity = true }
 ]
 
 [server]

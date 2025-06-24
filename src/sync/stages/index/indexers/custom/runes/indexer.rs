@@ -10,6 +10,7 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
+use indexmap::IndexSet;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -19,7 +20,7 @@ use super::tables::{
 };
 
 // Import structures needed for optional rune operation logging
-use super::tables::{RuneBalanceChange, RuneOpsByTxKV, RuneOpsByTxKey};
+use super::tables::{RuneActivityByTxKV, RuneActivityByTxKey, RuneBalanceChange};
 
 /// Internal key used for aggregating rune totals per script during a transaction.
 #[derive(Hash, Eq, PartialEq, Clone, Debug)]
@@ -30,18 +31,18 @@ struct AddressRuneKey {
 
 pub struct RunesIndexer {
     start_height: u64,
-    /// When true, rune balance deltas are written to `RuneOpsByTxKV` during indexing.
-    log_rune_ops: bool,
+    /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
+    index_activity: bool,
 }
 
 impl RunesIndexer {
     pub fn new(config: RunesIndexerConfig) -> Result<Self, Error> {
         let start_height = config.start_height;
-        let log_rune_ops = config.log_rune_ops;
+        let index_activity = config.index_activity;
 
         Ok(Self {
             start_height,
-            log_rune_ops,
+            index_activity,
         })
     }
 }
@@ -50,9 +51,9 @@ impl RunesIndexer {
 pub struct RunesIndexerConfig {
     #[serde(default)]
     pub start_height: u64,
-    /// Enable writing rune movement logs into the RuneOpsByTx table.
+    /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
     #[serde(default)]
-    pub log_rune_ops: bool,
+    pub index_activity: bool,
 }
 
 impl ProcessTransaction for RunesIndexer {
@@ -229,7 +230,7 @@ impl ProcessTransaction for RunesIndexer {
         // Will accumulate runes received per script while iterating outputs.
         let mut received_totals: HashMap<AddressRuneKey, u128> = HashMap::new();
 
-        if self.log_rune_ops {
+        if self.index_activity {
             collect_input_totals(tx, ctx, &mut spent_totals)?;
         }
 
@@ -260,7 +261,7 @@ impl ProcessTransaction for RunesIndexer {
                 task.set::<RuneUtxosByScriptKV>(key, ())?;
 
                 // Record rune movements for this output
-                if self.log_rune_ops {
+                if self.index_activity {
                     // Update received totals
                     for (rune_id, amount) in &output_runes_vec {
                         let key = AddressRuneKey {
@@ -274,7 +275,7 @@ impl ProcessTransaction for RunesIndexer {
         }
 
         // After processing all outputs, emit balance change records if logging is enabled.
-        if self.log_rune_ops {
+        if self.index_activity {
             log_rune_balance_changes(
                 task,
                 &mut seq_counter,
@@ -609,9 +610,7 @@ fn log_rune_balance_changes(
     spent_totals: HashMap<AddressRuneKey, u128>,
     received_totals: HashMap<AddressRuneKey, u128>,
 ) -> Result<(), Error> {
-    use std::collections::HashSet;
-
-    let mut keys: HashSet<AddressRuneKey> = HashSet::new();
+    let mut keys: IndexSet<AddressRuneKey> = IndexSet::new();
     keys.extend(spent_totals.keys().cloned());
     keys.extend(received_totals.keys().cloned());
 
@@ -630,13 +629,13 @@ fn log_rune_balance_changes(
             received,
         };
 
-        let key = RuneOpsByTxKey {
+        let key = RuneActivityByTxKey {
             tx_hash,
             seq: *seq_counter,
         };
 
         *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
-        task.set::<RuneOpsByTxKV>(key, change)?;
+        task.set::<RuneActivityByTxKV>(key, change)?;
     }
 
     Ok(())

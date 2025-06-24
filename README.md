@@ -1,6 +1,6 @@
 # Maestro Symphony
 
-_An orchestrated Bitcoin indexing suite: from hash to harmony._
+_from hash to harmony: an orchestrated Bitcoin indexing suite_
 
 ---
 

@@ -1,6 +1,7 @@
 use crate::error::Error;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
+use crate::serve::types::{ChainTip, EstimatedBlock, IndexerInfo};
 use crate::storage::encdec::prefix_key_range;
 use crate::storage::kv_store::{Reader, StorageHandler};
 use crate::storage::table::Table;
@@ -20,6 +21,7 @@ use axum::{
 use axum_server::Server;
 use bitcoin::BlockHash;
 use bitcoin::hashes::Hash;
+use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::{IteratorMode, ReadOptions};
 use serde::Deserialize;
 use serde_json::json;
@@ -31,6 +33,7 @@ use tracing::{info, warn};
 mod error;
 mod reader_wrapper;
 mod routes;
+mod types;
 mod utils;
 
 pub static DEFAULT_SERVE_ADDRESS: &str = "0.0.0.0:8080";
@@ -44,12 +47,20 @@ pub struct ServerConfig {
 pub struct AppState(Arc<RwLock<StorageHandler>>);
 
 impl AppState {
-    pub async fn start_reader(&self, mempool: bool) -> Result<Reader, ServeError> {
+    pub async fn start_reader(&self, mempool: bool) -> Result<(Reader, IndexerInfo), ServeError> {
         let storage = self.0.read().await;
 
         let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
 
         let confirmed_point = latest_reader.get_expected::<TimestampsKV>(&PointKind::Confirmed)?;
+
+        let chain_tip = ChainTip {
+            block_height: confirmed_point.tip_height,
+            block_hash: BlockHash::from_byte_array(confirmed_point.tip_hash).to_string(),
+        };
+
+        let mut mempool_timestamp = None;
+        let mut estimated_blocks = vec![];
 
         // use mempool timestamp if mempool true && mempool timestamp found && mempool point
         // is chained on current confirmed tip
@@ -59,20 +70,41 @@ impl AppState {
             if let Some(mempool_point) = mempool_point {
                 if mempool_point.tip_hash != confirmed_point.tip_hash {
                     // mempool blocks not chained on current confirmed tip
-                    storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
+                    storage.reader(Timestamp::from_u64(confirmed_point.rocks_timestamp))
                 } else {
-                    storage.reader(Timestamp::from_u64(mempool_point.timestamp))
+                    for i in 0..(mempool_point
+                        .tip_height
+                        .saturating_sub(confirmed_point.tip_height))
+                    {
+                        estimated_blocks.push(EstimatedBlock {
+                            block_height: confirmed_point.tip_height + i + 1,
+                        });
+                    }
+
+                    mempool_timestamp = mempool_point.mempool_timestamp.map(|x| {
+                        let datetime: DateTime<Utc> =
+                            Utc.timestamp_opt(x.try_into().unwrap(), 0).unwrap();
+                        datetime.format("%Y-%m-%d %H:%M:%S").to_string()
+                    });
+
+                    storage.reader(Timestamp::from_u64(mempool_point.rocks_timestamp))
                 }
             } else {
                 // no mempool timestamp found
-                storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
+                storage.reader(Timestamp::from_u64(confirmed_point.rocks_timestamp))
             }
         } else {
             // mempool: false
-            storage.reader(Timestamp::from_u64(confirmed_point.timestamp))
+            storage.reader(Timestamp::from_u64(confirmed_point.rocks_timestamp))
         };
 
-        Ok(reader)
+        let indexer_info = IndexerInfo {
+            chain_tip,
+            mempool_timestamp,
+            estimated_blocks,
+        };
+
+        Ok((reader, indexer_info))
     }
 }
 

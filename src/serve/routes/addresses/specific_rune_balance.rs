@@ -2,6 +2,7 @@ use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
+use crate::serve::types::ServeResponse;
 use crate::serve::utils::{RuneIdentifier, decimal};
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
@@ -31,7 +32,7 @@ pub async fn handler(
     Query(params): Query<QueryParams>,
     Path((address, rune)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.start_reader(params.mempool).await?;
+    let (storage, indexer_info) = state.start_reader(params.mempool).await?;
 
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
@@ -83,11 +84,16 @@ pub async fn handler(
     let rune = Rune(rune_info.name);
     let spaced = SpacedRune::new(rune, rune_info.spacers);
 
-    let out = RuneAndQuantity {
+    let balance = RuneAndQuantity {
         id: specified_rune.to_string(),
         name: rune.to_string(),
         spaced_name: spaced.to_string(),
         quantity: decimal(raw_quantity, rune_info.divisibility),
+    };
+
+    let out = ServeResponse {
+        data: balance,
+        indexer_info,
     };
 
     Ok((StatusCode::OK, Json(out)))

@@ -1,5 +1,6 @@
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
+use crate::serve::types::ServeResponse;
 use crate::serve::utils::{RuneIdentifier, decimal};
 use crate::serve::{AppState, QueryParams};
 use crate::sync::stages::index::indexers::custom::runes::tables::{RuneIdByNameKV, RuneInfoByIdKV};
@@ -37,7 +38,7 @@ pub async fn handler(
     Query(params): Query<QueryParams>,
     Path(rune): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
-    let storage = state.start_reader(params.mempool).await?;
+    let (storage, indexer_info) = state.start_reader(params.mempool).await?;
 
     let rune_id = match RuneIdentifier::parse(rune)? {
         RuneIdentifier::Id(x) => x,
@@ -70,5 +71,10 @@ pub async fn handler(
         premine: decimal(rune_info.premine, rune_info.divisibility),
     };
 
-    Ok((StatusCode::OK, Json(info)))
+    let out = ServeResponse {
+        data: info,
+        indexer_info,
+    };
+
+    Ok((StatusCode::OK, Json(out)))
 }

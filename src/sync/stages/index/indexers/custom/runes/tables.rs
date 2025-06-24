@@ -66,7 +66,7 @@ define_indexer_table! {
 define_indexer_table! {
     name: RuneOpsByTxKV,
     key_type: RuneOpsByTxKey,
-    value_type: RuneOp,
+    value_type: RuneBalanceChange,
     indexer: TransactionIndexer::Runes,
     table: RunesTables::RuneOpsByTx
 }
@@ -109,13 +109,14 @@ pub struct RuneOpsByTxKey {
 }
 
 #[derive(Encode, Decode, Debug, Clone)]
-pub struct RuneOp {
+pub struct RuneBalanceChange {
     pub rune_id: RuneId,
-    /// Script of the address sending the rune. Empty if newly minted (no input owner).
-    pub from_script: ScriptPubKey,
-    /// Script of the address receiving the rune.
-    pub to_script: ScriptPubKey,
-    pub amount: u128,
+    /// Script of the address.
+    pub script: ScriptPubKey,
+    /// Total amount of the rune spent by this address in the transaction.
+    pub sent: u128,
+    /// Total amount of the rune received by this address in the transaction (including mints).
+    pub received: u128,
 }
 
 // ---

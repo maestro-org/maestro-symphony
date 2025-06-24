@@ -21,7 +21,6 @@ pub enum RunesTables {
     RuneIdByName = 1,
     RuneMintsById = 2,
     RuneUtxosByScript = 3,
-    #[cfg(feature = "tx-rune-log")]
     RuneOpsByTx = 4,
 }
 
@@ -64,7 +63,6 @@ define_indexer_table! {
 }
 
 // Table to log rune operations inside each transaction (optional)
-#[cfg(feature = "tx-rune-log")]
 define_indexer_table! {
     name: RuneOpsByTxKV,
     key_type: RuneOpsByTxKey,
@@ -102,7 +100,6 @@ pub struct RuneInfo {
     pub spacers: u32,
 }
 
-#[cfg(feature = "tx-rune-log")]
 #[derive(Encode, Decode, Debug, Clone)]
 pub struct RuneOpsByTxKey {
     /// Transaction hash
@@ -111,7 +108,6 @@ pub struct RuneOpsByTxKey {
     pub seq: u16,
 }
 
-#[cfg(feature = "tx-rune-log")]
 #[derive(Encode, Decode, Debug, Clone)]
 pub struct RuneOp {
     pub rune_id: RuneId,

@@ -1,6 +1,4 @@
-use std::collections::HashMap;
-#[cfg(feature = "tx-rune-log")]
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque};
 
 use crate::error::Error;
 use crate::storage::encdec::Decode;
@@ -20,12 +18,10 @@ use super::tables::{
     RuneUtxosByScriptKey, UtxoRunes,
 };
 
-// Only import logging structs when feature enabled
-#[cfg(feature = "tx-rune-log")]
+// Import structures needed for optional rune operation logging
 use super::tables::{RuneOp, RuneOpsByTxKV, RuneOpsByTxKey};
 
 /// Represents a slice of a rune balance coming from a specific input script (only used with logging).
-#[cfg(feature = "tx-rune-log")]
 #[derive(Clone)]
 struct RuneAddressAmount {
     script: Vec<u8>,
@@ -34,13 +30,19 @@ struct RuneAddressAmount {
 
 pub struct RunesIndexer {
     start_height: u64,
+    /// When true, detailed rune transfer operations are written to RuneOpsByTxKV during indexing.
+    log_rune_ops: bool,
 }
 
 impl RunesIndexer {
     pub fn new(config: RunesIndexerConfig) -> Result<Self, Error> {
         let start_height = config.start_height;
+        let log_rune_ops = config.log_rune_ops;
 
-        Ok(Self { start_height })
+        Ok(Self {
+            start_height,
+            log_rune_ops,
+        })
     }
 }
 
@@ -48,6 +50,9 @@ impl RunesIndexer {
 pub struct RunesIndexerConfig {
     #[serde(default)]
     pub start_height: u64,
+    /// Enable writing rune movement logs into the RuneOpsByTx table.
+    #[serde(default)]
+    pub log_rune_ops: bool,
 }
 
 impl ProcessTransaction for RunesIndexer {
@@ -217,10 +222,12 @@ impl ProcessTransaction for RunesIndexer {
 
         // allocated contains runes for each output (may be empty)
         // We'll also record rune operations (movements) for logging
-        #[cfg(feature = "tx-rune-log")]
-        let mut input_runes = collect_input_runes(tx, ctx)?;
+        let mut input_runes_opt = if self.log_rune_ops {
+            Some(collect_input_runes(tx, ctx)?)
+        } else {
+            None
+        };
 
-        #[cfg(feature = "tx-rune-log")]
         let mut seq_counter: u16 = 0;
 
         for ((output_index, output), output_runes) in tx.output.iter().enumerate().zip(allocated) {
@@ -250,16 +257,17 @@ impl ProcessTransaction for RunesIndexer {
                 task.set::<RuneUtxosByScriptKV>(key, ())?;
 
                 // Record rune movements for this output
-                #[cfg(feature = "tx-rune-log")]
-                {
-                    log_rune_transfers(
-                        task,
-                        &mut seq_counter,
-                        tx_id.to_byte_array(),
-                        output.script_pubkey.as_bytes(),
-                        &output_runes_vec,
-                        &mut input_runes,
-                    )?;
+                if self.log_rune_ops {
+                    if let Some(ref mut input_runes) = input_runes_opt {
+                        log_rune_transfers(
+                            task,
+                            &mut seq_counter,
+                            tx_id.to_byte_array(),
+                            output.script_pubkey.as_bytes(),
+                            &output_runes_vec,
+                            input_runes,
+                        )?;
+                    }
                 }
             }
         }
@@ -551,7 +559,6 @@ fn create_rune_entry(
 /// assigned to this output, creating one `RuneOp` per movement. Any remainder that
 /// cannot be matched to an input is treated as a mint and logged with an empty
 /// `from_script`.
-#[cfg(feature = "tx-rune-log")]
 fn log_rune_transfers(
     task: &mut IndexingTask,
     seq_counter: &mut u16,
@@ -608,7 +615,6 @@ fn log_rune_transfers(
 }
 
 /// Convenience wrapper for emitting a single `RuneOp` and advancing the sequence counter.
-#[cfg(feature = "tx-rune-log")]
 fn write_rune_op(
     task: &mut IndexingTask,
     seq_counter: &mut u16,
@@ -639,7 +645,6 @@ fn write_rune_op(
 /// Scans all inputs of `tx` and returns a map from `RuneId` to queued chunks of
 /// that rune coming from input scripts. Skips coinbase transactions and ignores
 /// inputs without rune metadata.
-#[cfg(feature = "tx-rune-log")]
 fn collect_input_runes(
     tx: &Transaction,
     ctx: &IndexingContext,

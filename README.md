@@ -61,14 +61,25 @@ Edit the config file (e.g., `examples/testnet.toml`) to set your node address an
 
 -   **UTXOs by address:**
     -   `GET /addresses/{address}/utxos`
+    - Requires indexers: `UtxosByAddress`
 -   **Rune UTXOs by address:**
     -   `GET /addresses/{address}/runes/utxos`
+    - Requires indexers: `Runes`
 -   **Rune UTXOs by address and rune:**
     -   `GET /addresses/{address}/runes/utxos/{rune}`
+    - Requires indexers: `Runes`
 -   **Rune balances by address:**
     -   `GET /addresses/{address}/runes/balance`
+    - Requires indexers: `Runes`
 -   **Rune balances by address and rune:**
     -   `GET /addresses/{address}/runes/balances/{rune}`
+    - Requires indexers: `Runes`
+
+### Runes
+
+-   **Rune info:**
+    -   `GET /runes/{rune}`
+    - Requires indexers: `Runes`
 
 #### Example: Rune UTXOs by Address
 
@@ -77,22 +88,32 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
 ```
 
 ```json
-[
+{
+  "data": [
     {
-        "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-        "output_index": 1,
-        "height": 30562,
-        "satoshis": "10000",
-        "runes": [
-            {
-                "id": "30562:50",
-                "name": "BESTINSLOTXYZ",
-                "spaced_name": "BESTINSLOT•XYZ",
-                "quantity": "1.00000000"
-            }
-        ]
+      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+      "output_index": 1,
+      "height": 30562,
+      "satoshis": "10000",
+      "runes": [
+        {
+          "id": "30562:50",
+          "name": "BESTINSLOTXYZ",
+          "spaced_name": "BESTINSLOT•XYZ",
+          "quantity": "1.00000000"
+        }
+      ]
     }
-]
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+      "block_height": 87777
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}
 ```
 
 ### Runes
@@ -108,6 +129,7 @@ curl -X GET http://localhost:8080/runes/30562:50 | jq .
 
 ```json
 {
+  "data": {
     "id": "30562:50",
     "name": "BESTINSLOTXYZ",
     "spaced_name": "BESTINSLOT•XYZ",
@@ -116,12 +138,21 @@ curl -X GET http://localhost:8080/runes/30562:50 | jq .
     "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
     "etching_height": 30562,
     "terms": {
-        "amount": "1.00000000",
-        "cap": "34028236692093846346337.46074316",
-        "start_height": null,
-        "end_height": null
+      "amount": "1.00000000",
+      "cap": "34028236692093846346337.46074316",
+      "start_height": null,
+      "end_height": null
     },
     "premine": "1.00000000"
+  },
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+      "block_height": 87777
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
 }
 ```
 
@@ -136,22 +167,36 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
 ```
 
 ```json
-[
+{
+  "data": [
     {
-        "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-        "output_index": 1,
-        "height": 30562,
-        "satoshis": "10000",
-        "runes": [
-            {
-                "id": "30562:50",
-                "name": "BESTINSLOTXYZ",
-                "spaced_name": "BESTINSLOT•XYZ",
-                "quantity": "1.00000000"
-            }
-        ]
+      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+      "output_index": 1,
+      "height": 30562,
+      "satoshis": "10000",
+      "runes": [
+        {
+          "id": "30562:50",
+          "name": "BESTINSLOTXYZ",
+          "spaced_name": "BESTINSLOT•XYZ",
+          "quantity": "1.00000000"
+        }
+      ]
     }
-]
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+      "block_height": 87777
+    },
+    "mempool_timestamp": "2025-06-23 22:04:31",
+    "estimated_blocks": [
+      {
+        "block_height": 87778
+      }
+    ]
+  }
+}
 ```
 
 ## Local Deployment Requirements

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::error::Error;
 use crate::storage::encdec::Decode;
@@ -10,7 +10,7 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
-use indexmap::IndexSet;
+use itertools::Itertools;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -23,7 +23,7 @@ use super::tables::{
 use super::tables::{RuneActivityByTxKV, RuneActivityByTxKey, RuneBalanceChange};
 
 /// Internal key used for aggregating rune totals per script during a transaction.
-#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+#[derive(Hash, Eq, PartialEq, Clone, Debug, PartialOrd, Ord)]
 struct AddressRuneKey {
     script: Vec<u8>,
     rune_id: RuneId,
@@ -610,11 +610,11 @@ fn log_rune_balance_changes(
     spent_totals: HashMap<AddressRuneKey, u128>,
     received_totals: HashMap<AddressRuneKey, u128>,
 ) -> Result<(), Error> {
-    let mut keys: IndexSet<AddressRuneKey> = IndexSet::new();
+    let mut keys: HashSet<AddressRuneKey> = HashSet::new();
     keys.extend(spent_totals.keys().cloned());
     keys.extend(received_totals.keys().cloned());
 
-    for key in keys {
+    for key in keys.into_iter().sorted() {
         let sent = spent_totals.get(&key).copied().unwrap_or(0);
         let received = received_totals.get(&key).copied().unwrap_or(0);
 

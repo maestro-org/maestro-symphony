@@ -10,6 +10,7 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
+use itertools::Itertools;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -35,7 +36,7 @@ struct AddressRuneKey {
 #[derive(Default, Debug)]
 struct RuneActivity {
     sent: u128,
-    received: HashMap<u32, u128>,
+    received: Vec<(u32, u128)>,
 }
 
 pub struct RunesIndexer {
@@ -274,7 +275,7 @@ impl ProcessTransaction for RunesIndexer {
                             rune_id: *rune_id,
                         };
                         let activity = rune_activity.entry(key).or_default();
-                        *activity.received.entry(output_index as u32).or_default() += *amount;
+                        (activity.received).push((output_index as u32, *amount));
                     }
                 }
             }
@@ -609,7 +610,7 @@ fn log_rune_balance_changes(
     tx_hash: [u8; 32],
     rune_activity: HashMap<AddressRuneKey, RuneActivity>,
 ) -> Result<(), Error> {
-    for (key, activity) in rune_activity {
+    for (key, activity) in rune_activity.into_iter().sorted_by_key(|(k, _)| k.clone()) {
         // Emit spend record if any
         if activity.sent > 0 {
             let change = RuneBalanceChange {

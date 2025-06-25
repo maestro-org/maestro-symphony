@@ -10,6 +10,7 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
+use indexmap::IndexSet;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -18,15 +19,31 @@ use super::tables::{
     RuneUtxosByScriptKey, UtxoRunes,
 };
 
+// Import structures needed for optional rune operation logging
+use super::tables::{RuneActivityByTxKV, RuneActivityByTxKey, RuneBalanceChange};
+
+/// Internal key used for aggregating rune totals per script during a transaction.
+#[derive(Hash, Eq, PartialEq, Clone, Debug)]
+struct AddressRuneKey {
+    script: Vec<u8>,
+    rune_id: RuneId,
+}
+
 pub struct RunesIndexer {
     start_height: u64,
+    /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
+    index_activity: bool,
 }
 
 impl RunesIndexer {
     pub fn new(config: RunesIndexerConfig) -> Result<Self, Error> {
         let start_height = config.start_height;
+        let index_activity = config.index_activity;
 
-        Ok(Self { start_height })
+        Ok(Self {
+            start_height,
+            index_activity,
+        })
     }
 }
 
@@ -34,6 +51,9 @@ impl RunesIndexer {
 pub struct RunesIndexerConfig {
     #[serde(default)]
     pub start_height: u64,
+    /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
+    #[serde(default)]
+    pub index_activity: bool,
 }
 
 impl ProcessTransaction for RunesIndexer {
@@ -56,6 +76,8 @@ impl ProcessTransaction for RunesIndexer {
         let mut unallocated = unallocated(task, tx, ctx.resolver())?;
 
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
+
+        // Initialize (empty) map for input rune chunks. Will be populated later after artifact checks.
 
         if let Some(artifact) = &artifact {
             if let Some(id) = artifact.mint() {
@@ -200,6 +222,18 @@ impl ProcessTransaction for RunesIndexer {
         }
 
         // allocated contains runes for each output (may be empty)
+        // We'll also record rune operations (movements) for logging
+        let mut seq_counter: u16 = 0;
+
+        // Aggregate totals of runes spent by each input script (address).
+        let mut spent_totals: HashMap<AddressRuneKey, u128> = HashMap::new();
+        // Will accumulate runes received per script while iterating outputs.
+        let mut received_totals: HashMap<AddressRuneKey, u128> = HashMap::new();
+
+        if self.index_activity {
+            collect_input_totals(tx, ctx, &mut spent_totals)?;
+        }
+
         for ((output_index, output), output_runes) in tx.output.iter().enumerate().zip(allocated) {
             let txo_ref = TxoRef {
                 tx_hash: tx_id.to_byte_array(),
@@ -208,8 +242,12 @@ impl ProcessTransaction for RunesIndexer {
 
             if !output_runes.is_empty() {
                 // attach runes to utxo metadata so we can resolve them
-                let output_runes: UtxoRunes = output_runes.into_iter().collect::<Vec<_>>();
-                ctx.attach_utxo_metadata(txo_ref, TransactionIndexer::Runes, output_runes);
+                let output_runes_vec: UtxoRunes = output_runes.into_iter().collect();
+                ctx.attach_utxo_metadata(
+                    txo_ref,
+                    TransactionIndexer::Runes,
+                    output_runes_vec.clone(),
+                );
 
                 // TODO: helper
                 // add kv for address utxo containing runes
@@ -221,7 +259,30 @@ impl ProcessTransaction for RunesIndexer {
                 };
 
                 task.set::<RuneUtxosByScriptKV>(key, ())?;
+
+                // Record rune movements for this output
+                if self.index_activity {
+                    // Update received totals
+                    for (rune_id, amount) in &output_runes_vec {
+                        let key = AddressRuneKey {
+                            script: output.script_pubkey.as_bytes().to_vec(),
+                            rune_id: *rune_id,
+                        };
+                        *received_totals.entry(key).or_default() += *amount;
+                    }
+                }
             }
+        }
+
+        // After processing all outputs, emit balance change records if logging is enabled.
+        if self.index_activity {
+            log_rune_balance_changes(
+                task,
+                &mut seq_counter,
+                tx_id.to_byte_array(),
+                spent_totals,
+                received_totals,
+            )?;
         }
 
         Ok(())
@@ -502,6 +563,80 @@ fn create_rune_entry(
 
     // insert new id to rune terms mapping
     task.set::<RuneInfoByIdKV>(id, info)?;
+
+    Ok(())
+}
+
+/// Scan all inputs and aggregate total amount of each rune spent per script.
+fn collect_input_totals(
+    tx: &Transaction,
+    ctx: &IndexingContext,
+    out_map: &mut HashMap<AddressRuneKey, u128>,
+) -> Result<(), Error> {
+    if tx.is_coinbase() {
+        return Ok(());
+    }
+
+    for input in &tx.input {
+        if input.previous_output.is_null() {
+            continue;
+        }
+
+        let txo_ref = input.previous_output.into();
+        let Some(utxo) = ctx.resolve_input(&txo_ref) else {
+            continue;
+        }; // orphaned input
+        let Some(raw) = utxo.extended.get(&TransactionIndexer::Runes) else {
+            continue;
+        };
+
+        for (id, qty) in UtxoRunes::decode_all(raw)? {
+            let key = AddressRuneKey {
+                script: utxo.script.clone(),
+                rune_id: id,
+            };
+            *out_map.entry(key).or_default() += qty;
+        }
+    }
+
+    Ok(())
+}
+
+/// After aggregating sent and received totals, emit `RuneBalanceChange` records.
+fn log_rune_balance_changes(
+    task: &mut IndexingTask,
+    seq_counter: &mut u16,
+    tx_hash: [u8; 32],
+    spent_totals: HashMap<AddressRuneKey, u128>,
+    received_totals: HashMap<AddressRuneKey, u128>,
+) -> Result<(), Error> {
+    let mut keys: IndexSet<AddressRuneKey> = IndexSet::new();
+    keys.extend(spent_totals.keys().cloned());
+    keys.extend(received_totals.keys().cloned());
+
+    for key in keys {
+        let sent = spent_totals.get(&key).copied().unwrap_or(0);
+        let received = received_totals.get(&key).copied().unwrap_or(0);
+
+        if sent == 0 && received == 0 {
+            continue;
+        }
+
+        let change = RuneBalanceChange {
+            rune_id: key.rune_id,
+            script: key.script.clone(),
+            sent,
+            received,
+        };
+
+        let key = RuneActivityByTxKey {
+            tx_hash,
+            seq: *seq_counter,
+        };
+
+        *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
+        task.set::<RuneActivityByTxKV>(key, change)?;
+    }
 
     Ok(())
 }

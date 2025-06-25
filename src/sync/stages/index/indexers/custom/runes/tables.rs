@@ -21,6 +21,7 @@ pub enum RunesTables {
     RuneIdByName = 1,
     RuneMintsById = 2,
     RuneUtxosByScript = 3,
+    RuneActivityByTx = 4,
 }
 
 // ---
@@ -61,6 +62,15 @@ define_indexer_table! {
     table: RunesTables::RuneUtxosByScript
 }
 
+// Table to log rune operations inside each transaction (optional)
+define_indexer_table! {
+    name: RuneActivityByTxKV,
+    key_type: RuneActivityByTxKey,
+    value_type: RuneBalanceChange,
+    indexer: TransactionIndexer::Runes,
+    table: RunesTables::RuneActivityByTx
+}
+
 // ---
 
 #[derive(Encode, Decode, Debug)]
@@ -88,6 +98,25 @@ pub struct RuneInfo {
     pub etching_tx: [u8; 32],
     pub premine: u128,
     pub spacers: u32,
+}
+
+#[derive(Encode, Decode, Debug, Clone)]
+pub struct RuneActivityByTxKey {
+    /// Transaction hash
+    pub tx_hash: [u8; 32],
+    /// monotonically-increasing sequence number inside the tx to keep keys unique and ordered
+    pub seq: u16,
+}
+
+#[derive(Encode, Decode, Debug, Clone)]
+pub struct RuneBalanceChange {
+    pub rune_id: RuneId,
+    /// Script of the address.
+    pub script: ScriptPubKey,
+    /// Total amount of the rune spent by this address in the transaction.
+    pub sent: u128,
+    /// Total amount of the rune received by this address in the transaction (including mints).
+    pub received: u128,
 }
 
 // ---

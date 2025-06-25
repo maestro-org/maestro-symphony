@@ -15,11 +15,12 @@ use crate::{
                         hash_by_height::HashByHeightKV,
                         indexer_info::{IndexerInfo, IndexerInfoKV},
                         rollback_buffer::{RollbackBufferKV, RollbackKey},
+                        utxo_by_txo_ref::UtxoCache,
                     },
                     custom::id::ProcessTransaction,
                 },
                 rollback::buffer::{DEFAULT_MAX_ROLLBACK, RollbackBuffer},
-                worker::context::IndexingContext,
+                worker::{context::IndexingContext, get_default_cache_size},
             },
         },
     },
@@ -54,8 +55,8 @@ pub struct Stage {
     last_processed: Point,
     // does our processed chain in db reflect mempool blocks (TODO)
     processed_mempool: bool,
+    utxo_cache: Option<UtxoCache>,
 
-    // custom indexers
     pub upstream: UpstreamPort,
     pub downstream: DownstreamPort,
 }
@@ -63,6 +64,17 @@ pub struct Stage {
 impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
         let safe_mode = config.safe_mode.unwrap_or_default();
+
+        let utxo_cache_size = config
+            .utxo_cache_size
+            .unwrap_or_else(|| get_default_cache_size());
+
+        let utxo_cache = if utxo_cache_size == 0 {
+            None
+        } else {
+            info!("using utxo cache with size {utxo_cache_size}");
+            Some(UtxoCache::new(utxo_cache_size))
+        };
 
         // TODO: in worker vs stage?
         let rollback_buffer = RollbackBuffer::fetch_from_storage(&config, &db)?;
@@ -124,6 +136,7 @@ impl Stage {
             safe_mode,
             last_processed,
             processed_mempool,
+            utxo_cache,
 
             upstream: Default::default(),
             downstream: Default::default(),
@@ -253,8 +266,14 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let mut task = stage.db.begin_indexing_task(self.mutable);
 
-                let mut ctx =
-                    IndexingContext::new(&mut task, txs, *point, stage.network).or_restart()?;
+                let mut ctx = IndexingContext::new(
+                    &mut task,
+                    txs,
+                    *point,
+                    stage.network,
+                    &mut stage.utxo_cache,
+                )
+                .or_restart()?;
 
                 for (block_index, tx) in txs.iter().enumerate() {
                     for indexer in &self.indexers {
@@ -263,7 +282,8 @@ impl gasket::framework::Worker<Stage> for Worker {
                             .or_restart()?;
                     }
 
-                    ctx.update_utxo_set(&mut task, tx).or_restart()?;
+                    ctx.update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
+                        .or_restart()?;
                 }
 
                 IndexerInfoKV::set_info(
@@ -338,6 +358,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     &mempool_txs,
                     stage.last_processed,
                     stage.network,
+                    &mut stage.utxo_cache,
                 )
                 .or_restart()?;
 
@@ -359,7 +380,8 @@ impl gasket::framework::Worker<Stage> for Worker {
                                 .or_restart()?;
                         }
 
-                        ctx.update_utxo_set(&mut task, tx).or_restart()?;
+                        ctx.update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
+                            .or_restart()?;
                     }
 
                     IndexerInfoKV::set_info(

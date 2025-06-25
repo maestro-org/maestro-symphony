@@ -1,18 +1,17 @@
+use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
+use crate::serve::types::ServeResponse;
 use crate::serve::utils::decimal;
-use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
-use crate::storage::timestamp::Timestamp;
 use crate::sync::stages::index::indexers::core::hash_by_height::HashByHeightKV;
-use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
-use crate::sync::stages::index::indexers::custom::TransactionIndexer;
-use crate::sync::stages::index::indexers::custom::runes::tables::{RuneInfoByIdKV, UtxoRunes};
-use crate::sync::stages::index::indexers::types::TxoRef;
+use crate::sync::stages::index::indexers::custom::runes::tables::{
+    RuneActivityByTxKV, RuneActivityByTxKey, RuneBalanceChange, RuneInfoByIdKV,
+};
 use axum::{
     Json,
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
 };
@@ -38,6 +37,7 @@ pub struct RuneEdict {
 
 pub async fn handler(
     State(state): State<AppState>,
+    Query(params): Query<QueryParams>,
     Path((address_str, txid_str)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ServeError> {
     // Parse inputs
@@ -48,64 +48,62 @@ pub async fn handler(
 
     let script_pk = address.assume_checked().script_pubkey().to_bytes();
 
-    // Reader at current tip
-    let storage = state.read().await.reader(Timestamp::from_u64(u64::MAX));
+    // Obtain a reader (optionally including mempool data)
+    let (storage, indexer_info) = state.start_reader(params.mempool).await?;
 
     let tx_hash = txid.to_byte_array();
 
-    let start_ref = TxoRef {
+    // Start and end keys to confine the iterator to this transaction only
+    let start_key = RuneActivityByTxKey { tx_hash, seq: 0 };
+    // u16::MAX is the highest possible sequence for the same tx_hash
+    let end_key = RuneActivityByTxKey {
         tx_hash,
-        txo_index: 0,
+        seq: u16::MAX,
     };
 
-    let end_ref = TxoRef {
-        tx_hash,
-        txo_index: u32::MAX,
-    };
+    let range = RuneActivityByTxKV::encode_range(Some(&start_key), Some(&end_key));
 
-    let range = UtxoByTxoRefKV::encode_range(Some(&start_ref), Some(&end_ref));
-
-    let iter = storage.iter_kvs::<UtxoByTxoRefKV>(range, false);
+    let iter = storage.iter_kvs::<RuneActivityByTxKV>(range, false);
 
     let mut out: Vec<RuneEdict> = Vec::new();
 
     for kv in iter {
-        let (txo_ref, utxo) = kv?;
+        let (_, change): (_, RuneBalanceChange) = kv?;
 
-        // Only consider outputs controlled by the requested address
-        if utxo.script != script_pk {
+        // Only consider balance changes affecting the requested script (address)
+        if change.script != script_pk {
             continue;
         }
 
-        let raw_runes = utxo
-            .extended
-            .get(&TransactionIndexer::Runes)
-            .ok_or_else(|| ServeError::internal("missing runes metadata"))?;
-        let runes = UtxoRunes::decode_all(raw_runes)?;
+        let rune_info = storage.get_expected::<RuneInfoByIdKV>(&change.rune_id)?;
 
-        for (rune_id, quantity) in runes {
-            let rune_info = storage.get_expected::<RuneInfoByIdKV>(&rune_id)?;
+        let block_hash_bytes = storage.get_expected::<HashByHeightKV>(&change.rune_id.block)?;
+        let block_hash = BlockHash::from_byte_array(block_hash_bytes);
 
-            let block_hash_bytes = storage.get_expected::<HashByHeightKV>(&rune_id.block)?;
-            let block_hash = BlockHash::from_byte_array(block_hash_bytes);
+        let rune = Rune(rune_info.name);
 
-            let rune = Rune(rune_info.name);
+        let amount_str = decimal(change.received, rune_info.divisibility);
 
-            out.push(RuneEdict {
-                rune_id: format!("{}", rune_id),
-                amount: decimal(quantity, rune_info.divisibility),
-                output: txo_ref.txo_index,
-                tx_id: txid.to_string(),
-                block_height: rune_id.block,
-                tx_index: rune_id.tx,
-                divisibility: rune_info.divisibility,
-                name: rune.to_string(),
-                symbol: rune_info.symbol.and_then(|s| char::from_u32(s)),
-                block_hash: block_hash.to_string(),
-                premine: rune_info.premine.to_string(),
-            });
-        }
+        // Use recorded output index if provided (None for spends)
+        out.push(RuneEdict {
+            rune_id: change.rune_id.to_string(),
+            amount: amount_str,
+            output: change.output_index.unwrap_or(0),
+            tx_id: txid.to_string(),
+            block_height: change.rune_id.block,
+            tx_index: change.rune_id.tx,
+            divisibility: rune_info.divisibility,
+            name: rune.to_string(),
+            symbol: rune_info.symbol.and_then(|s| char::from_u32(s)),
+            block_hash: block_hash.to_string(),
+            premine: rune_info.premine.to_string(),
+        });
     }
 
-    Ok((StatusCode::OK, Json(out)))
+    let resp = ServeResponse {
+        data: out,
+        indexer_info,
+    };
+
+    Ok((StatusCode::OK, Json(resp)))
 }

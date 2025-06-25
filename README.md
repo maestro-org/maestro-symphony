@@ -74,6 +74,9 @@ Edit the config file (e.g., `examples/testnet.toml`) to set your node address an
 -   **Rune balances by address and rune:**
     -   `GET /addresses/{address}/runes/balances/{rune}`
     - Requires indexers: `Runes`
+-   **Rune balance changes by address and transaction:**
+    -   `GET /addresses/{address}/runes/tx/{txid}`
+    - Requires indexers: `Runes`
 
 ### Runes
 
@@ -195,6 +198,40 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
         "block_height": 87778
       }
     ]
+  }
+}
+```
+
+#### Example: Rune Balance Changes in a Transaction
+
+```bash
+curl -X GET http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID> | jq .
+```
+
+```json
+{
+  "data": [
+    {
+      "rune_id": "30562:50",
+      "amount": "1",
+      "output": 2,
+      "tx_id": "<TXID>",
+      "block_height": 30562,
+      "tx_index": 50,
+      "divisibility": 8,
+      "name": "BESTINSLOTXYZ",
+      "symbol": "ʃ",
+      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+      "premine": "1"
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+      "block_height": 87777
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
   }
 }
 ```

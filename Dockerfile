@@ -65,9 +65,9 @@ RUN groupadd --gid 65532 nonroot \
         nonroot
 
 # Copy binary
-COPY --from=builder /dist/maestro-symphony /bin/maestro-symphony
+COPY --from=builder /dist/maestro-symphony /usr/local/bin/maestro-symphony
 
 USER nonroot
 
 # Set entrypoint
-ENTRYPOINT ["/sbin/tini", "--", "/bin/maestro-symphony"]
+ENTRYPOINT [ "/usr/bin/tini", "-g", "--", "/usr/local/bin/maestro-symphony" ]

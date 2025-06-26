@@ -3,13 +3,13 @@ use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::serve::types::ServeResponse;
-use crate::serve::utils::{RuneIdentifier, decimal};
+use crate::serve::utils::RuneIdentifier;
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::custom::runes::tables::{
-    RuneIdByNameKV, RuneInfoByIdKV, RuneUtxosByScriptKV, UtxoRunes,
+    RuneIdByNameKV, RuneUtxosByScriptKV, UtxoRunes,
 };
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
@@ -17,7 +17,6 @@ use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
-use ordinals::{Rune, SpacedRune};
 use serde::Serialize;
 use std::str::FromStr;
 
@@ -33,8 +32,6 @@ pub struct RuneUtxo {
 #[derive(Serialize)]
 pub struct RuneAndQuantity {
     id: String,
-    name: String,
-    spaced_name: String,
     quantity: String,
 }
 
@@ -98,17 +95,10 @@ pub async fn handler(
 
         let mut processed_runes = Vec::with_capacity(utxo_runes.len());
 
-        for (rune_id, raw_quantity) in utxo_runes {
-            let rune_info = storage.get_expected::<RuneInfoByIdKV>(&rune_id)?;
-
-            let rune = Rune(rune_info.name);
-            let spaced = SpacedRune::new(rune, rune_info.spacers);
-
+        for (rune_id, quantity) in utxo_runes {
             processed_runes.push(RuneAndQuantity {
                 id: rune_id.to_string(),
-                name: rune.to_string(),
-                spaced_name: spaced.to_string(),
-                quantity: decimal(raw_quantity, rune_info.divisibility),
+                quantity: quantity.to_string(),
             })
         }
 

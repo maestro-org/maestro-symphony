@@ -136,7 +136,13 @@ curl -X POST http://localhost:8080/runes/info \
         "divisibility": 8,
         "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
         "etching_height": 30562,
-        "premine": "1.00000000"
+        "premine": "100000000",
+        "terms": {
+          "amount": "100000000",
+          "cap": "3402823669209384634633746074316",
+          "start_height": null,
+          "end_height": null
+        }
       }
     },
     "missing": ["UNKNOWN"]

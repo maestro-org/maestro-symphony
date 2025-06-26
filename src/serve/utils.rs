@@ -40,7 +40,7 @@ pub enum RuneIdentifier {
 }
 
 impl RuneIdentifier {
-    pub fn parse(string: String) -> Result<Self, ServeError> {
+    pub fn parse(string: &str) -> Result<Self, ServeError> {
         if string.contains(':') {
             let parts: Vec<_> = string.split(':').collect();
             if parts.len() != 2 {

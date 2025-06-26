@@ -22,13 +22,13 @@ pub struct RuneUtxo {
     output_index: u32,
     height: u64,
     satoshis: String,
-    runes: Vec<RuneAndQuantity>,
+    runes: Vec<RuneAndAmount>,
 }
 
 #[derive(Serialize)]
-pub struct RuneAndQuantity {
+pub struct RuneAndAmount {
     id: String,
-    quantity: String,
+    amount: String,
 }
 
 pub async fn handler(
@@ -75,10 +75,10 @@ pub async fn handler(
 
         let mut processed_runes = Vec::with_capacity(utxo_runes.len());
 
-        for (rune_id, quantity) in utxo_runes {
-            processed_runes.push(RuneAndQuantity {
+        for (rune_id, amount) in utxo_runes {
+            processed_runes.push(RuneAndAmount {
                 id: rune_id.to_string(),
-                quantity: quantity.to_string(),
+                amount: amount.to_string(),
             })
         }
 

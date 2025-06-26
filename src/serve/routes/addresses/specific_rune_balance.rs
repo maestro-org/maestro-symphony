@@ -20,9 +20,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize)]
-pub struct RuneAndQuantity {
+pub struct RuneAndAmount {
     id: String,
-    quantity: String,
+    amount: String,
 }
 
 pub async fn handler(
@@ -75,11 +75,11 @@ pub async fn handler(
         }
     }
 
-    let quantity = balances.remove(&specified_rune).unwrap_or_default();
+    let amount = balances.remove(&specified_rune).unwrap_or_default();
 
-    let balance = RuneAndQuantity {
+    let balance = RuneAndAmount {
         id: specified_rune.to_string(),
-        quantity: quantity.to_string(),
+        amount: amount.to_string(),
     };
 
     let out = ServeResponse {

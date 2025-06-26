@@ -18,9 +18,9 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize)]
-pub struct RuneAndQuantity {
+pub struct RuneAndAmount {
     id: String,
-    quantity: String,
+    amount: String,
 }
 
 pub async fn handler(
@@ -68,10 +68,10 @@ pub async fn handler(
 
     let mut processed_balances = vec![];
 
-    for (rune_id, quantity) in balances.into_iter().sorted_by_key(|(rid, _)| *rid) {
-        processed_balances.push(RuneAndQuantity {
+    for (rune_id, amount) in balances.into_iter().sorted_by_key(|(rid, _)| *rid) {
+        processed_balances.push(RuneAndAmount {
             id: rune_id.to_string(),
-            quantity: quantity.to_string(),
+            amount: amount.to_string(),
         })
     }
 

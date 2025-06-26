@@ -117,8 +117,6 @@ pub struct RuneBalanceChange {
     pub sent: u128,
     /// Total amount of the rune received by this address in the transaction (including mints).
     pub received: u128,
-    /// Output index where the amount was received (if applicable). `None` for spend records.
-    pub output_index: Option<u32>,
 }
 
 // ---

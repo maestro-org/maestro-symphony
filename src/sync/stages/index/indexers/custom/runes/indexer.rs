@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::error::Error;
 use crate::storage::encdec::Decode;
@@ -10,6 +10,7 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
+use itertools::Itertools;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -26,16 +27,6 @@ use super::tables::{RuneActivityByTxKV, RuneActivityByTxKey, RuneBalanceChange};
 struct AddressRuneKey {
     script: Vec<u8>,
     rune_id: RuneId,
-}
-
-/// Tracks rune activity for a specific address-rune combination during a transaction.
-/// `sent` is aggregated across all inputs for this address+rune within the tx.
-/// `received` is a map of `vout -> amount` so we can record multiple outputs
-/// that credit the same rune to the same address in one transaction.
-#[derive(Default, Debug)]
-struct RuneActivity {
-    sent: u128,
-    received: Vec<(u32, u128)>,
 }
 
 pub struct RunesIndexer {
@@ -85,6 +76,8 @@ impl ProcessTransaction for RunesIndexer {
         let mut unallocated = unallocated(task, tx, ctx.resolver())?;
 
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
+
+        // Initialize (empty) map for input rune chunks. Will be populated later after artifact checks.
 
         if let Some(artifact) = &artifact {
             if let Some(id) = artifact.mint() {
@@ -232,11 +225,13 @@ impl ProcessTransaction for RunesIndexer {
         // We'll also record rune operations (movements) for logging
         let mut seq_counter: u16 = 0;
 
-        // Track all rune activity (sent/received) per address-rune combination
-        let mut rune_activity: HashMap<AddressRuneKey, RuneActivity> = HashMap::new();
+        // Aggregate totals of runes spent by each input script (address).
+        let mut spent_totals: HashMap<AddressRuneKey, u128> = HashMap::new();
+        // Will accumulate runes received per script while iterating outputs.
+        let mut received_totals: HashMap<AddressRuneKey, u128> = HashMap::new();
 
         if self.index_activity {
-            collect_input_totals(tx, ctx, &mut rune_activity)?;
+            collect_input_totals(tx, ctx, &mut spent_totals)?;
         }
 
         for ((output_index, output), output_runes) in tx.output.iter().enumerate().zip(allocated) {
@@ -273,11 +268,7 @@ impl ProcessTransaction for RunesIndexer {
                             script: output.script_pubkey.as_bytes().to_vec(),
                             rune_id: *rune_id,
                         };
-                        rune_activity
-                            .entry(key)
-                            .or_default()
-                            .received
-                            .push((output_index as u32, *amount));
+                        *received_totals.entry(key).or_default() += *amount;
                     }
                 }
             }
@@ -285,7 +276,13 @@ impl ProcessTransaction for RunesIndexer {
 
         // After processing all outputs, emit balance change records if logging is enabled.
         if self.index_activity {
-            log_rune_balance_changes(task, &mut seq_counter, tx_id.to_byte_array(), rune_activity)?;
+            log_rune_balance_changes(
+                task,
+                &mut seq_counter,
+                tx_id.to_byte_array(),
+                spent_totals,
+                received_totals,
+            )?;
         }
 
         Ok(())
@@ -574,7 +571,7 @@ fn create_rune_entry(
 fn collect_input_totals(
     tx: &Transaction,
     ctx: &IndexingContext,
-    rune_activity: &mut HashMap<AddressRuneKey, RuneActivity>,
+    out_map: &mut HashMap<AddressRuneKey, u128>,
 ) -> Result<(), Error> {
     if tx.is_coinbase() {
         return Ok(());
@@ -598,7 +595,7 @@ fn collect_input_totals(
                 script: utxo.script.clone(),
                 rune_id: id,
             };
-            rune_activity.entry(key).or_default().sent += qty;
+            *out_map.entry(key).or_default() += qty;
         }
     }
 
@@ -610,48 +607,35 @@ fn log_rune_balance_changes(
     task: &mut IndexingTask,
     seq_counter: &mut u16,
     tx_hash: [u8; 32],
-    rune_activity: HashMap<AddressRuneKey, RuneActivity>,
+    spent_totals: HashMap<AddressRuneKey, u128>,
+    received_totals: HashMap<AddressRuneKey, u128>,
 ) -> Result<(), Error> {
-    for (key, activity) in rune_activity {
-        // Emit spend record if any
-        if activity.sent > 0 {
-            let change = RuneBalanceChange {
-                rune_id: key.rune_id,
-                script: key.script.clone(),
-                sent: activity.sent,
-                received: 0,
-                output_index: None,
-            };
+    let mut keys: HashSet<AddressRuneKey> = HashSet::new();
+    keys.extend(spent_totals.keys().cloned());
+    keys.extend(received_totals.keys().cloned());
 
-            let key_tx = RuneActivityByTxKey {
-                tx_hash,
-                seq: *seq_counter,
-            };
-            *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
-            task.set::<RuneActivityByTxKV>(key_tx, change)?;
+    for key in keys.into_iter().sorted() {
+        let sent = spent_totals.get(&key).copied().unwrap_or(0);
+        let received = received_totals.get(&key).copied().unwrap_or(0);
+
+        if sent == 0 && received == 0 {
+            continue;
         }
 
-        // Emit separate records for each received output
-        for (vout, amount) in activity.received {
-            if amount == 0 {
-                continue;
-            }
+        let change = RuneBalanceChange {
+            rune_id: key.rune_id,
+            script: key.script.clone(),
+            sent,
+            received,
+        };
 
-            let change = RuneBalanceChange {
-                rune_id: key.rune_id,
-                script: key.script.clone(),
-                sent: 0,
-                received: amount,
-                output_index: Some(vout),
-            };
+        let key = RuneActivityByTxKey {
+            tx_hash,
+            seq: *seq_counter,
+        };
 
-            let key_tx = RuneActivityByTxKey {
-                tx_hash,
-                seq: *seq_counter,
-            };
-            *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
-            task.set::<RuneActivityByTxKV>(key_tx, change)?;
-        }
+        *seq_counter = seq_counter.checked_add(1).expect("seq overflow");
+        task.set::<RuneActivityByTxKV>(key, change)?;
     }
 
     Ok(())

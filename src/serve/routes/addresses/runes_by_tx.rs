@@ -3,7 +3,6 @@ use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::serve::types::ServeResponse;
-use crate::serve::utils::decimal;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::hash_by_height::HashByHeightKV;
 use crate::sync::stages::index::indexers::custom::runes::tables::{
@@ -85,7 +84,7 @@ pub async fn handler(
         // Use recorded output index if provided (None for spends)
         out.push(RuneEdict {
             rune_id: change.rune_id.to_string(),
-            amount: decimal(change.received, rune_info.divisibility),
+            amount: change.received.to_string(),
             output: change.output_index.unwrap_or(0),
             tx_id: txid.to_string(),
             block_height: change.rune_id.block,
@@ -94,7 +93,7 @@ pub async fn handler(
             name: rune.to_string(),
             symbol: rune_info.symbol.and_then(|s| char::from_u32(s)),
             block_hash: block_hash.to_string(),
-            premine: decimal(rune_info.premine, rune_info.divisibility),
+            premine: rune_info.premine.to_string(),
         });
     }
 

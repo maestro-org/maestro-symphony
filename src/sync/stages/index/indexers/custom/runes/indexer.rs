@@ -273,8 +273,11 @@ impl ProcessTransaction for RunesIndexer {
                             script: output.script_pubkey.as_bytes().to_vec(),
                             rune_id: *rune_id,
                         };
-                        let activity = rune_activity.entry(key).or_default();
-                        (activity.received).push((output_index as u32, *amount));
+                        rune_activity
+                            .entry(key)
+                            .or_default()
+                            .received
+                            .push((output_index as u32, *amount));
                     }
                 }
             }

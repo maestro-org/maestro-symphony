@@ -1,8 +1,8 @@
 pub mod rune_info;
 
 use crate::serve::AppState;
-use axum::{Router, routing::get};
+use axum::{Router, routing::post};
 
 pub fn router() -> Router<AppState> {
-    Router::new().route("/{rune}", get(rune_info::handler))
+    Router::new().route("/info", post(rune_info::handler))
 }

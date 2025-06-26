@@ -77,8 +77,8 @@ Edit the config file (e.g., `examples/testnet.toml`) to set your node address an
 
 ### Runes
 
--   **Rune info:**
-    -   `GET /runes/{rune}`
+-   **Rune info (batch):**
+    -   `POST /runes/info` (body: JSON array of rune identifiers or names)
     - Requires indexers: `Runes`
 
 #### Example: Rune UTXOs by Address
@@ -114,34 +114,36 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
 }
 ```
 
-### Runes
-
--   **Rune info:**
-    -   `GET /runes/{rune}`
-
-#### Example: Rune Info
+#### Example: Rune Info (batch)
 
 ```bash
-curl -X GET http://localhost:8080/runes/30562:50 | jq .
+curl -X POST http://localhost:8080/runes/info \
+  -H "Content-Type: application/json" \
+  -d '["30562:50", "BESTINSLOTXYZ", "UNKNOWN"]' | jq .
 ```
 
 ```json
 {
   "data": {
-    "id": "30562:50",
-    "name": "BESTINSLOTXYZ",
-    "spaced_name": "BESTINSLOT•XYZ",
-    "symbol": "ʃ",
-    "divisibility": 8,
-    "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-    "etching_height": 30562,
-    "terms": {
-      "amount": "1.00000000",
-      "cap": "34028236692093846346337.46074316",
-      "start_height": null,
-      "end_height": null
+    "found": {
+      "30562:50": {
+        "id": "30562:50",
+        "name": "BESTINSLOTXYZ",
+        "spaced_name": "BESTINSLOT•XYZ",
+        "symbol": "ʃ",
+        "divisibility": 8,
+        "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+        "etching_height": 30562,
+        "premine": "100000000",
+        "terms": {
+          "amount": "100000000",
+          "cap": "3402823669209384634633746074316",
+          "start_height": null,
+          "end_height": null
+        }
+      }
     },
-    "premine": "1.00000000"
+    "missing": ["UNKNOWN"]
   },
   "indexer_info": {
     "chain_tip": {
@@ -191,6 +193,33 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
         "block_height": 87778
       }
     ]
+  }
+}
+```
+
+#### Example: Rune Balance Changes in a Transaction
+
+```bash
+curl -X GET http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID> | jq .
+```
+
+```json
+{
+  "data": [
+    {
+      "rune_id": "30562:50",
+      "amount": "100000000",
+      "output": 1,
+      "block_height": 30562
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "0000000000000035ec326a15b2f81822962f786028f33205b74b47a9b7cf3caf",
+      "block_height": 38980
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
   }
 }
 ```

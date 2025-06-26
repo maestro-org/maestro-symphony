@@ -35,7 +35,7 @@ pub async fn handler(
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
 
-    let specified_rune = match RuneIdentifier::parse(rune)? {
+    let specified_rune = match RuneIdentifier::parse(&rune)? {
         RuneIdentifier::Id(x) => x,
         RuneIdentifier::Name(n) => storage
             .get_maybe::<RuneIdByNameKV>(&n)?

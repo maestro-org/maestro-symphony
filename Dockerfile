@@ -37,9 +37,10 @@ COPY ./macros ./macros
 RUN --mount=type=tmpfs,target=/build/src \
     printf "#[allow(dead_code)]\nfn main() {}\n" > src/lib.rs && \
     case "$TARGETARCH" in \
-        "amd64") cargo build --release --target=x86_64-unknown-linux-gnu ;; \
-        "arm64") cargo build --release --target=aarch64-unknown-linux-gnu ;; \
-    esac
+        "amd64") TARGET="x86_64-unknown-linux-gnu" ;; \
+        "arm64") TARGET="aarch64-unknown-linux-gnu" ;; \
+    esac && \
+    cargo build --release --target=$TARGET
 
 # Build source
 COPY ./src ./src

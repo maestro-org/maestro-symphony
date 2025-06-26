@@ -1,0 +1,44 @@
+services:
+  bitcoin-node:
+    image: bitcoin/bitcoin:29
+    command:
+      - -printtoconsole
+      - -txindex
+      - -port=8333
+      - -rpcbind=0.0.0.0
+      - -rpcallowip=0.0.0.0/0
+      - -rpcport=8332
+      - -rpcthreads=1
+      - -rpcuser=symphony
+      - -rpcpassword=symphony
+      - -datadir=/srv/bitcoin/node
+      - -deprecatedrpc=warnings
+      - -rest
+      - -testnet4
+    ports:
+      - "8333:8333" # P2P port
+      - "8332:8332" # RPC port
+    volumes:
+      - bitcoin-data:/srv/bitcoin/node
+
+  symphony:
+    build:
+      context: .
+    command:
+      - /etc/symphony/config.toml
+      - run
+    environment:
+      - RUST_LOG=info
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./examples/testnet.toml:/etc/symphony/config.toml
+      - symphony-data:/srv/symphony
+    depends_on:
+      - bitcoin-node
+
+volumes:
+  bitcoin-data:
+    driver: local
+  symphony-data:
+    driver: local

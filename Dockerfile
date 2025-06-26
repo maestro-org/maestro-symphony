@@ -10,11 +10,13 @@ RUN case "$TARGETARCH" in \
     "amd64") \
         printf "x86_64-unknown-linux-gnu" > .target; \
         printf "gcc-x86-64-linux-gnu" > .gcc; \
+        printf "g++-x86-64-linux-gnu" > .gpp; \
         printf "libc6-dev-amd64-cross" > .libc; \
         ;; \
     "arm64") \
         printf "aarch64-unknown-linux-gnu" > .target; \
         printf "gcc-aarch64-linux-gnu" > .gcc; \
+        printf "g++-aarch64-linux-gnu" > .gpp; \
         printf "libc6-dev-arm64-cross" > .libc; \
         ;; \
     *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;; \
@@ -26,12 +28,14 @@ RUN apt-get update \
         build-essential \
         libclang-dev \
         $(cat .gcc) \
+        $(cat .gpp) \
         $(cat .libc) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Add target to rustup
-RUN rustup target add $(cat .target)
+# Add target to rustup and install rustfmt
+RUN rustup target add $(cat .target) && \
+    rustup component add rustfmt
 
 # Build dependencies
 COPY ./Cargo.toml ./Cargo.lock ./

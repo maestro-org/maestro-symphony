@@ -10,7 +10,6 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
-use itertools::Itertools;
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -610,7 +609,7 @@ fn log_rune_balance_changes(
     tx_hash: [u8; 32],
     rune_activity: HashMap<AddressRuneKey, RuneActivity>,
 ) -> Result<(), Error> {
-    for (key, activity) in rune_activity.into_iter().sorted_by_key(|(k, _)| k.clone()) {
+    for (key, activity) in rune_activity {
         // Emit spend record if any
         if activity.sent > 0 {
             let change = RuneBalanceChange {

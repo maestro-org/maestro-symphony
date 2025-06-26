@@ -1,7 +1,7 @@
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::types::ServeResponse;
-use crate::serve::utils::{RuneIdentifier, decimal};
+use crate::serve::utils::RuneIdentifier;
 use crate::serve::{AppState, QueryParams};
 use crate::sync::stages::index::indexers::custom::runes::tables::{RuneIdByNameKV, RuneInfoByIdKV};
 use axum::extract::Query;

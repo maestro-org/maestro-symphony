@@ -3,28 +3,26 @@ use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::serve::types::ServeResponse;
-use crate::serve::utils::{RuneIdentifier, decimal};
+use crate::serve::utils::RuneIdentifier;
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::custom::runes::tables::{
-    RuneIdByNameKV, RuneInfoByIdKV, RuneUtxosByScriptKV, UtxoRunes,
+    RuneIdByNameKV, RuneUtxosByScriptKV, UtxoRunes,
 };
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
-use ordinals::{Rune, RuneId, SpacedRune};
+use ordinals::RuneId;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize)]
-pub struct RuneAndQuantity {
+pub struct RuneAndAmount {
     id: String,
-    name: String,
-    spaced_name: String,
-    quantity: String,
+    amount: String,
 }
 
 pub async fn handler(
@@ -77,18 +75,11 @@ pub async fn handler(
         }
     }
 
-    let raw_quantity = balances.remove(&specified_rune).unwrap_or_default();
+    let amount = balances.remove(&specified_rune).unwrap_or_default();
 
-    let rune_info = storage.get_expected::<RuneInfoByIdKV>(&specified_rune)?;
-
-    let rune = Rune(rune_info.name);
-    let spaced = SpacedRune::new(rune, rune_info.spacers);
-
-    let balance = RuneAndQuantity {
+    let balance = RuneAndAmount {
         id: specified_rune.to_string(),
-        name: rune.to_string(),
-        spaced_name: spaced.to_string(),
-        quantity: decimal(raw_quantity, rune_info.divisibility),
+        amount: amount.to_string(),
     };
 
     let out = ServeResponse {

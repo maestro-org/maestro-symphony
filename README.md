@@ -98,9 +98,7 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
       "runes": [
         {
           "id": "30562:50",
-          "name": "BESTINSLOTXYZ",
-          "spaced_name": "BESTINSLOT•XYZ",
-          "quantity": "1.00000000"
+          "amount": "100000000"
         }
       ]
     }
@@ -179,9 +177,7 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
       "runes": [
         {
           "id": "30562:50",
-          "name": "BESTINSLOTXYZ",
-          "spaced_name": "BESTINSLOT•XYZ",
-          "quantity": "1.00000000"
+          "amount": "100000000"
         }
       ]
     }

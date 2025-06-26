@@ -20,7 +20,7 @@ use std::str::FromStr;
 pub struct RuneEdict {
     rune_id: String,
     amount: String,
-    output: u32,
+    output: Option<u32>,
     block_height: u64,
 }
 
@@ -68,7 +68,7 @@ pub async fn handler(
         out.push(RuneEdict {
             rune_id: change.rune_id.to_string(),
             amount: change.received.to_string(),
-            output: change.output_index.unwrap_or(0),
+            output: change.output_index,
             block_height: change.rune_id.block,
         });
     }

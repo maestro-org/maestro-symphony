@@ -105,12 +105,12 @@ pub async fn handler(
             etching_tx: Txid::from_byte_array(rune_info.etching_tx).to_string(),
             etching_height: rune_info.etching_height,
             terms: rune_info.terms.map(|x| RuneTerms {
-                amount: x.amount.map(|y| decimal(y, rune_info.divisibility)),
-                cap: x.cap.map(|y| decimal(y, rune_info.divisibility)),
+                amount: x.amount.map(|y| y.to_string()),
+                cap: x.cap.map(|y| y.to_string()),
                 start_height: x.start_height,
                 end_height: x.end_height,
             }),
-            premine: decimal(rune_info.premine, rune_info.divisibility),
+            premine: rune_info.premine.to_string(),
         };
 
         found.insert(key_string, info);

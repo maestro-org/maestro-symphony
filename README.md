@@ -199,6 +199,33 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
 }
 ```
 
+#### Example: Rune Balance Changes in a Transaction
+
+```bash
+curl -X GET http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID> | jq .
+```
+
+```json
+{
+  "data": [
+    {
+      "rune_id": "30562:50",
+      "amount": "1.00000000",
+      "output": 1,
+      "block_height": 30562
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "0000000000000035ec326a15b2f81822962f786028f33205b74b47a9b7cf3caf",
+      "block_height": 38980
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}
+```
+
 ## Local Deployment Requirements
 
 ### Testnet4

@@ -14,9 +14,7 @@ use crate::sync::stages::index::indexers::custom::runes::tables::{
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
-use ordinals::RuneId;
 use serde::Serialize;
-use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize)]
@@ -53,7 +51,7 @@ pub async fn handler(
 
     let iter = storage.iter_kvs::<RuneUtxosByScriptKV>(range, false);
 
-    let mut balances: HashMap<RuneId, u128> = HashMap::new();
+    let mut balance: u128 = 0;
 
     // TODO: batch gets
     for kv in iter {
@@ -70,16 +68,17 @@ pub async fn handler(
         // Decode runes data
         let utxo_runes = UtxoRunes::decode_all(utxo_runes_raw)?;
 
-        for (rune_id, raw_quantity) in utxo_runes {
-            *balances.entry(rune_id).or_default() += raw_quantity
+        for (rune_id, quantity) in utxo_runes {
+            if rune_id == specified_rune {
+                balance += quantity;
+                break;
+            }
         }
     }
 
-    let amount = balances.remove(&specified_rune).unwrap_or_default();
-
     let balance = RuneAndAmount {
         id: specified_rune.to_string(),
-        amount: amount.to_string(),
+        amount: balance.to_string(),
     };
 
     let out = ServeResponse {

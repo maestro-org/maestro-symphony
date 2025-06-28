@@ -39,13 +39,13 @@ WORKDIR /dist
 WORKDIR /build
 
 # Install build dependencies
-RUN apt-get update \
+RUN --mount=type=cache,target=/var/lib/apt/lists \
+    --mount=type=cache,target=/var/cache/apt \
+    apt-get update \
     && apt-get install --no-install-recommends --yes \
         $(cat /.vars/deps) \
         build-essential \
-        libclang-dev \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+        libclang-dev
 
 # Add target to rustup and install rustfmt
 RUN rustup target add $(cat /.vars/target) && \

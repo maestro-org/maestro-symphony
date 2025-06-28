@@ -1,4 +1,21 @@
-FROM --platform=$BUILDPLATFORM rust:1.87-bookworm AS builder
+FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:latest-rust-1.87-bookworm AS chef
+
+ENV RUSTC_WRAPPER=sccache
+ENV SCCACHE_DIR=/var/cache/sccache
+
+RUN cargo install sccache
+
+# ---
+FROM chef AS planner
+
+WORKDIR /build
+
+COPY ./Cargo.toml ./Cargo.lock ./
+COPY ./macros ./macros
+RUN cargo chef prepare --recipe-path recipe.json
+
+
+FROM chef AS builder
 
 ARG TARGETARCH
 
@@ -37,16 +54,23 @@ RUN rustup target add $(cat /.vars/target) && \
 # Build dependencies
 COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
-RUN --mount=type=tmpfs,target=/build/src \
-    printf "#[allow(dead_code)]\nfn main() {}\n" > src/lib.rs && \
-    cargo build --release --target=$(cat /.vars/target)
+COPY --from=planner /build/recipe.json ./
+RUN --mount=type=cache,target=/var/cache/sccache \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/build/target \
+    cargo chef cook --release --target=$(cat /.vars/target) --recipe-path recipe.json
 
 # Build source
 COPY ./src ./src
-RUN cargo build --verbose --release --target=$(cat /.vars/target) && \
-    mv /build/target/$(cat /.vars/target)/release/maestro-symphony /dist/maestro-symphony
+RUN --mount=type=cache,target=/var/cache/sccache \
+    --mount=type=cache,target=/usr/local/cargo/registry \
+    --mount=type=cache,target=/usr/local/cargo/git \
+    --mount=type=cache,target=/build/target \
+    cargo build --verbose --release --target=$(cat /.vars/target) && \
+    cp /build/target/$(cat /.vars/target)/release/maestro-symphony /dist/maestro-symphony
 
-
+# ---
 FROM debian:bookworm-slim
 
 ENV DEBCONF_NONINTERACTIVE_SEEN=true

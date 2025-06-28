@@ -1,10 +1,5 @@
 FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:latest-rust-1.87-bookworm AS chef
 
-RUN cargo install sccache
-
-ENV RUSTC_WRAPPER=sccache
-ENV SCCACHE_DIR=/var/cache/sccache
-
 # ---
 FROM chef AS planner
 
@@ -55,16 +50,14 @@ RUN rustup target add $(cat /.vars/target) && \
 COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
 COPY --from=planner /build/recipe.json ./
-RUN --mount=type=cache,target=/var/cache/sccache \
-    --mount=type=cache,target=/usr/local/cargo/registry \
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/build/target \
     cargo chef cook --release --target=$(cat /.vars/target) --recipe-path recipe.json
 
 # Build source
 COPY ./src ./src
-RUN --mount=type=cache,target=/var/cache/sccache \
-    --mount=type=cache,target=/usr/local/cargo/registry \
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/build/target \
     cargo build --verbose --release --target=$(cat /.vars/target) && \

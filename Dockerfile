@@ -2,39 +2,45 @@ FROM --platform=$BUILDPLATFORM rust:1.87-bookworm AS builder
 
 ARG TARGETARCH
 
-WORKDIR /dist
-WORKDIR /build
-
 # Set up cross-compilation
+WORKDIR /.vars
 RUN case "$TARGETARCH" in \
     "amd64") \
-        printf "x86_64-unknown-linux-gnu" > .target; \
-        printf "gcc-x86-64-linux-gnu" > .gcc; \
-        printf "g++-x86-64-linux-gnu" > .gpp; \
-        printf "libc6-dev-amd64-cross" > .libc; \
+        printf "x86_64-unknown-linux-gnu" > target; \
+        printf "gcc-x86-64-linux-gnu" > gcc; \
+        printf "g++-x86-64-linux-gnu" > gpp; \
+        printf "libc6-dev-amd64-cross" > libc; \
+        echo '[target.x86_64-unknown-linux-gnu]' >> $CARGO_HOME/config.toml; \
+        echo 'linker = "x86_64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml; \
         ;; \
     "arm64") \
-        printf "aarch64-unknown-linux-gnu" > .target; \
-        printf "gcc-aarch64-linux-gnu" > .gcc; \
-        printf "g++-aarch64-linux-gnu" > .gpp; \
-        printf "libc6-dev-arm64-cross" > .libc; \
+        printf "aarch64-unknown-linux-gnu" > target; \
+        printf "gcc-aarch64-linux-gnu" > gcc; \
+        printf "g++-aarch64-linux-gnu" > gpp; \
+        printf "libc6-dev-arm64-cross" > libc; \
+        echo '[target.aarch64-unknown-linux-gnu]' >> $CARGO_HOME/config.toml; \
+        echo 'linker = "aarch64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml; \
+        echo 'strip = { path = "aarch64-linux-gnu-strip" }' >> $CARGO_HOME/config.toml; \
         ;; \
     *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;; \
 esac
+
+WORKDIR /dist
+WORKDIR /build
 
 # Install build dependencies
 RUN apt-get update \
     && apt-get install --no-install-recommends --yes \
         build-essential \
         libclang-dev \
-        $(cat .gcc) \
-        $(cat .gpp) \
-        $(cat .libc) \
+        $(cat /.vars/gcc) \
+        $(cat /.vars/gpp) \
+        $(cat /.vars/libc) \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
 # Add target to rustup and install rustfmt
-RUN rustup target add $(cat .target) && \
+RUN rustup target add $(cat /.vars/target) && \
     rustup component add rustfmt
 
 # Build dependencies
@@ -42,12 +48,12 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
 RUN --mount=type=tmpfs,target=/build/src \
     printf "#[allow(dead_code)]\nfn main() {}\n" > src/lib.rs && \
-    cargo build --release --target=$(cat .target)
+    cargo build --release --target=$(cat /.vars/target)
 
 # Build source
 COPY ./src ./src
-RUN cargo build --verbose --release --target=$(cat .target) && \
-    mv /build/target/$(cat .target)/release/maestro-symphony /dist/maestro-symphony
+RUN cargo build --verbose --release --target=$(cat /.vars/target) && \
+    mv /build/target/$(cat /.vars/target)/release/maestro-symphony /dist/maestro-symphony
 
 
 FROM debian:bookworm-slim

@@ -9,15 +9,12 @@ RUN case "$TARGETARCH" in \
         printf "x86_64-unknown-linux-gnu" > target; \
         printf "gcc-x86-64-linux-gnu g++-x86-64-linux-gnu libc6-dev-amd64-cross" > deps; \
         echo '[target.x86_64-unknown-linux-gnu]' >> $CARGO_HOME/config.toml; \
-        echo 'linker = "x86_64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml; \
-        ;; \
+        echo 'linker = "x86_64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml ;; \
     "arm64") \
         printf "aarch64-unknown-linux-gnu" > target; \
         printf "gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross" > deps; \
         echo '[target.aarch64-unknown-linux-gnu]' >> $CARGO_HOME/config.toml; \
-        echo 'linker = "aarch64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml; \
-        echo 'strip = { path = "aarch64-linux-gnu-strip" }' >> $CARGO_HOME/config.toml; \
-        ;; \
+        echo 'linker = "aarch64-linux-gnu-gcc"' >> $CARGO_HOME/config.toml ;; \
     *) echo "Unsupported architecture: $TARGETARCH" >&2 && exit 1 ;; \
 esac
 

@@ -1,9 +1,9 @@
 FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:latest-rust-1.87-bookworm AS chef
 
+RUN cargo install sccache
+
 ENV RUSTC_WRAPPER=sccache
 ENV SCCACHE_DIR=/var/cache/sccache
-
-RUN cargo install sccache
 
 # ---
 FROM chef AS planner
@@ -14,7 +14,7 @@ COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
 RUN cargo chef prepare --recipe-path recipe.json
 
-
+# ---
 FROM chef AS builder
 
 ARG TARGETARCH

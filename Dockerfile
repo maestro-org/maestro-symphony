@@ -85,10 +85,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 # Create nonroot user
-RUN groupadd --gid 65532 nonroot \
+RUN groupadd --gid 60000 nonroot \
     && useradd --no-log-init --create-home \
-        --uid 65532 \
-        --gid 65532 \
+        --uid 60000 \
+        --gid 60000 \
         --shell /sbin/nologin \
         nonroot
 

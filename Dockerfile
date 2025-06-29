@@ -55,6 +55,8 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 # ---
 FROM debian:bookworm-slim
 
+LABEL org.opencontainers.image.source=https://github.com/maestro-org/maestro-symphony
+
 ENV DEBCONF_NONINTERACTIVE_SEEN=true
 ENV DEBIAN_FRONTEND=noninteractive
 

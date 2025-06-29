@@ -22,8 +22,8 @@ WORKDIR /dist
 WORKDIR /build
 
 # Install build dependencies
-RUN --mount=type=cache,target=/var/lib/apt/lists \
-    --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+    --mount=type=cache,target=/var/cache/apt,sharing=locked \
     apt-get update \
     && apt-get install --no-install-recommends --yes \
         $(cat /.vars/deps) \

@@ -1,16 +1,4 @@
-FROM --platform=$BUILDPLATFORM lukemathwalker/cargo-chef:latest-rust-1.87-bookworm AS chef
-
-# ---
-FROM chef AS planner
-
-WORKDIR /build
-
-COPY ./Cargo.toml ./Cargo.lock ./
-COPY ./macros ./macros
-RUN cargo chef prepare --recipe-path recipe.json
-
-# ---
-FROM chef AS builder
+FROM --platform=$BUILDPLATFORM rust:1.87-bookworm AS builder
 
 ARG TARGETARCH
 
@@ -49,11 +37,12 @@ RUN rustup target add $(cat /.vars/target) && \
 # Build dependencies
 COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
-COPY --from=planner /build/recipe.json ./
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/build/target \
-    cargo chef cook --release --target=$(cat /.vars/target) --recipe-path recipe.json
+    --mount=type=tmpfs,target=/build/src \
+    printf "#[allow(dead_code)]\nfn main() {}\n" > src/lib.rs && \
+    cargo build --release --target=$(cat /.vars/target)
 
 # Build source
 COPY ./src ./src

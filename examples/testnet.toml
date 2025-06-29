@@ -1,10 +1,10 @@
 db_path = "tmp/symphony"
 
 [sync.node]
-p2p_address = "localhost:8333"
-rpc_address = "http://localhost:8332"
-rpc_user = ""
-rpc_pass = ""
+p2p_address = "bitcoin-node:8333"
+rpc_address = "http://bitcoin-node:8332"
+rpc_user = "symphony"
+rpc_pass = "symphony"
 
 [sync]
 network = "testnet"

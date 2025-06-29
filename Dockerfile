@@ -37,20 +37,18 @@ RUN rustup target add $(cat /.vars/target) && \
 # Build dependencies
 COPY ./Cargo.toml ./Cargo.lock ./
 COPY ./macros ./macros
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/build/target \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     --mount=type=tmpfs,target=/build/src \
     printf "#[allow(dead_code)]\nfn main() {}\n" > src/lib.rs && \
     cargo build --release --target=$(cat /.vars/target)
 
 # Build source
 COPY ./src ./src
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/usr/local/cargo/git \
-    --mount=type=cache,target=/build/target \
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo build --verbose --release --target=$(cat /.vars/target) && \
-    cp /build/target/$(cat /.vars/target)/release/maestro-symphony /dist/maestro-symphony
+    mv /build/target/$(cat /.vars/target)/release/maestro-symphony /dist/maestro-symphony
 
 # ---
 FROM debian:bookworm-slim

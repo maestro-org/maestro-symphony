@@ -2,7 +2,7 @@ use id::ProcessTransaction;
 use maestro_symphony_macros::{Decode, Encode};
 use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
-use tx_count_by_address::{TxCountByAddressConfig, TxCountByAddressIndexer};
+use tx_count_by_address::TxCountByAddressIndexer;
 
 use crate::{
     error::Error, sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressIndexer,
@@ -26,7 +26,7 @@ pub enum TransactionIndexer {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(tag = "type")]
 pub enum TransactionIndexerFactory {
-    TxCountByAddress(TxCountByAddressConfig),
+    TxCountByAddress,
     Runes(RunesIndexerConfig),
     UtxosByAddress,
 }
@@ -34,7 +34,7 @@ pub enum TransactionIndexerFactory {
 impl TransactionIndexerFactory {
     pub fn create_indexer(self) -> Result<Box<dyn ProcessTransaction>, Error> {
         match self {
-            Self::TxCountByAddress(c) => Ok(Box::new(TxCountByAddressIndexer::new(c)?)),
+            Self::TxCountByAddress => Ok(Box::new(TxCountByAddressIndexer::new())),
             Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
             Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
         }

@@ -2,7 +2,7 @@ use thiserror::Error;
 
 use crate::{
     storage::encdec::DecodingError,
-    sync::stages::{Point, pull::peer::P2PError},
+    sync::stages::{Point, index::indexers::types::TxoRef, pull::peer::P2PError},
 };
 
 #[derive(Error, Debug)]
@@ -24,6 +24,9 @@ pub enum Error {
 
     #[error("{0}")]
     P2P(#[from] P2PError),
+
+    #[error("{0:?}")]
+    MissingUtxo(TxoRef),
 }
 
 impl Error {
@@ -33,6 +36,10 @@ impl Error {
 
     pub fn custom(error: Box<dyn std::error::Error>) -> Error {
         Error::Custom(format!("{error}"))
+    }
+
+    pub fn missing_utxo(txo_ref: TxoRef) -> Error {
+        Error::MissingUtxo(txo_ref)
     }
 }
 

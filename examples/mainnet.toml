@@ -3,8 +3,8 @@ db_path = "tmp/symphony"
 [sync.node]
 p2p_address = "localhost:8333"
 rpc_address = "http://localhost:8332"
-rpc_user = ""
-rpc_pass = ""
+rpc_user = "..." // insert RPC credentials
+rpc_pass = "..." // insert RPC credentials
 
 [sync]
 network = "mainnet"
@@ -14,6 +14,7 @@ mempool = true
 
 [sync.indexers]
 transaction_indexers = [
+    { type = "TxCountByAddress" },
     { type = "UtxosByAddress" },
     { type = "Runes", start_height = 840000 }
 ]

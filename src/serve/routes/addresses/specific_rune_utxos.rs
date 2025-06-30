@@ -1,8 +1,7 @@
-use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::serve::types::ServeResponse;
+use crate::serve::types::{MempoolParam, RuneAndAmount, RuneUtxo, ServeResponse};
 use crate::serve::utils::RuneIdentifier;
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
@@ -17,27 +16,36 @@ use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
-use serde::Serialize;
 use std::str::FromStr;
 
-#[derive(Serialize)]
-pub struct RuneUtxo {
-    tx_hash: String,
-    output_index: u32,
-    height: u64,
-    satoshis: String,
-    runes: Vec<RuneAndAmount>,
-}
-
-#[derive(Serialize)]
-pub struct RuneAndAmount {
-    id: String,
-    amount: String,
-}
-
-pub async fn handler(
+#[utoipa::path(
+    tag = "Addresses",
+    get,
+    path = "/addresses/{address}/runes/utxos/{rune}",
+    params(
+        ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
+        ("rune" = String, Path, description = "Rune ID or name (spaced or unspaced)", example="65103:2", example="BITCOIN•PIZZAS"),
+        
+        ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Requested data",
+            body = ServeResponse<Vec<RuneUtxo>>,
+            // example = json!({})
+        ),
+        (status = 400, description = "Malformed query parameters"),
+        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 500, description = "Internal server error"),
+    )
+)]
+/// Rune UTxOs by Address and Rune
+///
+/// Returns UTxOs controlled by the provided address which contain the provided rune, sorted by height.
+pub async fn addresses_specific_rune_utxos(
     State(state): State<AppState>,
-    Query(params): Query<QueryParams>,
+    Query(params): Query<MempoolParam>,
     Path((address, rune)): Path<(String, String)>,
 ) -> Result<impl IntoResponse, ServeError> {
     let (storage, indexer_info) = state.start_reader(params.mempool).await?;

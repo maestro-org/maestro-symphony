@@ -1,8 +1,8 @@
+use crate::serve::AppState;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
-use crate::serve::types::ServeResponse;
+use crate::serve::types::{MempoolParam, RuneInfo, RuneInfoBatch, RuneTerms, ServeResponse};
 use crate::serve::utils::RuneIdentifier;
-use crate::serve::{AppState, QueryParams};
 use crate::sync::stages::index::indexers::custom::runes::tables::{RuneIdByNameKV, RuneInfoByIdKV};
 use axum::extract::Query;
 use axum::http::StatusCode;
@@ -10,40 +10,36 @@ use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
 use ordinals::{Rune, SpacedRune};
-use serde::Serialize;
+
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-#[derive(Serialize)]
-pub struct RuneInfo {
-    id: String,
-    name: String,
-    spaced_name: String,
-    symbol: Option<char>,
-    divisibility: u8,
-    etching_tx: String,
-    etching_height: u64,
-    terms: Option<RuneTerms>,
-    premine: String,
-}
-
-#[derive(Serialize)]
-pub struct RuneTerms {
-    amount: Option<String>,
-    cap: Option<String>,
-    start_height: Option<u64>,
-    end_height: Option<u64>,
-}
-
-#[derive(Serialize)]
-pub struct RuneInfoBatch {
-    found: HashMap<String, RuneInfo>,
-    missing: Vec<String>,
-}
-
-pub async fn handler(
+#[utoipa::path(
+    tag = "Runes (Metaprotocol)",
+    post,
+    path = "/runes/info",
+    request_body = Vec<String>,
+    params(
+        ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Requested data",
+            body = ServeResponse<RuneInfoBatch>,
+            // example = json!({})
+        ),
+        (status = 400, description = "Malformed query parameters"),
+        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 500, description = "Internal server error"),
+    )
+)]
+/// Info by Rune (Batch)
+///
+/// Given a list of rune identifiers (name or id), returns a map of identifiers to rune info and a list of identifiers for which information could not be found.
+pub async fn runes_rune_info(
     State(state): State<AppState>,
-    Query(params): Query<QueryParams>,
+    Query(params): Query<MempoolParam>,
     Json(rune_ids): Json<Vec<String>>,
 ) -> Result<impl IntoResponse, ServeError> {
     let (storage, indexer_info) = state.start_reader(params.mempool).await?;

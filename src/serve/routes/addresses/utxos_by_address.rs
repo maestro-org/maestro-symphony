@@ -1,8 +1,7 @@
-use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::serve::types::ServeResponse;
+use crate::serve::types::{AddressUtxo, MempoolParam, ServeResponse};
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressKV;
@@ -11,20 +10,35 @@ use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use bitcoin::Txid;
 use bitcoin::hashes::Hash;
-use serde::Serialize;
 use std::str::FromStr;
 
-#[derive(Serialize)]
-pub struct AddressUtxo {
-    tx_hash: String,
-    output_index: u32,
-    height: u64,
-    satoshis: String,
-}
-
-pub async fn handler(
+#[utoipa::path(
+    tag = "Addresses",
+    get,
+    path = "/addresses/{address}/utxos",
+    params(
+        ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
+        
+        ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Requested data",
+            body = ServeResponse<Vec<AddressUtxo>>,
+            // example = json!({})
+        ),
+        (status = 400, description = "Malformed query parameters"),
+        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 500, description = "Internal server error"),
+    )
+)]
+/// UTxOs by Address
+///
+/// Returns UTxOs controlled by the provided address, sorted by height.
+pub async fn addresses_utxos_by_address(
     State(state): State<AppState>,
-    Query(params): Query<QueryParams>,
+    Query(params): Query<MempoolParam>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
     let (storage, indexer_info) = state.start_reader(params.mempool).await?;

@@ -21,7 +21,7 @@ use std::str::FromStr;
     path = "/addresses/{address}/runes/balances",
     params(
         ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
-        
+
         ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware (default: false)"),
     ),
     responses(

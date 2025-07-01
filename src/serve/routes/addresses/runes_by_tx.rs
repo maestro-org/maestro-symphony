@@ -21,7 +21,7 @@ use std::str::FromStr;
     params(
         ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
         ("txid" = String, Path, description = "Transaction ID", example="c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3"),
-        
+
         ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
     ),
     responses(

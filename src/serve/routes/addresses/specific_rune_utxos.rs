@@ -25,7 +25,7 @@ use std::str::FromStr;
     params(
         ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
         ("rune" = String, Path, description = "Rune ID or name (spaced or unspaced)", example="65103:2", example="BITCOIN•PIZZAS"),
-        
+
         ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
     ),
     responses(

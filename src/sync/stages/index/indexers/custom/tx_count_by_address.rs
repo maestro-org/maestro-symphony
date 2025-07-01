@@ -1,52 +1,69 @@
-use std::str::FromStr;
+use std::collections::HashSet;
 
 use super::id::ProcessTransaction;
+use crate::define_indexer_table;
 use crate::error::Error;
 use crate::storage::kv_store::IndexingTask;
+use crate::storage::table::IndexerTable;
 use crate::sync::stages::TransactionWithId;
+use crate::sync::stages::index::indexers::custom::TransactionIndexer;
+use crate::sync::stages::index::indexers::types::ScriptPubKey;
 use crate::sync::stages::index::worker::context::IndexingContext;
-use bitcoin::Address;
-use serde::Deserialize;
 
-pub struct TxCountByAddressIndexer {
-    addresses: Vec<Address>,
+// --- storage
+
+define_indexer_table! {
+    name: TxCountByAddressKV,
+    key_type: ScriptPubKey,
+    value_type: u64,
+    indexer: TransactionIndexer::TxCountByAddress,
+    table: 0
 }
+
+// --- indexer
+
+pub struct TxCountByAddressIndexer;
 
 impl TxCountByAddressIndexer {
-    pub fn new(config: TxCountByAddressConfig) -> Result<Self, Error> {
-        let addresses = config
-            .addresses
-            .into_iter()
-            .map(|x| Address::from_str(&x).map(|x| x.assume_checked()))
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap(); // TODO error handling
-
-        Ok(Self { addresses })
+    pub fn new() -> Self {
+        Self
     }
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct TxCountByAddressConfig {
-    #[serde(default)]
-    pub addresses: Vec<String>,
 }
 
 impl ProcessTransaction for TxCountByAddressIndexer {
     fn process_tx(
         &self,
-        _task: &mut IndexingTask,
+        task: &mut IndexingTask,
         tx: &TransactionWithId,
         _tx_block_index: usize,
         ctx: &mut IndexingContext,
     ) -> Result<(), Error> {
         let TransactionWithId { tx, .. } = tx;
 
-        if !tx.is_coinbase() {
-            for input in tx.input.iter() {
-                ctx.resolve_input(&(input.previous_output.into())).unwrap();
+        let mut seen_scripts = HashSet::new();
 
-                unimplemented!();
+        if !tx.is_coinbase() {
+            for input in &tx.input {
+                let txo_ref = input.previous_output.into();
+
+                let utxo = ctx
+                    .resolve_input(&txo_ref)
+                    .ok_or_else(|| Error::missing_utxo(txo_ref))?;
+
+                seen_scripts.insert(utxo.script.clone());
             }
+        }
+
+        for output in &tx.output {
+            seen_scripts.insert(output.script_pubkey.as_bytes().to_vec());
+        }
+
+        for script in seen_scripts {
+            let old_count = task.get::<TxCountByAddressKV>(&script)?.unwrap_or_default();
+
+            let new_count = old_count + 1;
+
+            task.set::<TxCountByAddressKV>(script, new_count)?;
         }
 
         Ok(())

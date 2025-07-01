@@ -4,6 +4,7 @@ use ordinals::{Rune, RuneId};
 
 use crate::serve::error::ServeError;
 
+#[allow(dead_code)]
 pub fn decimal(num: u128, dec: u8) -> String {
     let dec = dec as usize;
 

@@ -20,8 +20,6 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 </details>
 
-<br>
-
 <details>
 <summary><strong>Indexers</strong></summary>
 
@@ -30,8 +28,6 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 -   UTXOs by address
 
 </details>
-
-<br>
 
 **Endpoints:** [OpenAPI](docs/openapi.json)
 
@@ -70,8 +66,6 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 </details>
 
-</details>
-
 ## Configuration
 
 | Section      | Key            | Description                                           | Example Value              |
@@ -87,7 +81,7 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 | `[sync]`     | `batch_size`   | Number of blocks to process per sync batch            | `100`                      |
 |              | `start_height` | Block height to start indexing from                   | `0`                        |
 
-See [examples](examples/) for sample configuration files.
+See the [examples](examples/) directory for sample configuration files.
 
 ## Running Locally
 

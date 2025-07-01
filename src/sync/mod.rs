@@ -9,10 +9,15 @@ pub mod stages;
 pub struct Config {
     pub node: NodeConfig,
     pub network: Network,
+    /// Index estimated future blocks using transactions in mempool
     pub mempool: bool,
+    /// Rough size in bytes to use for UTxO cache (0 = disabled, default 1/6 RAM)
+    pub utxo_cache_size: Option<u64>,
 
+    /// Max number of blocks to pull from the node at once
     pub block_page_size: Option<usize>,
 
+    /// Max in-flight messages between the pull and index stage
     pub stage_queue_size: Option<usize>,
     pub stage_timeout_secs: Option<u64>,
 
@@ -20,9 +25,6 @@ pub struct Config {
 
     pub max_rollback: Option<usize>,
     pub safe_mode: Option<bool>,
-    // TODO
-    // utxo cache
-    // mempool
 }
 
 #[derive(Deserialize, Debug, Clone)]

@@ -30,3 +30,6 @@ snapshots/
 # already existing elements were commented out
 
 #/target
+
+.mise/
+.mise.toml

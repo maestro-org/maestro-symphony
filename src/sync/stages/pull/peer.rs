@@ -30,7 +30,7 @@ use tokio::{
     sync::{Notify, mpsc},
     task::JoinHandle,
 };
-use tracing::{debug, error, info};
+use tracing::{error, info, trace};
 
 const VERSION: u32 = 70016;
 const USER_AGENT: &str = "/symphony:0.0.1/";
@@ -240,7 +240,7 @@ impl Peer {
         &mut self,
         intersects: Vec<BlockHash>,
     ) -> Result<Vec<Header>, P2PError> {
-        debug!("requesting headers {intersects:?}");
+        trace!("requesting headers {intersects:?}");
 
         self.request_send
             .send(Request::get_new_headers(intersects))
@@ -257,7 +257,7 @@ impl Peer {
     }
 
     pub async fn get_blocks(&mut self, hashes: Vec<BlockHash>) -> Result<Vec<Block>, P2PError> {
-        debug!("requesting blocks {hashes:?}");
+        trace!("requesting blocks {hashes:?}");
 
         self.request_send
             .send(Request::get_blocks(hashes.as_slice()))
@@ -469,27 +469,27 @@ impl PeerHandler {
                         self.egress_send.send(RawNetworkMessage::new(self.magic, NetworkMessage::Verack)).await.map_err(|_| P2PError::EgressChannelClosed)?;
                     },
                     DecodedMessage::Verack => {
-                        debug!("peer sent verack, sending init notification");
+                        trace!("peer sent verack, sending init notification");
                         self.init_notifier.notify_one();
                     },
                     DecodedMessage::Inv(inv) => {
                         if inv.iter().any(|i| matches!(i, Inventory::Block(_))) {
-                            debug!("peer sent inventory containing block: {inv:?}, sending new block notification");
+                            trace!("peer sent inventory containing block: {inv:?}, sending new block notification");
                             self.new_block_notifier.notify_one();
                         } else {
-                            debug!("peer sent inventory: {inv:?}");
+                            trace!("peer sent inventory: {inv:?}");
                         }
                     },
                     DecodedMessage::Ping(nonce) => {
-                        debug!("peer pinged with nonce {nonce}, responding with pong");
+                        trace!("peer pinged with nonce {nonce}, responding with pong");
                         self.egress_send.send(RawNetworkMessage::new(self.magic, NetworkMessage::Pong(nonce))).await.map_err(|_| P2PError::EgressChannelClosed)?;
                     },
                     DecodedMessage::Headers(headers) => {
-                        debug!("peer sent headers {headers:?}, relaying");
+                        trace!("peer sent headers {headers:?}, relaying");
                         self.headers_send.send(headers).await.map_err(|_| P2PError::PeerChannelClosed("headers".into()))?;
                     },
                     DecodedMessage::Block(block) => {
-                        debug!("peer sent block {block:?}, relaying");
+                        trace!("peer sent block {block:?}, relaying");
                         self.blocks_send.send(block).await.map_err(|_| P2PError::PeerChannelClosed("blocks".into()))?;
                     },
                     DecodedMessage::Unused => (),

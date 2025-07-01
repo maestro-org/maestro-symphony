@@ -1,35 +1,99 @@
+[![CI](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml/badge.svg)](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml) [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](./LICENSE)
+
 # Maestro Symphony
 
-_from hash to harmony: an orchestrated Bitcoin indexing suite_
-
----
+🎵 ₿ _From hash to harmony: an orchestrated Bitcoin indexing suite_ ₿ 🎵
 
 ## Overview
 
-Maestro Symphony is a fast, mempool-aware Bitcoin indexer and API server. It supports mainnet and testnet4, providing data for UTXOs, metaprotocols and much more. Designed for developers who need reliable, mempool-aware blockchain data.
+Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and other onchain transactions.
 
 ---
 
-## Features
+## Core Features
 
--   **Supported Networks:** mainnet, testnet4
--   **Indexers:**
-    -   Runes
-    -   Transaction count by address
-    -   UTXOs by address
--   **Mempool Awareness:** Query with `?mempool=true` to include unconfirmed transactions.
+<details>
+<summary><strong>Supported Networks</strong></summary>
+
+-   mainnet
+-   testnet4
+
+</details>
+
+<details>
+<summary><strong>Indexers</strong></summary>
+
+-   Runes
+-   Transaction count by address
+-   UTXOs by address
+
+</details>
+
+**Endpoints:** [OpenAPI](docs/openapi.json)
+
+**Mempool Awareness:** Query any endpoint with `?mempool=true` to include pending transactions.
+
+**Rollback Handling:** Always maintains an index of the longest chain.
 
 ---
 
-## Quick Start
+## Prerequisites
 
-### Prerequisites
+-   Bitcoin node with RPC and P2P access
+-   [Rust 1.87+](https://www.rust-lang.org/tools/install)
+-   [Docker](https://docs.docker.com/compose/install/)
+-   [mise](https://mise.jdx.dev/getting-started.html)
 
--   A running Bitcoin node (mainnet or testnet4)
--   Set the `node_address` parameter in your config (see `examples/testnet.toml`)
--   Rust toolchain installed
+### Deployment Requirements
 
-### Run All (Sync + Serve)
+<details>
+<summary><strong>Testnet4</strong></summary>
+
+-   Disk: 1 GB
+-   CPU: 2 cores
+-   RAM: 4 GB
+-   Sync time: ~2 hours
+
+</details>
+
+<details>
+<summary><strong>Mainnet</strong></summary>
+
+-   Disk: 16 GB
+-   CPU: 4 cores
+-   RAM: 16 GB
+-   Sync time: ~10 hours
+
+</details>
+
+**NOTE**: Deployment requirements are subject to change with new indexers and API endpoints.
+
+## Configuration
+
+| Section      | Key            | Description                                           | Example Value              |
+| ------------ | -------------- | ----------------------------------------------------- | -------------------------- |
+| `[network]`  | `type`         | Bitcoin network to connect to (`mainnet`, `testnet4`) | `"testnet4"`               |
+|              | `rpc_url`      | URL of your Bitcoin node's RPC endpoint               | `"http://localhost:18332"` |
+|              | `rpc_user`     | RPC username for your Bitcoin node                    | `"bitcoin"`                |
+|              | `rpc_password` | RPC password for your Bitcoin node                    | `"password"`               |
+|              | `p2p_host`     | Host/IP for P2P connection to Bitcoin node            | `"127.0.0.1"`              |
+|              | `p2p_port`     | Port for P2P connection                               | `18333`                    |
+| `[indexers]` | `enabled`      | List of enabled indexers                              | `["runes", "utxos"]`       |
+| `[api]`      | `bind_address` | Address and port for API server to listen on          | `"0.0.0.0:8080"`           |
+| `[sync]`     | `batch_size`   | Number of blocks to process per sync batch            | `100`                      |
+|              | `start_height` | Block height to start indexing from                   | `0`                        |
+
+See the [examples](examples/) directory for sample configuration files.
+
+## Running Locally
+
+Optionally, use `mise` to easily set up your environment:
+
+```bash
+mise install
+```
+
+### Sync & Serve
 
 ```bash
 RUST_LOG=info cargo run -- examples/testnet.toml run
@@ -47,77 +111,53 @@ RUST_LOG=info cargo run -- examples/testnet.toml sync
 RUST_LOG=info cargo run -- examples/testnet.toml serve
 ```
 
----
-
-## Configuration
-
-Edit the config file (e.g., `examples/testnet.toml`) to set your node address and other parameters.
-
----
-
-## API Endpoints & Examples
-
-### Addresses
-
--   **UTXOs by address:**
-    -   `GET /addresses/{address}/utxos`
-    - Requires indexers: `UtxosByAddress`
--   **Rune UTXOs by address:**
-    -   `GET /addresses/{address}/runes/utxos`
-    - Requires indexers: `Runes`
--   **Rune UTXOs by address and rune:**
-    -   `GET /addresses/{address}/runes/utxos/{rune}`
-    - Requires indexers: `Runes`
--   **Rune balances by address:**
-    -   `GET /addresses/{address}/runes/balance`
-    - Requires indexers: `Runes`
--   **Rune balances by address and rune:**
-    -   `GET /addresses/{address}/runes/balances/{rune}`
-    - Requires indexers: `Runes`
-
-### Runes
-
--   **Rune info (batch):**
-    -   `POST /runes/info` (body: JSON array of rune identifiers or names)
-    - Requires indexers: `Runes`
-
-#### Example: Rune UTXOs by Address
+## Running with Docker
 
 ```bash
-curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936/runes/utxos | jq .
+docker compose up
+```
+
+---
+
+## Endpoint Examples
+
+### Rune UTXOs by Address
+
+```bash
+curl -X GET "http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936/runes/utxos" | jq .
 ```
 
 ```json
 {
-  "data": [
-    {
-      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-      "output_index": 1,
-      "height": 30562,
-      "satoshis": "10000",
-      "runes": [
+    "data": [
         {
-          "id": "30562:50",
-          "amount": "100000000"
+            "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+            "output_index": 1,
+            "height": 30562,
+            "satoshis": "10000",
+            "runes": [
+                {
+                    "id": "30562:50",
+                    "amount": "100000000"
+                }
+            ]
         }
-      ]
+    ],
+    "indexer_info": {
+        "chain_tip": {
+            "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+            "block_height": 87777
+        },
+        "mempool_timestamp": null,
+        "estimated_blocks": []
     }
-  ],
-  "indexer_info": {
-    "chain_tip": {
-      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
-      "block_height": 31633
-    },
-    "mempool_timestamp": null,
-    "estimated_blocks": []
-  }
 }
 ```
 
-#### Example: Rune Info (batch)
+### Rune Info (Batch)
 
 ```bash
-curl -X POST http://localhost:8080/runes/info \
+curl -X POST "http://localhost:8080/runes/info" \
   -H "Content-Type: application/json" \
   -d '["30562:50", "ABCDEF"]' | jq .
 ```
@@ -156,80 +196,69 @@ curl -X POST http://localhost:8080/runes/info \
 
 ---
 
-### Mempool awareness
-
-#### Example: Rune UTXOs by Address
+### Mempool-Aware Rune UTXOs by Address
 
 ```bash
-curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936/runes/utxos?mempool=true | jq .
+curl -X GET "http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwemrpuwljnmz9qdk38ueqsqae936/runes/utxos?mempool=true" | jq .
 ```
 
 ```json
 {
-  "data": [
-    {
-      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-      "output_index": 1,
-      "height": 30562,
-      "satoshis": "10000",
-      "runes": [
+    "data": [
         {
-          "id": "30562:50",
-          "amount": "100000000"
+            "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+            "output_index": 1,
+            "height": 30562,
+            "satoshis": "10000",
+            "runes": [
+                {
+                    "id": "30562:50",
+                    "amount": "100000000"
+                }
+            ]
         }
-      ]
+    ],
+    "indexer_info": {
+        "chain_tip": {
+            "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
+            "block_height": 87777
+        },
+        "mempool_timestamp": "2025-06-23 22:04:31",
+        "estimated_blocks": [
+            {
+                "block_height": 87778
+            }
+        ]
     }
-  ],
-  "indexer_info": {
-    "chain_tip": {
-      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
-      "block_height": 87777
-    },
-    "mempool_timestamp": "2025-06-23 22:04:31",
-    "estimated_blocks": [
-      {
-        "block_height": 87778
-      }
-    ]
-  }
 }
 ```
 
-#### Example: Rune Balance Changes in a Transaction
+#### Rune Balance Changes in a Transaction
 
 ```bash
-curl -X GET http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID> | jq .
+curl -X GET "http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID>" | jq .
 ```
 
 ```json
 {
-  "data": [
-    {
-      "rune_id": "30562:50",
-      "amount": "100000000",
-      "output": 1,
-      "block_height": 30562
+    "data": [
+        {
+            "rune_id": "30562:50",
+            "amount": "100000000",
+            "output": 1,
+            "block_height": 30562
+        }
+    ],
+    "indexer_info": {
+        "chain_tip": {
+            "block_hash": "0000000000000035ec326a15b2f81822962f786028f33205b74b47a9b7cf3caf",
+            "block_height": 38980
+        },
+        "mempool_timestamp": null,
+        "estimated_blocks": []
     }
-  ],
-  "indexer_info": {
-    "chain_tip": {
-      "block_hash": "0000000000000035ec326a15b2f81822962f786028f33205b74b47a9b7cf3caf",
-      "block_height": 38980
-    },
-    "mempool_timestamp": null,
-    "estimated_blocks": []
-  }
 }
 ```
-
-## Local Deployment Requirements
-
-### Testnet4
-
--   Disk: 1 GB
--   CPU: 2 cores
--   RAM: 4 GB
--   Approximate sync time: 2 hours
 
 ---
 
@@ -241,4 +270,4 @@ Pull requests and issues are welcome! See the [Kanban board](https://github.com/
 
 ## License
 
-This project is licensed under the terms of the [Apache 2.0 License](./LICENSE).
+This project is licensed under the [Apache 2.0 License](./LICENSE).

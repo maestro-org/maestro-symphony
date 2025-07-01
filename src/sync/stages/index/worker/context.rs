@@ -10,7 +10,7 @@ use crate::{
         stages::{
             BlockHeight, BlockTxs, Point, TransactionWithId,
             index::indexers::{
-                core::utxo_by_txo_ref::{ResolvedUtxos, UtxoByTxoRefKV},
+                core::utxo_by_txo_ref::{ResolvedUtxos, UtxoByTxoRefKV, UtxoCache},
                 custom::TransactionIndexer,
                 types::{ExtendedUtxoData, TxoRef, Utxo},
             },
@@ -71,11 +71,12 @@ impl IndexingContext {
         txs: &BlockTxs,
         point: Point,
         network: sync::Network,
+        utxo_cache: &mut Option<UtxoCache>,
     ) -> Result<Self, Error> {
         let ResolvedUtxos {
             resolver,
             chained_txos,
-        } = UtxoByTxoRefKV::resolve_inputs(&task, txs, None)?; // TODO cache
+        } = UtxoByTxoRefKV::resolve_inputs(&task, txs, utxo_cache)?; // TODO cache
 
         let network = match network {
             sync::Network::Mainnet => Network::Bitcoin,
@@ -95,6 +96,7 @@ impl IndexingContext {
         &mut self,
         task: &mut IndexingTask,
         tx: &TransactionWithId,
+        utxo_cache: &mut Option<UtxoCache>,
     ) -> Result<(), Error> {
         // remove consumed utxos from resolver and strorage
         for input in &tx.tx.input {
@@ -121,6 +123,7 @@ impl IndexingContext {
             if self.chained_txos.contains(&txo_ref) {
                 self.resolver.insert(txo_ref, utxo);
             } else {
+                utxo_cache.as_mut().map(|c| c.insert(txo_ref, utxo.clone()));
                 task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
             }
         }

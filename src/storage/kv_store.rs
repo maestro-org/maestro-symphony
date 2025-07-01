@@ -4,7 +4,7 @@ use bitcoin::hashes::Hash;
 use itertools::Itertools;
 use maestro_symphony_macros::{Decode, Encode};
 use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, WriteBatch};
-use tracing::{debug, info};
+use tracing::{info, trace};
 
 use crate::{
     error::Error,
@@ -52,7 +52,7 @@ impl<'a> IndexingTask<'a> {
 
         // Check the write buffer first
         if let Some(action) = self.write_buffer.get(&encoded_key) {
-            debug!("fetching {} from writebuf", hex::encode(&encoded_key));
+            trace!("fetching {} from writebuf", hex::encode(&encoded_key));
 
             match action {
                 StorageAction::Set(value) => return Ok(Some(T::Value::decode_all(value)?)),
@@ -60,7 +60,7 @@ impl<'a> IndexingTask<'a> {
             }
         }
 
-        debug!("fetching {} from storage", hex::encode(&encoded_key));
+        trace!("fetching {} from storage", hex::encode(&encoded_key));
 
         let mut read_opts = ReadOptions::default();
         read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
@@ -128,7 +128,7 @@ impl<'a> IndexingTask<'a> {
         let encoded_key = T::encode_key(&key);
         let encoded_value = value.encode();
 
-        debug!("setting {}", hex::encode(&encoded_key));
+        trace!("setting {}", hex::encode(&encoded_key));
 
         // Store original KV if mutable
         self.maybe_store_original_kv(&encoded_key)?;
@@ -147,7 +147,7 @@ impl<'a> IndexingTask<'a> {
         // Encode the key and value
         let encoded_key = T::encode_key(&key);
 
-        debug!("deleting {}", hex::encode(&encoded_key));
+        trace!("deleting {}", hex::encode(&encoded_key));
 
         // Store original KV if mutable
         self.maybe_store_original_kv(&encoded_key)?;

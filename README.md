@@ -105,8 +105,8 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
   ],
   "indexer_info": {
     "chain_tip": {
-      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
-      "block_height": 87777
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
     },
     "mempool_timestamp": null,
     "estimated_blocks": []
@@ -119,36 +119,34 @@ curl -X GET http://localhost:8080/addresses/tb1pn9dzakm6egrv90c9gsgs63axvmn6ydwe
 ```bash
 curl -X POST http://localhost:8080/runes/info \
   -H "Content-Type: application/json" \
-  -d '["30562:50", "BESTINSLOTXYZ", "UNKNOWN"]' | jq .
+  -d '["30562:50", "ABCDEF"]' | jq .
 ```
 
 ```json
 {
   "data": {
-    "found": {
-      "30562:50": {
-        "id": "30562:50",
-        "name": "BESTINSLOTXYZ",
-        "spaced_name": "BESTINSLOT•XYZ",
-        "symbol": "ʃ",
-        "divisibility": 8,
-        "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-        "etching_height": 30562,
-        "premine": "100000000",
-        "terms": {
-          "amount": "100000000",
-          "cap": "3402823669209384634633746074316",
-          "start_height": null,
-          "end_height": null
-        }
-      }
+    "30562:50": {
+      "id": "30562:50",
+      "name": "BESTINSLOTXYZ",
+      "spaced_name": "BESTINSLOT•XYZ",
+      "symbol": "ʃ",
+      "divisibility": 8,
+      "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+      "etching_height": 30562,
+      "terms": {
+        "amount": "100000000",
+        "cap": "3402823669209384634633746074316",
+        "start_height": null,
+        "end_height": null
+      },
+      "premine": "100000000"
     },
-    "missing": ["UNKNOWN"]
+    "ABCDEF": null
   },
   "indexer_info": {
     "chain_tip": {
-      "block_hash": "000000002ec229e75c52e8e9adf95149fdde167b59c3271abb6bf541ef85249b",
-      "block_height": 87777
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
     },
     "mempool_timestamp": null,
     "estimated_blocks": []

@@ -1,5 +1,6 @@
 pub mod all_rune_balances;
 pub mod all_rune_utxos;
+pub mod runes_by_tx;
 pub mod specific_rune_balance;
 pub mod specific_rune_utxos;
 pub mod utxos_by_address;
@@ -21,4 +22,5 @@ pub fn router() -> Router<AppState> {
             "/{address}/runes/balances/{rune}",
             get(specific_rune_balance::handler),
         )
+        .route("/{address}/runes/txs/{txid}", get(runes_by_tx::handler))
 }

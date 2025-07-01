@@ -144,6 +144,7 @@ pub struct Peer {
     pub handler: JoinHandle<()>,
 }
 
+#[allow(dead_code)]
 #[derive(Debug)]
 enum Request {
     GetNewHeaders(GetHeadersMessage),
@@ -167,6 +168,7 @@ impl Request {
         )
     }
 
+    #[allow(dead_code)]
     fn get_mempool_ids() -> Request {
         Request::GetMempoolIds
     }

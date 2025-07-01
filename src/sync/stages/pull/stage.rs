@@ -136,7 +136,6 @@ impl gasket::framework::Worker<Stage> for Worker {
             peer_session,
             peer_rpc,
             cursor: intersect_options,
-            init: false,
             stats: PullStats::new(),
             tip_reached: false,
             has_shutdown: stage.has_shutdown.clone(),
@@ -162,17 +161,6 @@ impl gasket::framework::Worker<Stage> for Worker {
         // TODO: timed stats
 
         let mut units = vec![];
-
-        // send initial rollback if applicable
-        if !self.init {
-            if let Some(point) = self.cursor.first() {
-                // TODO
-                // if point.height != 0 {
-                //     units.push(ChainEvent::RollBack(*point));
-                // }
-                self.init = true;
-            }
-        }
 
         // if we have not reached the tip
         if !self.tip_reached {
@@ -269,7 +257,6 @@ pub struct Worker {
     peer_session: Peer,
     peer_rpc: RpcClient,
     cursor: Vec<Point>,
-    init: bool,
     stats: PullStats,
     tip: Point,
     tip_reached: bool,
@@ -494,7 +481,8 @@ impl PullStats {
     }
 }
 
-// Download all headers after the provided point until we find the tip or encounter a rollback
+#[allow(dead_code)]
+/// Estimate tip by downloading headers using only P2P (currently using RPC)
 // TODO: improve so we can reuse these fetched headers instead of fetching again
 async fn estimate_tip(peer: &mut Peer, after: Point) -> Result<Point, Error> {
     info!("estimating tip (starting from {after:?}");

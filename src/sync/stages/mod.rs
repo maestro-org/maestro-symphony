@@ -1,6 +1,5 @@
 use bitcoin::{BlockHash, Transaction, Txid, block::Header};
 
-pub mod health;
 pub mod index;
 pub mod pull;
 

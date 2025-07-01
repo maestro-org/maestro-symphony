@@ -3,28 +3,24 @@ use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
 use crate::serve::types::ServeResponse;
-use crate::serve::utils::{RuneIdentifier, decimal};
+use crate::serve::utils::RuneIdentifier;
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::custom::runes::tables::{
-    RuneIdByNameKV, RuneInfoByIdKV, RuneUtxosByScriptKV, UtxoRunes,
+    RuneIdByNameKV, RuneUtxosByScriptKV, UtxoRunes,
 };
 use axum::extract::{Path, Query};
 use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
-use ordinals::{Rune, RuneId, SpacedRune};
 use serde::Serialize;
-use std::collections::HashMap;
 use std::str::FromStr;
 
 #[derive(Serialize)]
-pub struct RuneAndQuantity {
+pub struct RuneAndAmount {
     id: String,
-    name: String,
-    spaced_name: String,
-    quantity: String,
+    amount: String,
 }
 
 pub async fn handler(
@@ -37,7 +33,7 @@ pub async fn handler(
     let address = bitcoin::Address::from_str(&address)
         .map_err(|_| ServeError::malformed_request("invalid address"))?;
 
-    let specified_rune = match RuneIdentifier::parse(rune)? {
+    let specified_rune = match RuneIdentifier::parse(&rune)? {
         RuneIdentifier::Id(x) => x,
         RuneIdentifier::Name(n) => storage
             .get_maybe::<RuneIdByNameKV>(&n)?
@@ -55,7 +51,7 @@ pub async fn handler(
 
     let iter = storage.iter_kvs::<RuneUtxosByScriptKV>(range, false);
 
-    let mut balances: HashMap<RuneId, u128> = HashMap::new();
+    let mut balance: u128 = 0;
 
     // TODO: batch gets
     for kv in iter {
@@ -72,23 +68,17 @@ pub async fn handler(
         // Decode runes data
         let utxo_runes = UtxoRunes::decode_all(utxo_runes_raw)?;
 
-        for (rune_id, raw_quantity) in utxo_runes {
-            *balances.entry(rune_id).or_default() += raw_quantity
+        for (rune_id, quantity) in utxo_runes {
+            if rune_id == specified_rune {
+                balance += quantity;
+                break;
+            }
         }
     }
 
-    let raw_quantity = balances.remove(&specified_rune).unwrap_or_default();
-
-    let rune_info = storage.get_expected::<RuneInfoByIdKV>(&specified_rune)?;
-
-    let rune = Rune(rune_info.name);
-    let spaced = SpacedRune::new(rune, rune_info.spacers);
-
-    let balance = RuneAndQuantity {
+    let balance = RuneAndAmount {
         id: specified_rune.to_string(),
-        name: rune.to_string(),
-        spaced_name: spaced.to_string(),
-        quantity: decimal(raw_quantity, rune_info.divisibility),
+        amount: balance.to_string(),
     };
 
     let out = ServeResponse {

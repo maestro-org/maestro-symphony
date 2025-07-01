@@ -66,6 +66,10 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 </details>
 
+<br>
+
+**NOTE**: Deployment requirements are subject to change with new indexers and API endpoints.
+
 ## Configuration
 
 | Section      | Key            | Description                                           | Example Value              |
@@ -259,8 +263,6 @@ curl -X GET "http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID>" | jq .
     }
 }
 ```
-
-**Note:** Output is subject to change as new indexers are added.
 
 ---
 

@@ -3,8 +3,8 @@ db_path = "tmp/symphony"
 [sync.node]
 p2p_address = "bitcoin-node:8333"
 rpc_address = "http://bitcoin-node:8332"
-rpc_user = "..." // insert RPC credentials
-rpc_pass = "..." // insert RPC credentials
+rpc_user = "..." # insert rpc credentials
+rpc_pass = "..." # insert rpc credentials
 
 [sync]
 network = "mainnet"

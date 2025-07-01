@@ -66,8 +66,6 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 </details>
 
-<br>
-
 **NOTE**: Deployment requirements are subject to change with new indexers and API endpoints.
 
 ## Configuration

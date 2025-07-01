@@ -142,7 +142,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         "docs/openapi.json",
         APIDoc::openapi().to_pretty_json().unwrap(),
     ) {
-        warn!("unable to write swagger to docs/swagger.json: {e:?}")
+        warn!("unable to write swagger to docs/openapi.json: {e:?}")
     };
 
     let app_state = AppState(Arc::new(RwLock::new(db)));

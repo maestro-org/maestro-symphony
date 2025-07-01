@@ -1,7 +1,7 @@
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::serve::types::{MempoolParam, RuneAndAmount, ServeResponse};
+use crate::serve::types::{MempoolParam, ServeResponse};
 use crate::serve::utils::RuneIdentifier;
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
@@ -29,8 +29,8 @@ use std::str::FromStr;
         (
             status = 200,
             description = "Requested data",
-            body = ServeResponse<RuneAndAmount>,
-            // example = json!({})
+            body = ServeResponse<String>,
+            example = json!(EXAMPLE_RESPONSE)
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested entity not found on-chain"),
@@ -93,15 +93,22 @@ pub async fn addresses_specific_rune_balance(
         }
     }
 
-    let balance = RuneAndAmount {
-        id: specified_rune.to_string(),
-        amount: balance.to_string(),
-    };
-
     let out = ServeResponse {
-        data: balance,
+        data: balance.to_string(),
         indexer_info,
     };
 
     Ok((StatusCode::OK, Json(out)))
 }
+
+static EXAMPLE_RESPONSE: &str = r##"{
+  "data": "100000000",
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}"##;

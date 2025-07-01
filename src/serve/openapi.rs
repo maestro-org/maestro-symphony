@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{routes::*, types::*};
 use utoipa::OpenApi;
 
@@ -22,7 +24,7 @@ use utoipa::OpenApi;
         addresses::specific_rune_balance::addresses_specific_rune_balance,
         addresses::specific_rune_utxos::addresses_specific_rune_utxos,
         addresses::utxos_by_address::addresses_utxos_by_address,
-        runes::rune_info::runes_rune_info,
+        runes::rune_info_batch::runes_rune_info_batch,
     ),
     components(schemas(
         IndexerInfo,
@@ -33,16 +35,15 @@ use utoipa::OpenApi;
         ServeResponse<Vec<RuneAndAmount>>,
         ServeResponse<Vec<RuneUtxo>>,
         ServeResponse<Vec<RuneEdict>>,
-        ServeResponse<RuneAndAmount>,
+        ServeResponse<String>,
         ServeResponse<AddressUtxo>,
-        ServeResponse<RuneInfoBatch>,
+        ServeResponse<HashMap<String, Option<RuneInfo>>>,
         // ---
         RuneAndAmount,
         RuneUtxo,
         RuneEdict,
         AddressUtxo,
         RuneInfo,
-        RuneInfoBatch,
     )),
 )]
 pub struct APIDoc;

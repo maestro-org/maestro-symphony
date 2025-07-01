@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -93,10 +91,4 @@ pub struct RuneTerms {
     pub cap: Option<String>,
     pub start_height: Option<u64>,
     pub end_height: Option<u64>,
-}
-
-#[derive(Serialize, ToSchema)]
-pub struct RuneInfoBatch {
-    pub found: HashMap<String, RuneInfo>,
-    pub missing: Vec<String>,
 }

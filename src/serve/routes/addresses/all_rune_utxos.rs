@@ -28,7 +28,7 @@ use std::str::FromStr;
             status = 200,
             description = "Requested data",
             body = ServeResponse<Vec<RuneUtxo>>,
-            // example = json!({})
+            example = json!(EXAMPLE_RESPONSE)
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested entity not found on-chain"),
@@ -106,3 +106,28 @@ pub async fn addresses_all_rune_utxos(
 
     Ok((StatusCode::OK, Json(out)))
 }
+
+static EXAMPLE_RESPONSE: &str = r##"{
+  "data": [
+    {
+      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+      "output_index": 1,
+      "height": 30562,
+      "satoshis": "10000",
+      "runes": [
+        {
+          "id": "30562:50",
+          "amount": "100000000"
+        }
+      ]
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}"##;

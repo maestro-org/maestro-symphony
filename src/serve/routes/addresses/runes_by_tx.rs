@@ -17,7 +17,7 @@ use std::str::FromStr;
 #[utoipa::path(
     tag = "Addresses",
     get,
-    path = "/addresses/{address}/runes/tx/{txid}",
+    path = "/addresses/{address}/runes/txs/{txid}",
     params(
         ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
         ("txid" = String, Path, description = "Transaction ID", example="c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3"),
@@ -29,7 +29,7 @@ use std::str::FromStr;
             status = 200,
             description = "Requested data",
             body = ServeResponse<Vec<RuneEdict>>,
-            // example = json!({})
+            example = json!(EXAMPLE_RESPONSE)
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested entity not found on-chain"),
@@ -93,3 +93,22 @@ pub async fn addresses_runes_by_tx(
 
     Ok((StatusCode::OK, Json(resp)))
 }
+
+static EXAMPLE_RESPONSE: &str = r##"{
+  "data": [
+    {
+      "rune_id": "30562:50",
+      "amount": "100000000",
+      "output": 1,
+      "block_height": 30562
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}"##;

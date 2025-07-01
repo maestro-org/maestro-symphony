@@ -49,7 +49,8 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneAndAmount"
-                }
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"id\": \"30562:50\",\n      \"amount\": \"100000000\"\n    },\n    {\n      \"id\": \"65103:2\",\n      \"amount\": \"300000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -110,8 +111,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServeResponse_RuneAndAmount"
-                }
+                  "$ref": "#/components/schemas/ServeResponse_String"
+                },
+                "example": "{\n  \"data\": \"100000000\",\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -127,7 +129,7 @@
         }
       }
     },
-    "/addresses/{address}/runes/tx/{txid}": {
+    "/addresses/{address}/runes/txs/{txid}": {
       "get": {
         "tags": [
           "Addresses"
@@ -172,7 +174,8 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneEdict"
-                }
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"rune_id\": \"30562:50\",\n      \"amount\": \"100000000\",\n      \"output\": 1,\n      \"block_height\": 30562\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -224,7 +227,8 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
-                }
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -286,7 +290,8 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
-                }
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -338,7 +343,8 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_AddressUtxo"
-                }
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -360,8 +366,8 @@
           "Runes (Metaprotocol)"
         ],
         "summary": "Info by Rune (Batch)",
-        "description": "Given a list of rune identifiers (name or id), returns a map of identifiers to rune info and a list of identifiers for which information could not be found.",
-        "operationId": "runes_rune_info",
+        "description": "Given a list of rune identifiers (name or id), returns a map of identifiers to rune info (or null if no info found).",
+        "operationId": "runes_rune_info_batch",
         "parameters": [
           {
             "name": "mempool",
@@ -381,7 +387,11 @@
                 "items": {
                   "type": "string"
                 }
-              }
+              },
+              "example": [
+                "BESTINSLOTXYZ",
+                "ABCDEF"
+              ]
             }
           },
           "required": true
@@ -392,8 +402,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServeResponse_RuneInfoBatch"
-                }
+                  "$ref": "#/components/schemas/ServeResponse_HashMap_String_Option_RuneInfo"
+                },
+                "example": "{\n  \"data\": {\n    \"30562:50\": {\n      \"id\": \"30562:50\",\n      \"name\": \"BESTINSLOTXYZ\",\n      \"spaced_name\": \"BESTINSLOT•XYZ\",\n      \"symbol\": \"ʃ\",\n      \"divisibility\": 8,\n      \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"etching_height\": 30562,\n      \"terms\": {\n        \"amount\": \"100000000\",\n        \"cap\": \"3402823669209384634633746074316\",\n        \"start_height\": null,\n        \"end_height\": null\n      },\n      \"premine\": \"100000000\"\n    },\n    \"ABCDEF\": null\n  },\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -605,30 +616,6 @@
           }
         }
       },
-      "RuneInfoBatch": {
-        "type": "object",
-        "required": [
-          "found",
-          "missing"
-        ],
-        "properties": {
-          "found": {
-            "type": "object",
-            "additionalProperties": {
-              "$ref": "#/components/schemas/RuneInfo"
-            },
-            "propertyNames": {
-              "type": "string"
-            }
-          },
-          "missing": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            }
-          }
-        }
-      },
       "RuneTerms": {
         "type": "object",
         "properties": {
@@ -735,7 +722,7 @@
           }
         }
       },
-      "ServeResponse_RuneAndAmount": {
+      "ServeResponse_HashMap_String_Option_RuneInfo": {
         "type": "object",
         "required": [
           "data",
@@ -744,17 +731,70 @@
         "properties": {
           "data": {
             "type": "object",
-            "required": [
-              "id",
-              "amount"
-            ],
-            "properties": {
-              "amount": {
-                "type": "string"
-              },
-              "id": {
-                "type": "string"
-              }
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "spaced_name",
+                    "divisibility",
+                    "etching_tx",
+                    "etching_height",
+                    "premine"
+                  ],
+                  "properties": {
+                    "divisibility": {
+                      "type": "integer",
+                      "format": "int32",
+                      "minimum": 0
+                    },
+                    "etching_height": {
+                      "type": "integer",
+                      "format": "int64",
+                      "minimum": 0
+                    },
+                    "etching_tx": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "premine": {
+                      "type": "string"
+                    },
+                    "spaced_name": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "terms": {
+                      "oneOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "$ref": "#/components/schemas/RuneTerms"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "propertyNames": {
+              "type": "string"
             }
           },
           "indexer_info": {
@@ -762,7 +802,7 @@
           }
         }
       },
-      "ServeResponse_RuneInfoBatch": {
+      "ServeResponse_String": {
         "type": "object",
         "required": [
           "data",
@@ -770,28 +810,7 @@
         ],
         "properties": {
           "data": {
-            "type": "object",
-            "required": [
-              "found",
-              "missing"
-            ],
-            "properties": {
-              "found": {
-                "type": "object",
-                "additionalProperties": {
-                  "$ref": "#/components/schemas/RuneInfo"
-                },
-                "propertyNames": {
-                  "type": "string"
-                }
-              },
-              "missing": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
+            "type": "string"
           },
           "indexer_info": {
             "$ref": "#/components/schemas/IndexerInfo"

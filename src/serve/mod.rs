@@ -139,7 +139,7 @@ async fn auto_refresh(
 
 pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
     if let Err(e) = fs::write(
-        "docs/swagger.json",
+        "docs/openapi.json",
         APIDoc::openapi().to_pretty_json().unwrap(),
     ) {
         warn!("unable to write swagger to docs/swagger.json: {e:?}")

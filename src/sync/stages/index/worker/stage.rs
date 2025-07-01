@@ -48,8 +48,6 @@ pub struct Stage {
     network: sync::Network,
     rollback_buffer: RollbackBuffer,
     max_rollbacks: u64,
-    // perform extra integrity checks at the expense of more reads/compute
-    safe_mode: bool,
     // tip of our processed chain in db (not including mempool)
     last_processed: Point,
     // does our processed chain in db reflect mempool blocks (TODO)
@@ -62,8 +60,6 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
-        let safe_mode = config.safe_mode.unwrap_or_default();
-
         // TODO: in worker vs stage?
         let rollback_buffer = RollbackBuffer::fetch_from_storage(&config, &db)?;
 
@@ -121,7 +117,6 @@ impl Stage {
             indexers: config.indexers,
             rollback_buffer,
             max_rollbacks: config.max_rollback.unwrap_or(DEFAULT_MAX_ROLLBACK) as u64,
-            safe_mode,
             last_processed,
             processed_mempool,
 

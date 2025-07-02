@@ -1,0 +1,987 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Maestro Symphony",
+    "description": "Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and other onchain transactions.",
+    "contact": {
+      "name": "info@gomaestro.org"
+    },
+    "license": {
+      "name": "Apache 2.0",
+      "url": "https://www.apache.org/licenses/LICENSE-2.0.txt"
+    },
+    "version": "v0.0.1"
+  },
+  "paths": {
+    "/addresses/{address}/runes/balances": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Rune Balances by Address",
+        "description": "Returns total rune balances held in UTxOs controlled by the provided address, sorted by rune ID.",
+        "operationId": "addresses_all_rune_balances",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware (default: false)",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneAndAmount"
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"id\": \"30562:50\",\n      \"amount\": \"100000000\"\n    },\n    {\n      \"id\": \"65103:2\",\n      \"amount\": \"300000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/runes/balances/{rune}": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Rune Balance by Address and Rune",
+        "description": "Returns the total amount of the provided rune kind held in UTxOs controlled by the provided address.",
+        "operationId": "addresses_specific_rune_balance",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "rune",
+            "in": "path",
+            "description": "Rune ID or name (spaced or unspaced)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "BITCOIN•PIZZAS"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_String"
+                },
+                "example": "{\n  \"data\": \"100000000\",\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/runes/txs/{txid}": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Rune Edicts by Address and Transaction",
+        "operationId": "addresses_runes_by_tx",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "txid",
+            "in": "path",
+            "description": "Transaction ID",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneEdict"
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"rune_id\": \"30562:50\",\n      \"amount\": \"100000000\",\n      \"output\": 1,\n      \"block_height\": 30562\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/runes/utxos": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Rune UTxOs by Address",
+        "description": "Returns all UTxOs controlled by the provided address which contain runes, sorted by height.",
+        "operationId": "addresses_all_rune_utxos",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware (default: false)",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/runes/utxos/{rune}": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Rune UTxOs by Address and Rune",
+        "description": "Returns UTxOs controlled by the provided address which contain the provided rune, sorted by height.",
+        "operationId": "addresses_specific_rune_utxos",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "rune",
+            "in": "path",
+            "description": "Rune ID or name (spaced or unspaced)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "BITCOIN•PIZZAS"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/utxos": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "UTxOs by Address",
+        "description": "Returns UTxOs controlled by the provided address, sorted by height.",
+        "operationId": "addresses_utxos_by_address",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_AddressUtxo"
+                },
+                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/runes/info": {
+      "post": {
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
+        "summary": "Info by Rune (Batch)",
+        "description": "Given a list of rune identifiers (name or id), returns a map of identifiers to rune info (or null if no info found).",
+        "operationId": "runes_rune_info_batch",
+        "parameters": [
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "example": [
+                "BESTINSLOTXYZ",
+                "ABCDEF"
+              ]
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_HashMap_String_Option_RuneInfo"
+                },
+                "example": "{\n  \"data\": {\n    \"30562:50\": {\n      \"id\": \"30562:50\",\n      \"name\": \"BESTINSLOTXYZ\",\n      \"spaced_name\": \"BESTINSLOT•XYZ\",\n      \"symbol\": \"ʃ\",\n      \"divisibility\": 8,\n      \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"etching_height\": 30562,\n      \"terms\": {\n        \"amount\": \"100000000\",\n        \"cap\": \"3402823669209384634633746074316\",\n        \"start_height\": null,\n        \"end_height\": null\n      },\n      \"premine\": \"100000000\"\n    },\n    \"ABCDEF\": null\n  },\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AddressUtxo": {
+        "type": "object",
+        "required": [
+          "tx_hash",
+          "output_index",
+          "height",
+          "satoshis"
+        ],
+        "properties": {
+          "height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "output_index": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "satoshis": {
+            "type": "string"
+          },
+          "tx_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "ChainTip": {
+        "type": "object",
+        "required": [
+          "block_hash",
+          "block_height"
+        ],
+        "properties": {
+          "block_hash": {
+            "type": "string",
+            "description": "The hash of the block"
+          },
+          "block_height": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The height of the block in the blockchain",
+            "minimum": 0
+          }
+        }
+      },
+      "EstimatedBlock": {
+        "type": "object",
+        "required": [
+          "block_height"
+        ],
+        "properties": {
+          "block_height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "IndexerInfo": {
+        "type": "object",
+        "required": [
+          "chain_tip",
+          "estimated_blocks"
+        ],
+        "properties": {
+          "chain_tip": {
+            "$ref": "#/components/schemas/ChainTip",
+            "description": "Most recent *mined* block in the indexed mainchain, any estimated blocks will be descendants of this block"
+          },
+          "estimated_blocks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EstimatedBlock"
+            },
+            "description": "Information about any estimated blocks from the mempool that were indexed in addition to the mainchain"
+          },
+          "mempool_timestamp": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Timestamp of the indexed mempool snapshot, if any estimated blocks from the mempool have been indexed"
+          }
+        }
+      },
+      "MempoolParam": {
+        "type": "object",
+        "properties": {
+          "mempool": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RuneAndAmount": {
+        "type": "object",
+        "required": [
+          "id",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "RuneEdict": {
+        "type": "object",
+        "required": [
+          "rune_id",
+          "amount",
+          "block_height"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "block_height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "output": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "rune_id": {
+            "type": "string"
+          }
+        }
+      },
+      "RuneInfo": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "spaced_name",
+          "divisibility",
+          "etching_tx",
+          "etching_height",
+          "premine"
+        ],
+        "properties": {
+          "divisibility": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "etching_height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "etching_tx": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "premine": {
+            "type": "string"
+          },
+          "spaced_name": {
+            "type": "string"
+          },
+          "symbol": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "terms": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuneTerms"
+              }
+            ]
+          }
+        }
+      },
+      "RuneTerms": {
+        "type": "object",
+        "properties": {
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "cap": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          },
+          "start_height": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "RuneUtxo": {
+        "type": "object",
+        "required": [
+          "tx_hash",
+          "output_index",
+          "height",
+          "satoshis",
+          "runes"
+        ],
+        "properties": {
+          "height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "output_index": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "runes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuneAndAmount"
+            }
+          },
+          "satoshis": {
+            "type": "string"
+          },
+          "tx_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "ServeResponse_AddressUtxo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "tx_hash",
+              "output_index",
+              "height",
+              "satoshis"
+            ],
+            "properties": {
+              "height": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              "output_index": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "satoshis": {
+                "type": "string"
+              },
+              "tx_hash": {
+                "type": "string"
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_HashMap_String_Option_RuneInfo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "id",
+                    "name",
+                    "spaced_name",
+                    "divisibility",
+                    "etching_tx",
+                    "etching_height",
+                    "premine"
+                  ],
+                  "properties": {
+                    "divisibility": {
+                      "type": "integer",
+                      "format": "int32",
+                      "minimum": 0
+                    },
+                    "etching_height": {
+                      "type": "integer",
+                      "format": "int64",
+                      "minimum": 0
+                    },
+                    "etching_tx": {
+                      "type": "string"
+                    },
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "premine": {
+                      "type": "string"
+                    },
+                    "spaced_name": {
+                      "type": "string"
+                    },
+                    "symbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "terms": {
+                      "oneOf": [
+                        {
+                          "type": "null"
+                        },
+                        {
+                          "$ref": "#/components/schemas/RuneTerms"
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_String": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "string"
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_AddressUtxo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tx_hash",
+                "output_index",
+                "height",
+                "satoshis"
+              ],
+              "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "output_index": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                },
+                "satoshis": {
+                  "type": "string"
+                },
+                "tx_hash": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_RuneAndAmount": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "amount"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_RuneEdict": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "rune_id",
+                "amount",
+                "block_height"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string"
+                },
+                "block_height": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "output": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "int32",
+                  "minimum": 0
+                },
+                "rune_id": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_RuneUtxo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tx_hash",
+                "output_index",
+                "height",
+                "satoshis",
+                "runes"
+              ],
+              "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "output_index": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                },
+                "runes": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RuneAndAmount"
+                  }
+                },
+                "satoshis": {
+                  "type": "string"
+                },
+                "tx_hash": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      }
+    }
+  }
+}

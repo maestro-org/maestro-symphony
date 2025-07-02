@@ -1,8 +1,7 @@
-use crate::serve::QueryParams;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::serve::types::ServeResponse;
+use crate::serve::types::{MempoolParam, RuneAndAmount, ServeResponse};
 use crate::storage::encdec::Decode;
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;
@@ -13,19 +12,36 @@ use axum::http::StatusCode;
 use axum::{Json, extract::State, response::IntoResponse};
 use itertools::Itertools;
 use ordinals::RuneId;
-use serde::Serialize;
 use std::collections::HashMap;
 use std::str::FromStr;
 
-#[derive(Serialize)]
-pub struct RuneAndAmount {
-    id: String,
-    amount: String,
-}
+#[utoipa::path(
+    tag = "Addresses",
+    get,
+    path = "/addresses/{address}/runes/balances",
+    params(
+        ("address" = String, Path, description = "Bitcoin address", example="tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"),
 
-pub async fn handler(
+        ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware (default: false)"),
+    ),
+    responses(
+        (
+            status = 200,
+            description = "Requested data",
+            body = ServeResponse<Vec<RuneAndAmount>>,
+            example = json!(EXAMPLE_RESPONSE)
+        ),
+        (status = 400, description = "Malformed query parameters"),
+        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 500, description = "Internal server error"),
+    )
+)]
+/// Rune Balances by Address
+///
+/// Returns total rune balances held in UTxOs controlled by the provided address, sorted by rune ID.
+pub async fn addresses_all_rune_balances(
     State(state): State<AppState>,
-    Query(params): Query<QueryParams>,
+    Query(params): Query<MempoolParam>,
     Path(address): Path<String>,
 ) -> Result<impl IntoResponse, ServeError> {
     let (storage, indexer_info) = state.start_reader(params.mempool).await?;
@@ -82,3 +98,24 @@ pub async fn handler(
 
     Ok((StatusCode::OK, Json(out)))
 }
+
+static EXAMPLE_RESPONSE: &str = r##"{
+  "data": [
+    {
+      "id": "30562:50",
+      "amount": "100000000"
+    },
+    {
+      "id": "65103:2",
+      "amount": "300000"
+    }
+  ],
+  "indexer_info": {
+    "chain_tip": {
+      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+      "block_height": 31633
+    },
+    "mempool_timestamp": null,
+    "estimated_blocks": []
+  }
+}"##;

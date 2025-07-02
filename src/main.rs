@@ -1,4 +1,7 @@
+use std::fs;
+
 use crate::error::Error;
+use crate::serve::openapi::APIDoc;
 use crate::serve::{DEFAULT_SERVE_ADDRESS, ServerConfig};
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
@@ -6,6 +9,7 @@ use storage::kv_store::StorageHandler;
 use tracing::{info, warn};
 
 pub use storage::encdec::{DecodingError, DecodingResult};
+use utoipa::OpenApi;
 
 mod error;
 pub mod serve;
@@ -17,6 +21,7 @@ enum Command {
     Sync(SyncArgs),
     Serve(ServeArgs),
     Run(RunArgs),
+    Docs(DocArgs),
 }
 
 #[derive(Debug, clap::Args)]
@@ -27,6 +32,9 @@ pub struct ServeArgs {}
 
 #[derive(Debug, clap::Args)]
 pub struct RunArgs {}
+
+#[derive(Debug, clap::Args)]
+pub struct DocArgs {}
 
 #[derive(Debug, Parser)]
 #[clap(name = "maestro-symphony")]
@@ -159,6 +167,16 @@ async fn main() -> Result<(), ()> {
             serve_handle.abort();
 
             info!("symphony stopping...");
+        }
+        Command::Docs(_) => {
+            if let Err(e) = fs::write(
+                "docs/openapi.json",
+                APIDoc::openapi().to_pretty_json().unwrap(),
+            ) {
+                warn!("unable to write swagger to docs/openapi.json: {e:?}")
+            } else {
+                info!("wrote docs/openapi.json");
+            }
         }
     }
 

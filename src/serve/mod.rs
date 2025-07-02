@@ -1,5 +1,6 @@
 use crate::error::Error;
 use crate::serve::error::ServeError;
+use crate::serve::openapi::APIDoc;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::types::{ChainTip, EstimatedBlock, IndexerInfo};
 use crate::storage::encdec::prefix_key_range;
@@ -25,12 +26,15 @@ use chrono::{DateTime, TimeZone, Utc};
 use rocksdb::{IteratorMode, ReadOptions};
 use serde::Deserialize;
 use serde_json::json;
+use std::fs;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 use tracing::{info, warn};
+use utoipa::OpenApi;
 
 mod error;
+pub mod openapi;
 mod reader_wrapper;
 mod routes;
 mod types;
@@ -134,6 +138,13 @@ async fn auto_refresh(
 }
 
 pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
+    if let Err(e) = fs::write(
+        "docs/openapi.json",
+        APIDoc::openapi().to_pretty_json().unwrap(),
+    ) {
+        warn!("unable to write spec to docs/openapi.json: {e:?}")
+    };
+
     let app_state = AppState(Arc::new(RwLock::new(db)));
 
     let app = Router::new()
@@ -219,10 +230,4 @@ async fn tip(State(state): State<AppState>) -> impl IntoResponse {
     };
 
     json.into_response()
-}
-
-#[derive(Deserialize)]
-pub struct QueryParams {
-    #[serde(default)]
-    mempool: bool,
 }

@@ -34,7 +34,7 @@ use tracing::{info, warn};
 use utoipa::OpenApi;
 
 mod error;
-mod openapi;
+pub mod openapi;
 mod reader_wrapper;
 mod routes;
 mod types;

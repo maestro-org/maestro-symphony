@@ -20,6 +20,11 @@ services:
       - "8332:8332" # RPC port
     volumes:
       - bitcoin-data:/srv/bitcoin/node
+    logging:
+      options:
+        max-size: "30m"
+        max-file: "2"
+    restart: unless-stopped
 
   symphony:
     build:
@@ -36,6 +41,11 @@ services:
       - symphony-data:/srv/symphony
     depends_on:
       - bitcoin-node
+    logging:
+      options:
+        max-size: "30m"
+        max-file: "2"
+    restart: unless-stopped
 
 volumes:
   bitcoin-data:

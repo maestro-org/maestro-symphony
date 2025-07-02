@@ -8,7 +8,7 @@ use utoipa::OpenApi;
     info(
         title = "Maestro Symphony",
         version = "v0.0.1",
-        description = "Maestro Symphony is a fast, mempool-aware Bitcoin indexer and API server. It supports mainnet and testnet4, providing data for UTXOs, metaprotocols and much more. Designed for developers who need reliable, mempool-aware blockchain data.",
+        description = "Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and other onchain transactions.",
         license(
             name = "Apache 2.0",
             url = "https://www.apache.org/licenses/LICENSE-2.0.txt"

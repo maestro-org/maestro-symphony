@@ -2,7 +2,7 @@
 name = "maestro-symphony"
 version = "0.0.1"
 edition = "2024"
-authors = ["jharper@gomaestro.org"]
+authors = ["info@gomaestro.org"]
 
 [dependencies]
 thiserror = "2.0.12"

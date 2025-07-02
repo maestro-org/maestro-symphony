@@ -2,9 +2,9 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Maestro Symphony",
-    "description": "Maestro Symphony is a fast, mempool-aware Bitcoin indexer and API server. It supports mainnet and testnet4, providing data for UTXOs, metaprotocols and much more. Designed for developers who need reliable, mempool-aware blockchain data.",
+    "description": "Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and other onchain transactions.",
     "contact": {
-      "name": "jharper@gomaestro.org"
+      "name": "info@gomaestro.org"
     },
     "license": {
       "name": "Apache 2.0",

@@ -2,7 +2,7 @@
 name = "maestro-symphony-macros"
 version = "0.0.1"
 edition = "2024"
-authors = ["jharper@gomaestro.org"]
+authors = ["info@gomaestro.org"]
 
 [dependencies]
 proc-macro2 = "1.0.95"

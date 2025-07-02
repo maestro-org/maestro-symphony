@@ -2,7 +2,7 @@
 
 # Maestro Symphony
 
-🎵 ₿ _From hash to harmony: an orchestrated Bitcoin indexing suite_ ₿ 🎵
+🎵 ₿ _from hash to harmony: an orchestrated Bitcoin indexing suite_ ₿ 🎵
 
 ## Overview
 
@@ -93,28 +93,66 @@ Optionally, use `mise` to easily set up your environment:
 mise install
 ```
 
+### Build
+
+```bash
+make build
+```
+
 ### Sync & Serve
 
 ```bash
-RUST_LOG=info cargo run -- examples/testnet.toml run
+make run [CONFIG=examples/testnet.toml]
 ```
 
 ### Sync Only
 
 ```bash
-RUST_LOG=info cargo run -- examples/testnet.toml sync
+make sync [CONFIG=examples/testnet.toml]
 ```
 
 ### Serve Only
 
 ```bash
-RUST_LOG=info cargo run -- examples/testnet.toml serve
+make serve [CONFIG=examples/testnet.toml]
 ```
 
 ## Running with Docker
 
 ```bash
-docker compose up
+make docker-up
+```
+
+To stop the stack:
+
+```bash
+make docker-down
+```
+
+## Development
+
+Format code:
+
+```bash
+make fmt
+```
+
+Lint code:
+
+```bash
+make lint
+```
+
+Clean build artifacts:
+
+```bash
+make clean
+```
+
+Show all make targets:
+
+```bash
+make help
 ```
 
 ---
@@ -164,33 +202,33 @@ curl -X POST "http://localhost:8080/runes/info" \
 
 ```json
 {
-  "data": {
-    "30562:50": {
-      "id": "30562:50",
-      "name": "BESTINSLOTXYZ",
-      "spaced_name": "BESTINSLOT•XYZ",
-      "symbol": "ʃ",
-      "divisibility": 8,
-      "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
-      "etching_height": 30562,
-      "terms": {
-        "amount": "100000000",
-        "cap": "3402823669209384634633746074316",
-        "start_height": null,
-        "end_height": null
-      },
-      "premine": "100000000"
+    "data": {
+        "30562:50": {
+            "id": "30562:50",
+            "name": "BESTINSLOTXYZ",
+            "spaced_name": "BESTINSLOT•XYZ",
+            "symbol": "ʃ",
+            "divisibility": 8,
+            "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+            "etching_height": 30562,
+            "terms": {
+                "amount": "100000000",
+                "cap": "3402823669209384634633746074316",
+                "start_height": null,
+                "end_height": null
+            },
+            "premine": "100000000"
+        },
+        "ABCDEF": null
     },
-    "ABCDEF": null
-  },
-  "indexer_info": {
-    "chain_tip": {
-      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
-      "block_height": 31633
-    },
-    "mempool_timestamp": null,
-    "estimated_blocks": []
-  }
+    "indexer_info": {
+        "chain_tip": {
+            "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+            "block_height": 31633
+        },
+        "mempool_timestamp": null,
+        "estimated_blocks": []
+    }
 }
 ```
 

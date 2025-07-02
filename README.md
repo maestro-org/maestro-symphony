@@ -120,13 +120,13 @@ make serve [CONFIG=examples/testnet.toml]
 ## Running with Docker
 
 ```bash
-make docker-up
+make compose-up
 ```
 
 To stop the stack:
 
 ```bash
-make docker-down
+make compose-down
 ```
 
 ## Development

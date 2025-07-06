@@ -86,7 +86,7 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 | `[sync]`     | `batch_size`   | Number of blocks to process per sync batch            | `100`                      |
 |              | `start_height` | Block height to start indexing from                   | `0`                        |
 
-See the [examples](examples/) directory for sample configuration files.
+See [examples](examples/) to quickly get started.
 
 ## Running Locally
 

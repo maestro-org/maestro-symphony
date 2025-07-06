@@ -39,8 +39,11 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 ## Prerequisites
 
--   Bitcoin node with RPC and P2P access
--   [Rust 1.87+](https://www.rust-lang.org/tools/install)
+-   [Bitcoin Core (22+)](https://hub.docker.com/r/bitcoin/bitcoin) with RPC and P2P access
+-   [Rust (stable)](https://www.rust-lang.org/tools/install)
+
+### Optional Tools
+
 -   [Docker](https://docs.docker.com/compose/install/)
 -   [mise](https://mise.jdx.dev/getting-started.html)
 
@@ -52,17 +55,17 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 -   Disk: 1 GB
 -   CPU: 2 cores
 -   RAM: 4 GB
--   Sync time: ~2 hours
+-   Sync time: ~6 hours
 
 </details>
 
 <details>
 <summary><strong>Mainnet</strong></summary>
 
--   Disk: 16 GB
+-   Disk: 24 GB
 -   CPU: 4 cores
 -   RAM: 16 GB
--   Sync time: ~10 hours
+-   Sync time: ~4 days
 
 </details>
 
@@ -131,13 +134,13 @@ make compose-down
 
 ## Development
 
-Format code:
+Format:
 
 ```bash
 make fmt
 ```
 
-Lint code:
+Lint:
 
 ```bash
 make lint

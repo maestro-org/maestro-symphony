@@ -73,18 +73,21 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 ## Configuration
 
-| Section      | Key            | Description                                           | Example Value              |
-| ------------ | -------------- | ----------------------------------------------------- | -------------------------- |
-| `[network]`  | `type`         | Bitcoin network to connect to (`mainnet`, `testnet4`) | `"testnet4"`               |
-|              | `rpc_url`      | URL of your Bitcoin node's RPC endpoint               | `"http://localhost:18332"` |
-|              | `rpc_user`     | RPC username for your Bitcoin node                    | `"bitcoin"`                |
-|              | `rpc_password` | RPC password for your Bitcoin node                    | `"password"`               |
-|              | `p2p_host`     | Host/IP for P2P connection to Bitcoin node            | `"127.0.0.1"`              |
-|              | `p2p_port`     | Port for P2P connection                               | `18333`                    |
-| `[indexers]` | `enabled`      | List of enabled indexers                              | `["runes", "utxos"]`       |
-| `[api]`      | `bind_address` | Address and port for API server to listen on          | `"0.0.0.0:8080"`           |
-| `[sync]`     | `batch_size`   | Number of blocks to process per sync batch            | `100`                      |
-|              | `start_height` | Block height to start indexing from                   | `0`                        |
+Below is a table describing the main configuration options for `maestro-symphony`. See the example configuration for context.
+
+| Section           | Key/Field              | Description                                           | Example Value             |
+| ----------------- | ---------------------- | ----------------------------------------------------- | ------------------------- |
+| _root_            | `db_path`              | Path to the database directory                        | `"tmp/symphony"`          |
+| `[sync.node]`     | `p2p_address`          | Host/IP and port for P2P connection to Bitcoin node   | `"localhost:8333"`        |
+|                   | `rpc_address`          | URL of your Bitcoin node's RPC endpoint               | `"http://localhost:8332"` |
+|                   | `rpc_user`             | RPC username for your Bitcoin node                    | `"bitcoin"`               |
+|                   | `rpc_pass`             | RPC password for your Bitcoin node                    | `"password"`              |
+| `[sync]`          | `network`              | Bitcoin network to connect to (`mainnet`, `testnet4`) | `"mainnet"`               |
+|                   | `safe_mode`            | Enable safe mode for sync (recommended)               | `true`                    |
+|                   | `max_rollback`         | Maximum blocks to roll back on reorg                  | `32`                      |
+|                   | `mempool`              | Enable mempool awareness                              | `true`                    |
+| `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options            | See example below         |
+| `[server]`        | `address`              | Address and port for API server to listen on          | `"0.0.0.0:8080"`          |
 
 See [examples](examples/) to quickly get started.
 

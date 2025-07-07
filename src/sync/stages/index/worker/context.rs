@@ -80,7 +80,8 @@ impl IndexingContext {
 
         let network = match network {
             sync::Network::Mainnet => Network::Bitcoin,
-            sync::Network::Testnet => Network::Testnet4,
+            sync::Network::Testnet4 => Network::Testnet4,
+            sync::Network::Regtest => Network::Regtest,
         };
 
         Ok(Self {

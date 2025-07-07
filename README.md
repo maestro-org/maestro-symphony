@@ -1,8 +1,11 @@
 # [Maestro Symphony](https://www.gomaestro.org/)
 
-[![Docs](https://img.shields.io/badge/docs-website-C53DD8?style=for-the-badge)](https://docs.gomaestro.org/) [![Discord](https://img.shields.io/discord/950173135838273556?label=discord&logo=discord&style=for-the-badge)](https://discord.gg/SJgkEje7) [![CI](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml/badge.svg?style=for-the-badge)](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml?style=for-the-badge) [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
+<a href="https://docs.gomaestro.org/" target="_blank"><img src="https://img.shields.io/badge/docs-website-C53DD8?style=for-the-badge" alt="Docs"></a>
+<a href="https://discord.gg/SJgkEje7" target="_blank"><img src="https://img.shields.io/discord/950173135838273556?label=discord&logo=discord&style=for-the-badge" alt="Discord"></a>
+<a href="https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml" target="_blank"><img src="https://img.shields.io/github/actions/workflow/status/maestro-org/maestro-symphony/ci.yml?label=CI&logo=github&style=for-the-badge" alt="CI"></a>
+<a href="./LICENSE" target="_blank"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge" alt="License"></a>
 
-<img src="https://github.com/maestro-org/maestro-symphony/blob/main/logo/logo.png" width="100">
+<img src="https://github.com/maestro-org/maestro-symphony/raw/main/logo/logo.png" width="100">
 
 ---
 

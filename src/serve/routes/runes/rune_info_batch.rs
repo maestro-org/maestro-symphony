@@ -95,7 +95,7 @@ pub async fn runes_rune_info_batch(
             id: rune_id.to_string(),
             name: rune.to_string(),
             spaced_name: spaced.to_string(),
-            symbol: rune_info.symbol.map(|x| char::from_u32(x)).flatten(),
+            symbol: rune_info.symbol.and_then(char::from_u32),
             divisibility: rune_info.divisibility,
             etching_tx: Txid::from_byte_array(rune_info.etching_tx).to_string(),
             etching_height: rune_info.etching_height,

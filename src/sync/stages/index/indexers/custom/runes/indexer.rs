@@ -112,7 +112,7 @@ impl ProcessTransaction for RunesIndexer {
                 }
 
                 for Edict { id, amount, output } in runestone.edicts.iter().copied() {
-                    let amount = amount;
+                    // let amount = amount; // removed redundant local
 
                     // edicts with output values greater than the number of outputs
                     // should never be produced by the edict parser
@@ -311,7 +311,7 @@ fn unallocated(
 
             // TODO: helper
             let runes = match utxo.extended.get(&TransactionIndexer::Runes) {
-                Some(raw_utxo_metadata) => UtxoRunes::decode_all(&raw_utxo_metadata)?,
+                Some(raw_utxo_metadata) => UtxoRunes::decode_all(raw_utxo_metadata)?,
                 None => vec![],
             };
 
@@ -337,7 +337,7 @@ fn unallocated(
 }
 
 fn mint(task: &mut IndexingTask, id: RuneId, height: BlockHeight) -> Result<Option<u128>, Error> {
-    let Some(terms) = task.get::<RuneInfoByIdKV>(&id)?.map(|x| x.terms).flatten() else {
+    let Some(terms) = task.get::<RuneInfoByIdKV>(&id)?.and_then(|x| x.terms) else {
         return Ok(None);
     };
 
@@ -452,7 +452,7 @@ fn etched(
     };
 
     let minimum = Rune::minimum_at_height(
-        network.into(),
+        network,
         Height(height.try_into().expect("height u32 overflow")),
     );
 

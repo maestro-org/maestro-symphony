@@ -76,7 +76,7 @@ impl IndexingContext {
         let ResolvedUtxos {
             resolver,
             chained_txos,
-        } = UtxoByTxoRefKV::resolve_inputs(&task, txs, utxo_cache)?; // TODO cache
+        } = UtxoByTxoRefKV::resolve_inputs(task, txs, utxo_cache)?; // TODO cache
 
         let network = match network {
             sync::Network::Mainnet => Network::Bitcoin,
@@ -123,8 +123,10 @@ impl IndexingContext {
 
             if self.chained_txos.contains(&txo_ref) {
                 self.resolver.insert(txo_ref, utxo);
+            } else if let Some(c) = utxo_cache.as_mut() {
+                c.insert(txo_ref, utxo.clone());
+                task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
             } else {
-                utxo_cache.as_mut().map(|c| c.insert(txo_ref, utxo.clone()));
                 task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
             }
         }

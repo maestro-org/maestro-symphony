@@ -2,7 +2,10 @@
 
 set -e
 
-[ "$(git branch --show-current)" = main ] || SUFFIX="-dev"
+# Get current branch name, preferring GitHub Actions env var if available
+CURRENT_BRANCH=${GITHUB_REF_NAME:-$(git branch --show-current)}
+
+[ "${CURRENT_BRANCH}" = main ] || SUFFIX="-dev"
 cat << EOF > "${GITHUB_OUTPUT}"
 image=ghcr.io/${GITHUB_REPOSITORY_OWNER}/$(basename "${PWD}")${SUFFIX}
 version=$("$(dirname $0)"/version)

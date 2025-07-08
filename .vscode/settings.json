@@ -1,0 +1,10 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "rust-lang.rust-analyzer",
+  "files.exclude": {
+    "target": true
+  },
+  "terminal.integrated.defaultProfile.linux": "zsh",
+  "maestro-symphony.config": "examples/testnet.toml",
+  "maestro-symphony.rustLog": "info"
+}

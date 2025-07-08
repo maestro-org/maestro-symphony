@@ -1,0 +1,4 @@
+{
+    "maestro-symphony.config": "examples/testnet.toml",
+    "maestro-symphony.rustLog": "info"
+}

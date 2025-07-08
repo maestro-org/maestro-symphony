@@ -22,17 +22,29 @@ jobs:
             id-token: write
             packages: write
         steps:
-            - uses: actions/checkout@v4
-            - uses: moonrepo/setup-rust@v1
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Setup Rust toolchain
+              uses: moonrepo/setup-rust@v1
               with:
                   cache: false
                   channel: 1.87
-            - run: rustup component add rustfmt
-            - run: cargo fmt --all -- --check
-            - uses: Swatinem/rust-cache@v2
-            - run: cargo test --all-targets --all-features
-            - run: cargo clippy --all-targets --all-features -- -D warnings
-            - run: cargo audit
+            - name: Install rustfmt
+              run: rustup component add rustfmt
+            - name: Check formatting
+              run: cargo fmt --all -- --check
+            - name: Setup Rust cache
+              uses: Swatinem/rust-cache@v2
+            - name: Install clippy
+              run: rustup component add clippy
+            - name: Run tests
+              run: cargo test --all-targets --all-features
+            - name: Run clippy
+              run: cargo clippy --all-targets --all-features -- -D warnings
+            - name: Install cargo-audit
+              run: cargo install cargo-audit --locked
+            - name: Run cargo audit
+              run: cargo audit
 
     build-and-push:
         runs-on: ubuntu-latest

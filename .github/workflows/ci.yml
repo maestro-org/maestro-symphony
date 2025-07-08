@@ -33,6 +33,7 @@ jobs:
             # - run: cargo audit
 
     build-and-push:
+        if: ${{ github.actor != 'dependabot[bot]' }}
         runs-on: ubuntu-latest
         needs: rust-checks
         steps:

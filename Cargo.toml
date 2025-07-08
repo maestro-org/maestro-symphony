@@ -1,14 +1,13 @@
 [package]
 name = "maestro-symphony"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 authors = ["info@gomaestro.org"]
 
 [dependencies]
 thiserror = "2.0.12"
 tempfile = "3.19.1"
-#rocksdb = { path = "/Users/hrpr/code/maestro/rust-rocksdb" }
-rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb", branch = "ts-support" }
+rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb", rev = "41396a748965a165b58152d7cd51cdf95279eff0" }
 gasket = { version = "^0.5", features = ["derive"] }
 tokio = { version = "1.45.0", features = [
     "rt",
@@ -26,7 +25,7 @@ config = { version = "0.15.11", default-features = false, features = [
 socket2 = "0.5.9"
 serde = "1.0.219"
 async-trait = "0.1.88"
-maestro-symphony-macros = { path = "./macros" }
+maestro-symphony-macros = "0.1.0"
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
 indexmap = "2.9.0"
 itertools = "0.14.0"

@@ -6,6 +6,7 @@
 [![Discord](https://img.shields.io/discord/950173135838273556?label=discord&logo=discord&style=for-the-badge)](https://discord.gg/SJgkEje7)
 [![CI](https://img.shields.io/github/actions/workflow/status/maestro-org/maestro-symphony/ci.yml?label=CI&logo=github&style=for-the-badge)](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
+[![Crates](https://img.shields.io/crates/v/maestro-symphony?style=for-the-badge&color=orange)](https://crates.io/crates/maestro-symphony)
 
 <img src="https://github.com/maestro-org/maestro-symphony/raw/main/logo/logo.png" width="100">
 

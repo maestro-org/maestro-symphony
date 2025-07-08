@@ -26,6 +26,7 @@ jobs:
             - uses: moonrepo/setup-rust@v1
               with:
                   cache: false
+                  channel: 1.87
             - run: cargo fmt --all -- --check
             - uses: Swatinem/rust-cache@v2
             - run: cargo test --all-targets --all-features

@@ -27,6 +27,7 @@ jobs:
               with:
                   cache: false
                   channel: 1.87
+            - run: rustup component add rustfmt
             - run: cargo fmt --all -- --check
             - uses: Swatinem/rust-cache@v2
             - run: cargo test --all-targets --all-features

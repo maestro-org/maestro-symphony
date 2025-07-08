@@ -27,7 +27,7 @@ jobs:
             - name: Setup Rust toolchain
               uses: moonrepo/setup-rust@v1
               with:
-                  cache: false
+                  cache: true
                   channel: 1.87
             - name: Install rustfmt
               run: rustup component add rustfmt

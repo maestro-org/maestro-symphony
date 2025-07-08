@@ -112,8 +112,6 @@ impl ProcessTransaction for RunesIndexer {
                 }
 
                 for Edict { id, amount, output } in runestone.edicts.iter().copied() {
-                    // let amount = amount; // removed redundant local
-
                     // edicts with output values greater than the number of outputs
                     // should never be produced by the edict parser
                     let output = usize::try_from(output).unwrap();

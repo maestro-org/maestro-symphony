@@ -1,3 +1,5 @@
+/// Result type for multi_get: a vector of (key, Option<value>) pairs.
+pub type MultiGetResult<K, V> = Vec<(K, Option<V>)>;
 use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc};
 
 use bitcoin::hashes::Hash;
@@ -72,10 +74,8 @@ impl<'a> IndexingTask<'a> {
             .transpose()
     }
 
-
-pub type MultiGetResult<K, V> = Vec<(K, Option<V>)>;
-
-    pub fn multi_get<T>(&self, keys: Vec<T::Key>) -> Result<crate::storage::kv_store::MultiGetResult<T::Key, T::Value>, Error>
+    /// Result type for multi_get: a vector of (key, Option<value>) pairs.
+    pub fn multi_get<T>(&self, keys: Vec<T::Key>) -> Result<MultiGetResult<T::Key, T::Value>, Error>
     where
         T: Table,
     {

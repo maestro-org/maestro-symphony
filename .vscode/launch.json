@@ -1,0 +1,40 @@
+{
+  "configurations": [
+    {
+      "name": "Debug Maestro Symphony (run)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/maestro-symphony",
+      "args": ["${config:maestro-symphony.config}", "run"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "${config:maestro-symphony.rustLog}"
+      },
+      "preLaunchTask": "cargo build"
+    },
+    {
+      "name": "Debug Maestro Symphony (sync)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/maestro-symphony",
+      "args": ["${config:maestro-symphony.config}", "sync"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "${config:maestro-symphony.rustLog}"
+      },
+      "preLaunchTask": "cargo build"
+    },
+    {
+      "name": "Debug Maestro Symphony (serve)",
+      "type": "lldb",
+      "request": "launch",
+      "program": "${workspaceFolder}/target/debug/maestro-symphony",
+      "args": ["${config:maestro-symphony.config}", "serve"],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "RUST_LOG": "${config:maestro-symphony.rustLog}"
+      },
+      "preLaunchTask": "cargo build"
+    }
+  ]
+}

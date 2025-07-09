@@ -27,24 +27,20 @@ jobs:
             - name: Setup Rust toolchain
               uses: moonrepo/setup-rust@v1
               with:
-                  cache: true
-                  channel: 1.87
-            - name: Install rustfmt
-              run: rustup component add rustfmt
+                  cache: false
+                  components: rustfmt,clippy
             - name: Check formatting
               run: cargo fmt --all -- --check
             - name: Setup Rust cache
               uses: Swatinem/rust-cache@v2
-            - name: Install clippy
-              run: rustup component add clippy
             - name: Run tests
               run: cargo test --all-targets --all-features
             - name: Run clippy
               run: cargo clippy --all-targets --all-features -- -D warnings
-            - name: Install cargo-audit
-              run: cargo install cargo-audit --locked
             - name: Run cargo audit
-              run: cargo audit
+              uses: actions-rs/audit-check@v1
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
     build-and-push:
         if: ${{ github.actor != 'dependabot[bot]' }}

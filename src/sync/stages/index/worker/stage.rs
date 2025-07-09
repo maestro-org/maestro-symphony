@@ -61,9 +61,7 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
-        let utxo_cache_size = config
-            .utxo_cache_size
-            .unwrap_or_else(|| get_default_cache_size());
+        let utxo_cache_size = config.utxo_cache_size.unwrap_or(get_default_cache_size());
 
         let utxo_cache = if utxo_cache_size == 0 {
             None
@@ -147,9 +145,8 @@ impl Stage {
         let commit_ts = self
             .db
             .previous_timestamp
-            .clone()
-            .map(|x| Timestamp::after(x))
-            .unwrap_or(Timestamp::new());
+            .map(Timestamp::after)
+            .unwrap_or_default();
 
         let ts = commit_ts.as_rocksdb_ts();
 
@@ -316,7 +313,7 @@ impl gasket::framework::Worker<Stage> for Worker {
             ChainEvent::MempoolBlocks(info, mempool_blocks) => {
                 // -- first rollback previous mempool blocks
 
-                let true_tip = stage.last_processed.clone();
+                let true_tip = stage.last_processed;
 
                 let blocks_to_undo = stage.rollback_buffer.points_since(&true_tip).or_panic()?;
 
@@ -344,7 +341,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let mut task = stage.db.begin_mempool_indexing_task();
 
-                let mempool_txs = mempool_blocks.iter().cloned().flatten().collect();
+                let mempool_txs = mempool_blocks.iter().flatten().cloned().collect();
 
                 let mut mempool_tip_height = stage.last_processed.height;
 

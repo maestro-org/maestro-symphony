@@ -1,4 +1,6 @@
-use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc, u64};
+/// Result type for multi_get: a vector of (key, Option<value>) pairs.
+pub type MultiGetResult<K, V> = Vec<(K, Option<V>)>;
+use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc};
 
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
@@ -72,7 +74,8 @@ impl<'a> IndexingTask<'a> {
             .transpose()
     }
 
-    pub fn multi_get<T>(&self, keys: Vec<T::Key>) -> Result<Vec<(T::Key, Option<T::Value>)>, Error>
+    /// Result type for multi_get: a vector of (key, Option<value>) pairs.
+    pub fn multi_get<T>(&self, keys: Vec<T::Key>) -> Result<MultiGetResult<T::Key, T::Value>, Error>
     where
         T: Table,
     {
@@ -285,9 +288,8 @@ impl StorageHandler {
 
         let commit_ts = self
             .previous_timestamp
-            .clone()
-            .map(|x| Timestamp::after(x))
-            .unwrap_or(Timestamp::new());
+            .map(Timestamp::after)
+            .unwrap_or_default();
 
         let ts = commit_ts.as_rocksdb_ts();
 
@@ -397,7 +399,7 @@ impl Reader {
     {
         let res = self.db.get_cf_opt(
             self.db.cf_handle(SYMPHONY_CF_NAME).unwrap(),
-            T::encode_key(&key),
+            T::encode_key(key),
             &self.read_opts,
         )?;
 
@@ -424,9 +426,7 @@ impl Reader {
             mode,
         );
 
-        let table_iter = TableIterator::<T>::new(iter);
-
-        table_iter
+        TableIterator::<T>::new(iter)
     }
 }
 

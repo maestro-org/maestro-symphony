@@ -1,3 +1,8 @@
+impl Default for Timestamp {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 use std::cmp::Ordering;
 
 /*

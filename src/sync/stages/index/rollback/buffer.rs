@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet, VecDeque},
-    u64,
-};
+use std::collections::{HashMap, HashSet, VecDeque};
 
 use bitcoin::{BlockHash, hashes::Hash};
 use tracing::{info, warn};
@@ -93,7 +90,7 @@ impl RollbackBuffer {
     pub fn rollback_to_point(&mut self, point: &Point) -> Result<Vec<PointWithOriginalKVs>, Error> {
         match self.position(point) {
             Some(p) => Ok(self.points.drain(..p).collect()),
-            None => Err(Error::Rollback(point.clone())),
+            None => Err(Error::Rollback(*point)),
         }
     }
 
@@ -101,7 +98,7 @@ impl RollbackBuffer {
     pub fn points_since(&self, point: &Point) -> Result<Vec<PointWithOriginalKVs>, Error> {
         match self.position(point) {
             Some(p) => Ok(self.points.range(..p).cloned().collect()),
-            None => Err(Error::Rollback(point.clone())),
+            None => Err(Error::Rollback(*point)),
         }
     }
 

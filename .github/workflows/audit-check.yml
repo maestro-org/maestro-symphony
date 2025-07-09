@@ -24,7 +24,9 @@ jobs:
     audit-check:
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions-rs/audit-check@v1
+            - name: Checkout repository
+              uses: actions/checkout@v4
+            - name: Run cargo audit
+              uses: actions-rs/audit-check@v1
               with:
                   token: ${{ secrets.GITHUB_TOKEN }}

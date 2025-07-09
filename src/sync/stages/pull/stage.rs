@@ -1,5 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
+use bitcoin::BlockHash;
 use bitcoincore_rpc::{
     Auth as RpcAuth, Client as RpcClient, RpcApi,
     json::{GetBlockTemplateModes, GetBlockTemplateRules},
@@ -139,6 +140,7 @@ impl gasket::framework::Worker<Stage> for Worker {
             stats: PullStats::new(),
             tip_reached: false,
             has_shutdown: stage.has_shutdown.clone(),
+            initialised: false,
 
             tip,
         })
@@ -157,6 +159,40 @@ impl gasket::framework::Worker<Stage> for Worker {
             info!("sync received shutdown signal");
             return Ok(WorkSchedule::Done);
         };
+
+        if !self.initialised {
+            if node_syncing(
+                &mut self.peer_session,
+                stage.network.genesis_block().block_hash(),
+            )
+            .await
+            .or_restart()?
+            {
+                info!("it seems the node is still syncing, waiting 60s before retrying...");
+
+                // refresh tip
+                let tip = self
+                    .peer_rpc
+                    .get_chain_tips()
+                    .or_restart()?
+                    .into_iter()
+                    .max_by_key(|x| x.height)
+                    .ok_or_else(|| {
+                        error!("No chaintip found");
+                        WorkerError::Restart
+                    })?;
+
+                self.tip = Point {
+                    height: tip.height,
+                    hash: tip.hash,
+                };
+
+                tokio::time::sleep(Duration::from_secs(60)).await;
+                return Ok(WorkSchedule::Idle);
+            } else {
+                self.initialised = true;
+            }
+        }
 
         // TODO: timed stats
 
@@ -226,7 +262,11 @@ impl gasket::framework::Worker<Stage> for Worker {
             }
         }
 
-        Ok(WorkSchedule::Unit(units))
+        if units.is_empty() {
+            Ok(WorkSchedule::Idle)
+        } else {
+            Ok(WorkSchedule::Unit(units))
+        }
     }
 
     async fn execute(
@@ -258,6 +298,7 @@ pub struct Worker {
     peer_rpc: RpcClient,
     cursor: Vec<Point>,
     stats: PullStats,
+    initialised: bool,
     tip: Point,
     tip_reached: bool,
     has_shutdown: Option<mpsc::Sender<()>>,
@@ -501,4 +542,9 @@ async fn estimate_tip(peer: &mut Peer, after: Point) -> Result<Point, Error> {
     }
 
     Ok(greatest)
+}
+
+/// If we give the node the genesis hash and it returns no headers, the node must be syncing.
+async fn node_syncing(peer: &mut Peer, genesis: BlockHash) -> Result<bool, Error> {
+    Ok(peer.get_new_headers(vec![genesis]).await?.is_empty())
 }

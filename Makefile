@@ -21,6 +21,9 @@ sync:
 serve:
 	RUST_LOG=$(RUST_LOG) cargo run -- $(CONFIG) serve
 
+openapi:
+	RUST_LOG=$(RUST_LOG) cargo run -- $(CONFIG) docs
+
 compose-up:
 	docker compose -f $(COMPOSE_FILE) up -d
 
@@ -38,6 +41,9 @@ lint:
 
 clean:
 	cargo clean
+
+publish:
+	cargo publish --locked --no-verify
 
 help:
 	@echo "Available targets:"

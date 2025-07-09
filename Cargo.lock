@@ -1101,7 +1101,7 @@ dependencies = [
 [[package]]
 name = "librocksdb-sys"
 version = "0.17.2+9.10.0"
-source = "git+https://github.com/maestro-org/rust-rocksdb?branch=ts-support#41396a748965a165b58152d7cd51cdf95279eff0"
+source = "git+https://github.com/maestro-org/rust-rocksdb.git?rev=32b8d249021aee8f530780dff4d85f44acfe9da0#32b8d249021aee8f530780dff4d85f44acfe9da0"
 dependencies = [
  "bindgen",
  "bzip2-sys",
@@ -1157,7 +1157,7 @@ dependencies = [
 
 [[package]]
 name = "maestro-symphony"
-version = "0.0.1"
+version = "0.1.0"
 dependencies = [
  "async-trait",
  "axum",
@@ -1171,7 +1171,7 @@ dependencies = [
  "hex",
  "indexmap 2.10.0",
  "itertools 0.14.0",
- "maestro-symphony-macros",
+ "maestro-symphony-macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mini-moka",
  "ordinals",
  "rocksdb",
@@ -1189,7 +1189,18 @@ dependencies = [
 
 [[package]]
 name = "maestro-symphony-macros"
-version = "0.0.1"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "maestro-symphony-macros"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "213527043eacb632b223c45b0dd910cf0cbf030c62cdc97db3208feb54fc4ece"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1557,7 +1568,7 @@ checksum = "2b15c43186be67a4fd63bee50d0303afffcef381492ebe2c5d87f324e1b8815c"
 [[package]]
 name = "rocksdb"
 version = "0.23.0"
-source = "git+https://github.com/maestro-org/rust-rocksdb?branch=ts-support#41396a748965a165b58152d7cd51cdf95279eff0"
+source = "git+https://github.com/maestro-org/rust-rocksdb.git?rev=32b8d249021aee8f530780dff4d85f44acfe9da0#32b8d249021aee8f530780dff4d85f44acfe9da0"
 dependencies = [
  "libc",
  "librocksdb-sys",

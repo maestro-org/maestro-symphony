@@ -1,14 +1,15 @@
 [package]
 name = "maestro-symphony"
-version = "0.0.1"
+description = "Orchestrating Bitcoin blocks into readable harmony"
+version = "0.1.0"
 edition = "2024"
 authors = ["info@gomaestro.org"]
+license = "Apache-2.0"
 
 [dependencies]
 thiserror = "2.0.12"
 tempfile = "3.20.0"
-#rocksdb = { path = "/Users/hrpr/code/maestro/rust-rocksdb" }
-rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb", branch = "ts-support" }
+rocksdb = "0.23.0"
 gasket = { version = "^0.5", features = ["derive"] }
 tokio = { version = "1.45.0", features = [
     "rt",
@@ -26,7 +27,7 @@ config = { version = "0.15.11", default-features = false, features = [
 socket2 = "0.5.9"
 serde = "1.0.219"
 async-trait = "0.1.88"
-maestro-symphony-macros = { path = "./macros" }
+maestro-symphony-macros = "0.1.0"
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
 indexmap = "2.10.0"
 itertools = "0.14.0"
@@ -42,6 +43,9 @@ sysinfo = "0.35.2"
 # runes
 ordinals = "0.0.15"
 bitcoincore-rpc = "0.19.0"
+
+[patch.crates-io]
+rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0" }
 
 [workspace]
 members = ["macros"]

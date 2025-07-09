@@ -1,8 +1,11 @@
 [package]
 name = "maestro-symphony-macros"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2024"
 authors = ["info@gomaestro.org"]
+
+description = "Procedural macros for the maestro-symphony project."
+license = "Apache-2.0"
 
 [dependencies]
 proc-macro2 = "1.0.95"

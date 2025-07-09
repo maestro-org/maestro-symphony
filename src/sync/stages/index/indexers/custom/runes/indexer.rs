@@ -438,6 +438,7 @@ fn tx_commits_to_rune(
     Ok(false)
 }
 
+#[allow(clippy::too_many_arguments)]
 fn etched(
     task: &mut IndexingTask,
     resolver: &HashMap<TxoRef, Utxo>,

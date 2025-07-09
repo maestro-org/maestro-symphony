@@ -135,6 +135,12 @@ make sync [CONFIG=examples/testnet.toml]
 make serve [CONFIG=examples/testnet.toml]
 ```
 
+### Generate OpenAPI
+
+```bash
+make openapi
+```
+
 ---
 
 ## Running with Docker

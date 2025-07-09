@@ -1,3 +1,8 @@
+impl Default for UtxosByAddressIndexer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 use super::id::ProcessTransaction;
 use crate::error::Error;
 use crate::storage::{kv_store::IndexingTask, table::IndexerTable};
@@ -72,7 +77,7 @@ impl ProcessTransaction for UtxosByAddressIndexer {
             let script = output.script_pubkey.as_bytes().to_vec();
 
             let key = UtxosByAddressKey {
-                script: script,
+                script,
                 produced_height: ctx.block_height(),
                 txo_ref,
             };

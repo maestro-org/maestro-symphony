@@ -1,3 +1,8 @@
+impl Default for TxCountByAddressIndexer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 use std::collections::HashSet;
 
 use super::id::ProcessTransaction;

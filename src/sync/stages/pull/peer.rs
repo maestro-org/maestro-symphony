@@ -147,20 +147,20 @@ pub struct Peer {
 #[allow(dead_code)]
 #[derive(Debug)]
 enum Request {
-    GetNewHeaders(GetHeadersMessage),
-    GetBlocks(Vec<Inventory>),
-    GetMempoolIds,
+    NewHeaders(GetHeadersMessage),
+    Blocks(Vec<Inventory>),
+    MempoolIds,
 }
 
 impl Request {
     // https://en.bitcoin.it/wiki/Protocol_documentation#getheaders
     fn get_new_headers(intersects: Vec<BlockHash>) -> Request {
-        Request::GetNewHeaders(GetHeadersMessage::new(intersects, BlockHash::all_zeros()))
+        Request::NewHeaders(GetHeadersMessage::new(intersects, BlockHash::all_zeros()))
     }
 
     // https://en.bitcoin.it/wiki/Protocol_documentation#getdata
     fn get_blocks(blockhashes: &[BlockHash]) -> Request {
-        Request::GetBlocks(
+        Request::Blocks(
             blockhashes
                 .iter()
                 .map(|blockhash| Inventory::WitnessBlock(*blockhash))
@@ -170,7 +170,7 @@ impl Request {
 
     #[allow(dead_code)]
     fn get_mempool_ids() -> Request {
-        Request::GetMempoolIds
+        Request::MempoolIds
     }
 }
 
@@ -451,9 +451,9 @@ impl PeerHandler {
             maybe_req = self.request_recv.recv() => {
                 let req = maybe_req.ok_or(P2PError::PeerChannelClosed("request".into()))?;
                 let to_send = match req {
-                    Request::GetNewHeaders(msg) => NetworkMessage::GetHeaders(msg),
-                    Request::GetBlocks(inv) => NetworkMessage::GetData(inv),
-                    Request::GetMempoolIds => NetworkMessage::MemPool,
+                    Request::NewHeaders(msg) => NetworkMessage::GetHeaders(msg),
+                    Request::Blocks(inv) => NetworkMessage::GetData(inv),
+                    Request::MempoolIds => NetworkMessage::MemPool,
                 };
 
                 let to_send = RawNetworkMessage::new(self.magic, to_send);

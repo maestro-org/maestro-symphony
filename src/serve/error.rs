@@ -50,7 +50,7 @@ impl IntoResponse for ServeError {
         let (status, string) = match self {
             ServeError::NotFound => (
                 StatusCode::NOT_FOUND,
-                format!("unable to find requested data"),
+                "unable to find requested data".to_string(),
             ),
             ServeError::MalformedRequest(e) => (
                 StatusCode::BAD_REQUEST,
@@ -60,7 +60,7 @@ impl IntoResponse for ServeError {
                 error!("internal server error: {}", self);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
-                    format!("internal server error"),
+                    "internal server error".to_string(),
                 )
             }
         };

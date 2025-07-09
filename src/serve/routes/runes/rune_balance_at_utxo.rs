@@ -35,7 +35,7 @@ use crate::serve::AppState;
             example = json!(EXAMPLE_RESPONSE)
         ),
         (status = 400, description = "Malformed query parameters"),
-        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 404, description = "Requested rune or UTXO not found on-chain"),
         (status = 500, description = "Internal server error"),
     )
 )]

@@ -7,9 +7,9 @@
 ///
 /// # Table Definition
 /// - **Key**: [`TxoRef`] - A reference to a specific transaction output, consisting of a
-/// transaction hash and an output index.
+///   transaction hash and an output index.
 /// - **Value**: [`Utxo`] - The unspent transaction output, containing details such as the amount,
-/// script, block height, and extended metadata.
+///   script, block height, and extended metadata.
 /// - **Indexer**: [`CoreIndexer::UtxoByTxoRef`] - The indexer responsible for managing this table.
 use std::collections::{HashMap, HashSet};
 

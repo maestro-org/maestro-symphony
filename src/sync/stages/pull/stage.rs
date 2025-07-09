@@ -430,23 +430,17 @@ impl Worker {
         match next {
             p @ ChainEvent::RollForward(_point, ..) => {
                 // info!(?point, "pull roll forward");
-
-                self.send(stage, p.clone().into()).await.or_panic()?;
-
+                self.send(stage, p.clone()).await.or_panic()?;
                 Ok(())
             }
             p @ ChainEvent::RollBack(_point) => {
                 // info!(?point, "pull rollback");
-
-                self.send(stage, p.clone().into()).await.or_panic()?;
-
+                self.send(stage, p.clone()).await.or_panic()?;
                 Ok(())
             }
             p @ ChainEvent::MempoolBlocks(_info, ..) => {
                 // info!(?info, "pull mempool blocks");
-
-                self.send(stage, p.clone().into()).await.or_panic()?;
-
+                self.send(stage, p.clone()).await.or_panic()?;
                 Ok(())
             }
         }
@@ -475,7 +469,7 @@ impl PullStats {
 
             info!(
                 "last 1000 units in {time_taken:?} ({} u/s)",
-                1000 as f64 / time_taken.as_secs_f64()
+                1000_f64 / time_taken.as_secs_f64()
             );
         }
     }

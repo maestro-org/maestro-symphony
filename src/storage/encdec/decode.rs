@@ -54,7 +54,7 @@ impl Decode for u16 {
 impl Decode for VarUInt {
     fn decode(bytes: &[u8]) -> DecodingResult<Self> {
         let len = *bytes
-            .get(0)
+            .first()
             .ok_or(malformed_input("varuint insufficient bytes", bytes))?
             as usize;
 

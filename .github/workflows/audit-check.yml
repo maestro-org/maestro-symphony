@@ -1,14 +1,17 @@
 name: Audit Check
 
 on:
-    # push:
-    #     branches: ["main"]
-    #     tags: ["v*"]
-    pull_request:
+    push:
+        branches: ["main"]
         paths:
             - '**/Cargo.toml'
             - '**/Cargo.lock'
-    #     branches: ["main"]
+        tags: ["v*"]
+    pull_request:
+        branches: ["main"]
+        paths:
+            - '**/Cargo.toml'
+            - '**/Cargo.lock'
 
 concurrency:
     group: ${{ github.workflow }}-${{ github.ref }}

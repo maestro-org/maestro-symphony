@@ -25,6 +25,7 @@ use utoipa::OpenApi;
         addresses::specific_rune_utxos::addresses_specific_rune_utxos,
         addresses::utxos_by_address::addresses_utxos_by_address,
         runes::rune_info_batch::runes_rune_info_batch,
+        runes::rune_balance_at_utxo::rune_balance_at_utxo,
     ),
     components(schemas(
         IndexerInfo,

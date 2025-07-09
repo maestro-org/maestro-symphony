@@ -419,6 +419,69 @@
           }
         }
       }
+    },
+    "/{rune}/utxos/{utxo}/balance": {
+      "get": {
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
+        "summary": "Rune Balance by UTXO and Rune",
+        "description": "Returns the amount of the specified rune contained in the provided UTXO. If the rune is not\npresent in the UTXO, `0` is returned.",
+        "operationId": "rune_balance_at_utxo",
+        "parameters": [
+          {
+            "name": "utxo",
+            "in": "path",
+            "description": "UTXO reference in format txid:index",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3:1"
+          },
+          {
+            "name": "rune",
+            "in": "path",
+            "description": "Rune ID or name (spaced or unspaced)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "BITCOIN•PIZZAS"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_String"
+                },
+                "example": "{\n  \"data\": \"100000000\",\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested rune or UTXO not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
     }
   },
   "components": {

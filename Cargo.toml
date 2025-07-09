@@ -24,7 +24,7 @@ config = { version = "0.15.11", default-features = false, features = [
     "toml",
     "json",
 ] }
-socket2 = "0.5.9"
+socket2 = "0.6.0"
 serde = "1.0.219"
 async-trait = "0.1.88"
 maestro-symphony-macros = "0.1.0"

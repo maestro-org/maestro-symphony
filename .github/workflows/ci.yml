@@ -37,6 +37,10 @@ jobs:
               run: cargo test --all-targets --all-features
             - name: Run clippy
               run: cargo clippy --all-targets --all-features -- -D warnings
+            - name: Run cargo audit
+              uses: actions-rs/audit-check@v1
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}
 
     build-and-push:
         if: ${{ github.actor != 'dependabot[bot]' }}

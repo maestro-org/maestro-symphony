@@ -42,16 +42,20 @@ pub struct RunesIndexer {
     start_height: u64,
     /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
     index_activity: bool,
+    /// Optionally override the default confirmations required for Rune commitment
+    commitment_confirmations: Option<u64>,
 }
 
 impl RunesIndexer {
     pub fn new(config: RunesIndexerConfig) -> Result<Self, Error> {
         let start_height = config.start_height;
         let index_activity = config.index_activity;
+        let commitment_confirmations = config.commitment_confirmations;
 
         Ok(Self {
             start_height,
             index_activity,
+            commitment_confirmations,
         })
     }
 }
@@ -63,6 +67,8 @@ pub struct RunesIndexerConfig {
     /// Enable indexing rune activity for each tx (RuneActivityByTxKV)
     #[serde(default)]
     pub index_activity: bool,
+    /// Optionally override the default confirmations required for Rune commitment
+    commitment_confirmations: Option<u64>,
 }
 
 impl ProcessTransaction for RunesIndexer {
@@ -103,6 +109,7 @@ impl ProcessTransaction for RunesIndexer {
                 artifact,
                 height,
                 ctx.network(),
+                self.commitment_confirmations,
             )?;
 
             if let Artifact::Runestone(runestone) = artifact {
@@ -373,8 +380,12 @@ fn tx_commits_to_rune(
     rune: Rune,
     height: BlockHeight,
     resolver: &HashMap<TxoRef, Utxo>,
+    confirmations_override: Option<u64>,
 ) -> Result<bool, Error> {
     let commitment = rune.commitment();
+
+    let required_confirmations =
+        confirmations_override.unwrap_or(Runestone::COMMIT_CONFIRMATIONS.into());
 
     for input in &tx.input {
         // extracting a tapscript does not indicate that the input being spent
@@ -420,7 +431,7 @@ fn tx_commits_to_rune(
                 .checked_add(1)
                 .expect("rune commit overflow");
 
-            if confirmations >= Runestone::COMMIT_CONFIRMATIONS.into() {
+            if confirmations >= required_confirmations {
                 return Ok(true);
             }
         }
@@ -437,6 +448,7 @@ fn etched(
     artifact: &Artifact,
     height: BlockHeight,
     network: Network,
+    confirmations_override: Option<u64>,
 ) -> Result<Option<(RuneId, Rune)>, Error> {
     let tx_index = tx_index.try_into().expect("tx index u32 overflow");
 
@@ -460,7 +472,7 @@ fn etched(
         if rune < minimum
             || rune.is_reserved()
             || task.get::<RuneIdByNameKV>(&rune.n())?.is_some()
-            || !tx_commits_to_rune(tx, rune, height, resolver)?
+            || !tx_commits_to_rune(tx, rune, height, resolver, confirmations_override)?
         {
             return Ok(None);
         }

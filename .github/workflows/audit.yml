@@ -1,0 +1,27 @@
+name: Audit Check
+
+on:
+    # push:
+    #     branches: ["main"]
+    #     tags: ["v*"]
+    pull_request:
+        paths:
+            - '**/Cargo.toml'
+            - '**/Cargo.lock'
+    #     branches: ["main"]
+
+concurrency:
+    group: ${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    audit-check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions-rs/audit-check@v1
+              with:
+                  token: ${{ secrets.GITHUB_TOKEN }}

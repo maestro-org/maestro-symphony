@@ -191,7 +191,7 @@ impl Peer {
             .map_err(P2PError::ConnectFailure)?;
 
         sock_ref
-            .set_nodelay(true)
+            .set_tcp_nodelay(true)
             .map_err(P2PError::ConnectFailure)?;
 
         // for sending requests to the handler

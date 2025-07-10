@@ -10,7 +10,6 @@ rpc_pass = "..."
 
 [sync]
 network = "testnet4"
-safe_mode = true
 max_rollback = 32
 mempool = true
 

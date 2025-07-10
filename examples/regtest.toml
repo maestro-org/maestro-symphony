@@ -10,7 +10,6 @@ rpc_pass = "..."
 
 [sync]
 network = "regtest"
-safe_mode = true
 max_rollback = 32
 mempool = true
 
@@ -18,7 +17,7 @@ mempool = true
 transaction_indexers = [
     { type = "TxCountByAddress" },
     { type = "UtxosByAddress" },
-    { type = "Runes" }
+    { type = "Runes", index_activity = true }
 ]
 
 [server]

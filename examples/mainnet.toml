@@ -1,8 +1,8 @@
 db_path = "tmp/symphony"
 
 [sync.node]
-p2p_address = "localhost:8333"
-rpc_address = "http://localhost:8332"
+p2p_address = "bitcoin-node:8333"
+rpc_address = "http://bitcoin-node:8332"
 # RPC user
 rpc_user = "..."
 # RPC password
@@ -10,7 +10,6 @@ rpc_pass = "..."
 
 [sync]
 network = "mainnet"
-safe_mode = true
 max_rollback = 32
 mempool = true
 

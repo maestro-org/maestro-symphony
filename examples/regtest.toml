@@ -9,7 +9,7 @@ rpc_user = "..."
 rpc_pass = "..."
 
 [sync]
-network = "testnet4"
+network = "regtest"
 max_rollback = 32
 mempool = true
 
@@ -17,7 +17,7 @@ mempool = true
 transaction_indexers = [
     { type = "TxCountByAddress" },
     { type = "UtxosByAddress" },
-    { type = "Runes", start_height = 30562, index_activity = true }
+    { type = "Runes", index_activity = true }
 ]
 
 [server]

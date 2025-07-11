@@ -16,17 +16,31 @@ This guide explains how to construct and integrate custom logic to be extracted 
 
 ## Steps
 
-### 1. Create the Indexer Module
+### 1. Create a New Indexer Project and Initialize it
 
-Create a file or module in:
+After [forking](https://github.com/maestro-org/maestro-symphony/fork) the repo, create a file or module in the [`/custom`](../../src/sync/stages/index/indexers/custom/) subdirectory.
 
+_Setup a new project directory_
+
+```bash
+mkdir -p src/sync/stages/index/indexers/custom/my_proj
 ```
 
-src/sync/stages/index/indexers/custom/
+_Create the files (plus any extra that you need)_
 
+```bash
+touch mod.rs indexer.rs tables.rs
 ```
 
-If your indexer is complex, split logic across multiple files (see the `runes` indexer for reference).
+_Generate the `mod.rs`_ (and add your related files)
+
+```bash
+cat>>mod.rs
+pub mod indexer;
+pub mod tables;
+```
+
+It is recommended to split logic across multiple files (see the [`runes`](../../src/sync/stages/index/indexers/custom/runes/) indexer for reference).
 
 ---
 

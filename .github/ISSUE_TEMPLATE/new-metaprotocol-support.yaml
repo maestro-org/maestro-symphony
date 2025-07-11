@@ -1,0 +1,29 @@
+name: New metaprotocol support
+description: Propose support for a new Bitcoin metaprotocol (e.g., Alkanes)
+title: "[Metaprotocol] Name of the protocol"
+labels: [metaprotocol]
+body:
+    - type: textarea
+      id: protocol
+      attributes:
+          label: Protocol overview
+          description: Describe the protocol, its data format, and purpose.
+          placeholder: This protocol enables...
+      validations:
+          required: true
+    - type: textarea
+      id: motivation
+      attributes:
+          label: Why support this?
+          description: Explain the usage, traction, or potential utility that justifies indexing it.
+          placeholder: It’s gaining adoption because...
+      validations:
+          required: true
+    - type: textarea
+      id: technical
+      attributes:
+          label: Technical format or parsing rules
+          description: Provide the encoding rules, tag formats, or detection logic for the metaprotocol.
+          placeholder: It uses OP_RETURN or a specific inscription format like...
+      validations:
+          required: false

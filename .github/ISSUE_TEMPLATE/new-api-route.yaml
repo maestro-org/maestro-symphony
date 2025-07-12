@@ -1,0 +1,29 @@
+name: New API route
+description: Suggest a new API route for the Symphony
+title: "[API] Descriptive route or endpoint name"
+labels: [api]
+body:
+    - type: textarea
+      id: endpoint
+      attributes:
+          label: Endpoint details
+          description: Define the desired route and expected inputs/outputs.
+          placeholder: GET /v0/foo/:bar → returns ...
+      validations:
+          required: true
+    - type: textarea
+      id: usecase
+      attributes:
+          label: Use case
+          description: Explain the need and how developers or systems would benefit from this route.
+          placeholder: This would allow apps to...
+      validations:
+          required: true
+    - type: textarea
+      id: implementation
+      attributes:
+          label: Implementation hints
+          description: Share any helpful insight on how this could be wired into the codebase or reused from existing endpoints.
+          placeholder: This could reuse the logic in...
+      validations:
+          required: false

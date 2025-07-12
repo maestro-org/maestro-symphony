@@ -1,0 +1,29 @@
+name: New indexer
+description: Propose a new data type to index
+title: "[Indexer] Descriptive name"
+labels: [indexer]
+body:
+    - type: textarea
+      id: scope
+      attributes:
+          label: What data should this indexer cover?
+          description: Describe the protocol or data you're trying to index (e.g. ordinals, inscriptions, taproot assets, etc.).
+          placeholder: This indexer would track...
+      validations:
+          required: true
+    - type: textarea
+      id: rationale
+      attributes:
+          label: Why is this needed?
+          description: Explain the motivation and potential value for having this indexer in the Symphony.
+          placeholder: It's currently difficult to...
+      validations:
+          required: true
+    - type: textarea
+      id: integration
+      attributes:
+          label: Suggested integration
+          description: Describe how this indexer could be added into the system. Mention any known dependencies or affected components.
+          placeholder: Could be slotted into...
+      validations:
+          required: false

@@ -5,6 +5,10 @@ version = "0.1.0"
 edition = "2024"
 authors = ["info@gomaestro.org"]
 license = "Apache-2.0"
+repository = "https://github.com/maestro-org/maestro-symphony"
+rust-version = "1.87"
+documentation = "https://docs.gomaestro.org/"
+categories = ["development-tools"]
 
 [dependencies]
 thiserror = "2.0.12"

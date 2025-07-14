@@ -33,7 +33,7 @@ use super::peer::Peer;
     rollbacks and then passing them downstream to the indexing stage.
 */
 
-pub type DownstreamPort = gasket::messaging::tokio::OutputPort<ChainEvent>;
+pub type DownstreamPort = gasket::messaging::OutputPort<ChainEvent>;
 
 #[derive(Stage)]
 #[stage(name = "pull", unit = "Vec<ChainEvent>", worker = "Worker")]

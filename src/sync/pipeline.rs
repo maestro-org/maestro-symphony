@@ -1,7 +1,6 @@
 use std::time::Duration;
 
 use bitcoincore_rpc::Auth;
-use gasket::messaging::{RecvPort, SendPort};
 use tokio::sync::{mpsc, oneshot::Receiver};
 
 use crate::{error::Error, storage::kv_store::StorageHandler, sync::stages::index};
@@ -80,6 +79,5 @@ pub fn pipeline(
     let index = gasket::runtime::spawn_stage(index, policy.clone());
     // let health = gasket::runtime::spawn_stage(health, policy);
 
-    Ok(gasket::daemon::Daemon(vec![pull, index]))
-    // Ok(gasket::daemon::Daemon(vec![pull, index, health])
+    Ok(gasket::daemon::Daemon::new(vec![pull, index]))
 }

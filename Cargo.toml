@@ -14,7 +14,7 @@ categories = ["development-tools"]
 thiserror = "2.0.12"
 tempfile = "3.20.0"
 rocksdb = "0.23.0"
-gasket = { version = "^0.5", features = ["derive"] }
+gasket = { version = "0.9.0", features = ["derive"] }
 tokio = { version = "1.46.1", features = [
     "rt",
     "rt-multi-thread",

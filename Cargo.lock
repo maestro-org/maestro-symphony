@@ -751,24 +751,26 @@ dependencies = [
 
 [[package]]
 name = "gasket"
-version = "0.5.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7babee760992462c2a8376424a7ddd8c13c4b38b31790b5077059c51e596aefe"
+checksum = "37057b6b0b48bb9bdcd4c2bc8ec51090a6cd754744caf28d44b813584473be3a"
 dependencies = [
  "async-trait",
  "crossbeam",
  "gasket-derive",
  "serde",
+ "signal-hook",
  "thiserror 1.0.69",
  "tokio",
+ "tokio-util",
  "tracing",
 ]
 
 [[package]]
 name = "gasket-derive"
-version = "0.5.0"
+version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d114a9d0572b1b505ac26bdcd669218b2ab5861d1b36ff72da4011dcc8725169"
+checksum = "00c4883f898206041f02b010ab10400715e89e7845c63410f6bad162a3841174"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1774,6 +1776,25 @@ name = "shlex"
 version = "1.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
+
+[[package]]
+name = "signal-hook"
+version = "0.3.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d881a16cf4426aa584979d30bd82cb33429027e42122b169753d6ef1085ed6e2"
+dependencies = [
+ "libc",
+ "signal-hook-registry",
+]
+
+[[package]]
+name = "signal-hook-registry"
+version = "1.4.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9203b8055f63a2a00e2f593bb0510367fe707d7ff1e5c872de2f537b339e5410"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "skeptic"

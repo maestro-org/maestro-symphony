@@ -38,8 +38,8 @@ use tracing::{debug, error, info, warn};
     the other reducers, and writing to storage.
 */
 
-pub type UpstreamPort = gasket::messaging::tokio::InputPort<ChainEvent>;
-pub type DownstreamPort = gasket::messaging::tokio::OutputPort<()>;
+pub type UpstreamPort = gasket::messaging::InputPort<ChainEvent>;
+pub type DownstreamPort = gasket::messaging::OutputPort<()>;
 
 #[derive(Stage)]
 #[stage(name = "index", unit = "ChainEvent", worker = "Worker")]

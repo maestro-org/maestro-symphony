@@ -24,7 +24,7 @@ tokio = { version = "1.45.0", features = [
 hex = "0.4.3"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-config = { version = "0.15.11", default-features = false, features = [
+config = { version = "0.15.13", default-features = false, features = [
     "toml",
     "json",
 ] }

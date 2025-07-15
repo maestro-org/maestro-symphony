@@ -3,6 +3,7 @@ use std::fs;
 use crate::error::Error;
 use crate::serve::openapi::APIDoc;
 use crate::serve::{DEFAULT_SERVE_ADDRESS, ServerConfig};
+use crate::shutdown::ShutdownManager;
 use clap::{Parser, Subcommand};
 use serde::Deserialize;
 use storage::kv_store::StorageHandler;
@@ -13,6 +14,7 @@ use utoipa::OpenApi;
 
 mod error;
 pub mod serve;
+mod shutdown;
 pub mod storage;
 pub mod sync;
 
@@ -72,7 +74,14 @@ impl Config {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
-    tracing_subscriber::fmt::init();
+    // Initialize tracing with env filter to respect RUST_LOG
+    let subscriber = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_writer(std::io::stdout)
+        .finish();
+
+    tracing::subscriber::set_global_default(subscriber)
+        .expect("Failed to set global default subscriber");
 
     let args = Cli::parse();
 
@@ -91,6 +100,9 @@ async fn main() -> Result<(), ()> {
         .and_then(|s| s.address.clone())
         .unwrap_or_else(|| DEFAULT_SERVE_ADDRESS.to_string());
 
+    // Setup shutdown handler
+    let shutdown_manager = ShutdownManager::new();
+
     match args.command {
         Command::Sync(_) => {
             let db = StorageHandler::open(db_path.into(), false);
@@ -100,9 +112,22 @@ async fn main() -> Result<(), ()> {
                 config.sync
             );
 
-            sync::pipeline::pipeline(config.sync, db, None)
-                .unwrap()
-                .block()
+            let daemon = sync::pipeline::pipeline(config.sync, db, None).unwrap();
+
+            // Since daemon.block() is not async, run it in a separate thread
+            let (block_done_tx, block_done_rx) = tokio::sync::oneshot::channel();
+            std::thread::spawn(move || {
+                daemon.block();
+                let _ = block_done_tx.send(());
+            });
+
+            // Wait for either shutdown or completion
+            shutdown_manager
+                .run_until_shutdown(async {
+                    let _ = block_done_rx.await;
+                    info!("Sync pipeline completed");
+                })
+                .await;
         }
         Command::Serve(_) => {
             let db = StorageHandler::open(db_path.into(), true);
@@ -112,7 +137,15 @@ async fn main() -> Result<(), ()> {
                 config.server
             );
 
-            serve::run(db, &serve_address).await.unwrap()
+            // Run the server until shutdown
+            if let Some(result) = shutdown_manager
+                .run_until_shutdown(serve::run(db, &serve_address))
+                .await
+            {
+                if let Err(e) = result {
+                    warn!("Serve mode ended with error: {:?}", e);
+                }
+            }
         }
         Command::Run(_) => {
             let db = StorageHandler::open(db_path.into(), false);
@@ -131,7 +164,7 @@ async fn main() -> Result<(), ()> {
             let (start_serve_tx, start_serve_rx) = tokio::sync::oneshot::channel();
 
             // Spawn the sync task
-            let _sync_handle = tokio::spawn(async move {
+            tokio::spawn(async move {
                 let _ = start_sync_rx.await;
 
                 info!("starting sync side...");
@@ -159,14 +192,19 @@ async fn main() -> Result<(), ()> {
                 let _ = serve_ended_tx.send(());
             });
 
+            // Send start signals
             let _ = start_sync_tx.send(());
             let _ = start_serve_tx.send(());
 
-            let _ = sync_ended_rx.recv().await;
+            // Create a future that will wait for sync to end
+            let sync_end_future = async {
+                let _ = sync_ended_rx.recv().await;
+                serve_handle.abort();
+                info!("symphony stopping normally...");
+            };
 
-            serve_handle.abort();
-
-            info!("symphony stopping...");
+            // Run until either shutdown or sync ends
+            shutdown_manager.run_until_shutdown(sync_end_future).await;
         }
         Command::Docs(_) => {
             if let Err(e) = fs::write(
@@ -180,5 +218,6 @@ async fn main() -> Result<(), ()> {
         }
     }
 
+    info!("Normal shutdown complete");
     Ok(())
 }

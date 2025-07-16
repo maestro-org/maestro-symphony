@@ -4,16 +4,6 @@ The [Maestro Symphony](https://github.com/maestro-org/maestro-symphony) is a fas
 
 This guide explains how to construct and integrate custom logic to be extracted and persisted during transaction processing by the Maestro Symphony indexer.
 
-## ✅ Summary
-
-1. Create a module under `custom/`
-2. Add enum variant to `TransactionIndexerType`
-3. Implement the `ProcessTransaction` trait
-4. Define your indexer's storage tables
-5. Write transaction processing logic
-6. Register your indexer in the factory
-7. (Optional) Attach metadata to UTXOs
-
 ## Steps
 
 ### 1. Create a New Indexer Project and Initialize it

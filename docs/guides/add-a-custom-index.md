@@ -168,7 +168,7 @@ Reference:
 
 Process each transaction by:
 
--   Iterating over inputs, ouputs, resolving UTXOs, etc.
+-   Iterating over inputs, outputs, resolving UTXOs, etc.
 -   Reading/writing to storage with `task.get` and `task.put`
 
 ```rust

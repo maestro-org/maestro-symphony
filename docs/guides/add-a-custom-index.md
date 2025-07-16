@@ -38,7 +38,7 @@ It is recommended to split logic across multiple files (see the [`runes`](../../
 Create a new `TransactionIndexerType` enum variant:
 
 ```
-src/sync/stages/index/indexers/custom/my_proj/mod.rs
+src/sync/stages/index/indexers/custom/mod.rs
 ```
 
 Add your variant **only at the end**. Example:
@@ -66,6 +66,7 @@ Implement a struct that represents your indexer and implements the `ProcessTrans
 
 ```rust
 pub struct MyProjIndexer {
+    // arbitrary indexer-specific config options
     start_height: u64,
     track_inputs: bool,
 }
@@ -168,7 +169,7 @@ Reference:
 Process each transaction by:
 
 -   Iterating over inputs, ouputs, resolving UTXOs, etc.
--   Reading/writing to storage with
+-   Reading/writing to storage with `task.get` and `task.put`
 
 ```rust
 impl ProcessTransaction for MyProjIndexer {

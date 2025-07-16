@@ -35,7 +35,6 @@ touch mod.rs indexer.rs tables.rs
 _Generate the `mod.rs`_ (and add your related files)
 
 ```bash
-cat>>mod.rs
 pub mod indexer;
 pub mod tables;
 ```
@@ -46,21 +45,24 @@ It is recommended to split logic across multiple files (see the [`runes`](../../
 
 ### 2. Register a New Enum Variant
 
-Edit the `TransactionIndexerType` enum:
+Create a new `TransactionIndexerType` enum variant:
 
 ```
-
-src/sync/stages/index/indexers/custom/mod.rs
-
+src/sync/stages/index/indexers/custom/my_proj/mod.rs
 ```
 
 Add your variant **only at the end**. Example:
 
 ```rust
+/// Unique u8 for each transaction indexer, used in the key encodings. Do not modify, only add new
+/// variants.
+#[derive(Clone, Copy, Encode, Decode, PartialEq, Eq, std::hash::Hash, Debug)]
+#[repr(u8)]
 pub enum TransactionIndexerType {
-    Runes = 0,
-    TxCountByAddress = 1,
-    YourIndexer = 2,
+    TxCountByAddress = 0,
+    Runes = 1,
+    UtxosByAddress = 2,
+    MyProjIndexer = 3,      // my_proj indexer
 }
 ```
 
@@ -72,50 +74,131 @@ pub enum TransactionIndexerType {
 
 Implement a struct that represents your indexer and implements the `ProcessTransaction` trait.
 
-Core function:
-
 ```rust
-fn process_tx(&mut self, task: &mut IndexerTask, tx: &Transaction, ctx: &IndexerContext)
+pub struct MyProjIndexer {
+    start_height: u64,
+    track_inputs: bool,
+}
+
+impl ProcessTransaction for MyProjIndexer {
+    fn process_tx(
+        &mut self,
+        task: &mut IndexerTask,
+        tx: &Transaction,
+        ctx: &IndexerContext,
+    ) -> Result<(), Error> {
+        ...
+    }
+}
 ```
 
 Where:
 
 -   `task`: read/write interface to storage
 -   `tx`: the transaction being processed
--   `ctx`: context with input resolver, block height, hash, network, etc.
+-   `ctx`: context with input resolver, block height, hash, network, arbitrary data to outputs, etc.
+
+A _resolver_ lets you provide a transcation input UTXO reference and receive the corresponding transaction output UTXO.
 
 Reference:
 [`runes/indexer.rs#L41-L61`](https://github.com/maestro-org/maestro-symphony/blob/main/src/sync/stages/index/indexers/custom/runes/indexer.rs#L41-L61)
 
 ---
 
-### 4. Define Storage Tables
+### 4. Implement and Handle Config
 
-Define custom key-value tables for storing your data.
+Your indexer should expose a `new()` function that takes a configuration struct and returns an instance of the indexer.
+
+This enables configuration-driven behavior such as start_height, track_inputs, or custom logic.
+
+```rust
+impl MyProjIndexer {
+    pub fn new(config: MyProjIndexerConfig) -> Result<Self, Error> {
+        let start_height = config.start_height;
+        let track_inputs = config.track_inputs;
+
+        Ok(Self {
+            start_height,
+            track_inputs,
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize)]
+pub struct MyProjIndexerConfig {
+    #[serde(default)]
+    pub start_height: u64,
+    #[serde(default)]
+    pub track_inputs: bool,
+}
+```
+
+The `MyProjIndexerConfig` struct should define fields relevant to your indexer.
+
+[Reference](https://github.com/maestro-org/maestro-symphony/blob/main/src/sync/stages/index/indexers/custom/runes/indexer.rs#L41-L72)
+
+### 5. Define Storage Tables
+
+Define custom key-value tables for storing the new data using the `define_indexer_table!` macro.
+
+```
+src/sync/stages/index/indexers/custom/my_proj/tables.rs
+```
 
 Example:
-[`tx_count_by_address.rs#L20-L26`](https://github.com/maestro-org/maestro-symphony/blob/main/src/sync/stages/index/indexers/custom/tx_count_by_address.rs#L20-L26)
+
+```rust
+define_indexer_table! {
+    name: MyProjIndexerKV,
+    key_type: ScriptPubKey,
+    value_type: u64,
+    indexer: TransactionIndexer::MyProjIndexer,
+    table: 0
+}
+```
+
+```rust
+// key-value:
+address => tx_count
+```
 
 Each table must:
 
 -   Have a unique `table` ID
--   Use your enum variant
+-   Use your new enum variant
 -   Use key/value types that implement `Encode` and `Decode`
+
+Reference:
+[`tx_count_by_address.rs#L20-L26`](https://github.com/maestro-org/maestro-symphony/blob/main/src/sync/stages/index/indexers/custom/tx_count_by_address.rs#L20-L26)
 
 ---
 
-### 5. Implement `ProcessTransaction`
+### 6. Implement `ProcessTransaction`
 
 Process each transaction by:
 
--   Iterating over inputs and resolving UTXOs (skip coinbase inputs)
--   Iterating over outputs
--   Tracking affected addresses or metadata
--   Reading/writing to storage with:
+-   Iterating over inputs, ouputs, resolving UTXOs, etc.
+-   Reading/writing to storage with
 
 ```rust
-task.get::<YourTable>(&key)?;
-task.put::<YourTable>(&key, &value)?;
+impl ProcessTransaction for MyProjIndexer {
+    fn process_tx(
+        &mut self,
+        task: &mut IndexerTask,
+        tx: &Transaction,
+        ctx: &IndexerContext,
+    ) -> Result<(), Error> {
+        let TransactionWithId { tx, .. } = tx;
+        ...
+        // retrieve value from KV store
+        task.get::<MyProjIndexerKV>(&key)?;
+        ...
+        // set value in KV store
+        task.put::<MyProjIndexerKV>(&key, &value)?;
+        ...
+    }
+}
+
 ```
 
 Example:
@@ -123,25 +206,50 @@ Example:
 
 ---
 
-### 6. Register in the Factory
+### 7. Register Module and Add to Factory
 
-In `custom/mod.rs`, add your variant to:
+Add your `my_proj` module in `custom/mod.rs`:
+
+```rust
+pub mod id;
+pub mod runes;
+pub mod tx_count_by_address;
+pub mod utxos_by_address;
+pub mod my_proj;            // my_proj indexer
+```
+
+[Reference](https://github.com/maestro-org/maestro-symphony/blob/main/src/sync/stages/index/indexers/custom/mod.rs#L11C1-L14C26)
+
+Next, add your variant to:
 
 -   The `TransactionIndexerFactory` enum
 -   The `create_indexer` function
 
-Example config:
+```rust
+#[derive(Clone, Debug, Deserialize)]
+#[serde(tag = "type")]
+pub enum TransactionIndexerFactory {
+    TxCountByAddress,
+    Runes(RunesIndexerConfig),
+    UtxosByAddress,
+    MyProjIndexer(MyProjIndexerConfig),
+}
 
-```toml
-[[indexers]]
-type = "YourIndexer"
-start_height = 840000
-index_activity = true
+impl TransactionIndexerFactory {
+    pub fn create_indexer(self) -> Result<Box<dyn ProcessTransaction>, Error> {
+        match self {
+            Self::TxCountByAddress => Ok(Box::new(TxCountByAddressIndexer::new())),
+            Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
+            Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
+            Self::MyProjIndexer(c) => Ok(Box::new(MyProjIndexer::new(c)?)),
+        }
+    }
+}
 ```
 
 ---
 
-### 7. (Optional) Attach Metadata to UTXOs
+### 8. (Optional) Attach Metadata to UTXOs
 
 To persist data across transactions using UTXOs (e.g., inscriptions, runes), you can attach metadata during output processing:
 

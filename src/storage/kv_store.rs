@@ -9,9 +9,14 @@ use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, Wr
 use tracing::{info, trace};
 
 use crate::{
-    DecodingResult,
     error::Error,
-    storage::encdec::{decode::malformed_input, encode::VarUIntEncoded},
+    storage::{
+        encdec::encode::VarUIntEncoded,
+        merge_operation::{
+            MergeOperation, apply_merge_to_value, combine_merge_operations, create_merge_operator,
+            create_partial_merge_operator,
+        },
+    },
     sync::stages::{
         Point,
         index::indexers::core::{
@@ -214,17 +219,7 @@ impl<'a> IndexingTask<'a> {
                 // If there's already a Set operation, apply the merge to the existing value
                 StorageAction::Set(existing_value) => {
                     // Apply the operation to the existing value
-                    let result = match &op {
-                        MergeOperation::Increment(amount) => {
-                            // Decode the existing value
-                            let existing_amount = u128::decode_all(existing_value)?;
-                            existing_amount.saturating_add(*amount)
-                        }
-                        MergeOperation::Decrement(amount) => {
-                            let existing_amount = u128::decode_all(existing_value)?;
-                            existing_amount.saturating_sub(*amount)
-                        }
-                    };
+                    let result = apply_merge_to_value(&op, existing_value)?;
 
                     // Update the write buffer with a new Set operation
                     self.write_buffer
@@ -234,45 +229,7 @@ impl<'a> IndexingTask<'a> {
                 }
                 // If there's already a Merge operation, try to combine them
                 StorageAction::Merge(existing_op) => {
-                    // Try to combine operations of the same type
-                    let merged_op = match (existing_op, &op) {
-                        (
-                            MergeOperation::Increment(existing_amount),
-                            MergeOperation::Increment(new_amount),
-                        ) => MergeOperation::Increment(existing_amount.saturating_add(*new_amount)),
-                        (
-                            MergeOperation::Decrement(existing_amount),
-                            MergeOperation::Decrement(new_amount),
-                        ) => MergeOperation::Decrement(existing_amount.saturating_add(*new_amount)),
-                        (
-                            MergeOperation::Increment(existing_amount),
-                            MergeOperation::Decrement(new_amount),
-                        ) => {
-                            if *new_amount <= *existing_amount {
-                                MergeOperation::Increment(
-                                    existing_amount.saturating_sub(*new_amount),
-                                )
-                            } else {
-                                MergeOperation::Decrement(
-                                    new_amount.saturating_sub(*existing_amount),
-                                )
-                            }
-                        }
-                        (
-                            MergeOperation::Decrement(existing_amount),
-                            MergeOperation::Increment(new_amount),
-                        ) => {
-                            if *new_amount <= *existing_amount {
-                                MergeOperation::Decrement(
-                                    existing_amount.saturating_sub(*new_amount),
-                                )
-                            } else {
-                                MergeOperation::Increment(
-                                    new_amount.saturating_sub(*existing_amount),
-                                )
-                            }
-                        }
-                    };
+                    let merged_op = combine_merge_operations(existing_op, &op);
 
                     // Update the write buffer with the new Merge operation
                     self.write_buffer
@@ -383,57 +340,8 @@ impl StorageHandler {
 
         cf_opts.set_merge_operator(
             "extensible_merge",
-            |_key, existing, operands| {
-                // Start with existing value or 0 (change if we need something other than u128)
-                let mut current = match existing {
-                    Some(b) => u128::decode_all(b).ok()?, // return None for error
-                    None => 0,
-                };
-
-                // Process each operand in sequence
-                for operand in operands.iter() {
-                    let merge_op = MergeOperation::decode_all(operand).ok()?;
-
-                    match merge_op {
-                        MergeOperation::Increment(delta) => current = current.saturating_add(delta),
-                        MergeOperation::Decrement(delta) => current = current.saturating_sub(delta),
-                    }
-                }
-
-                // Encode the result
-                Some(current.encode())
-            },
-            // Partial merge combines multiple operands (increments and decrements) into a net operation
-            |_key, _existing, operands| {
-                // Track net changes for increment and decrement operations
-                let mut increment_total: u128 = 0;
-                let mut decrement_total: u128 = 0;
-
-                // Process all operands to calculate the net change
-                for operand in operands.iter() {
-                    let merge_op = MergeOperation::decode_all(operand).ok()?;
-
-                    match merge_op {
-                        MergeOperation::Increment(delta) => {
-                            increment_total = increment_total.saturating_add(delta)
-                        }
-                        MergeOperation::Decrement(delta) => {
-                            decrement_total = decrement_total.saturating_add(delta)
-                        }
-                    }
-                }
-
-                // Calculate the net change
-                let new_op = if increment_total >= decrement_total {
-                    // Net increment
-                    MergeOperation::Increment(increment_total.saturating_sub(decrement_total))
-                } else {
-                    // Net decrement
-                    MergeOperation::Decrement(decrement_total.saturating_sub(increment_total))
-                };
-
-                Some(new_op.encode())
-            },
+            create_merge_operator(),
+            create_partial_merge_operator(),
         );
 
         cf_opts.set_comparator_with_ts(
@@ -651,41 +559,6 @@ impl Reader {
         );
 
         TableIterator::<T>::new(iter)
-    }
-}
-
-/// Operation types for merge operations
-#[derive(Debug, Clone, PartialEq)]
-#[repr(u8)]
-pub enum MergeOperation {
-    Increment(u128) = 0,
-    Decrement(u128) = 1,
-}
-
-impl Encode for MergeOperation {
-    fn encode(&self) -> Vec<u8> {
-        match self {
-            MergeOperation::Increment(amount) => [vec![0], amount.encode()].concat(),
-            MergeOperation::Decrement(amount) => [vec![1], amount.encode()].concat(),
-        }
-    }
-}
-
-impl Decode for MergeOperation {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
-        let (op_code, bytes) = u8::decode(bytes)?;
-
-        match op_code {
-            0 => {
-                let (amount, bytes) = u128::decode(bytes)?;
-                Ok((MergeOperation::Increment(amount), bytes))
-            }
-            1 => {
-                let (amount, bytes) = u128::decode(bytes)?;
-                Ok((MergeOperation::Decrement(amount), bytes))
-            }
-            _ => Err(malformed_input("invalid merge op code", bytes)),
-        }
     }
 }
 

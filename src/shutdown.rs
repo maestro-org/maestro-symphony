@@ -57,7 +57,7 @@ impl ShutdownManager {
                 process::exit(0);
             }
             result = future => {
-                return Some(result);
+                Some(result)
             }
         }
     }

@@ -138,22 +138,17 @@ async fn main() -> Result<(), ()> {
             );
 
             // Run the server until shutdown
-            if let Some(result) = shutdown_manager
+            if let Some(Err(e)) = shutdown_manager
                 .run_until_shutdown(serve::run(db, &serve_address))
                 .await
             {
-                if let Err(e) = result {
-                    warn!("Serve mode ended with error: {:?}", e);
-                }
+                warn!("Serve mode ended with error: {e:?}");
             }
         }
         Command::Run(_) => {
             let db = StorageHandler::open(db_path.into(), false);
 
-            info!(
-                "running symphony in sync+serve mode with config: {:?}",
-                config
-            );
+            info!("running symphony in sync+serve mode with config: {config:?}",);
 
             let sync_db = db.clone();
 

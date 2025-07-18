@@ -64,11 +64,7 @@ impl ProcessTransaction for TxCountByAddressIndexer {
         }
 
         for script in seen_scripts {
-            let old_count = task.get::<TxCountByAddressKV>(&script)?.unwrap_or_default();
-
-            let new_count = old_count + 1;
-
-            task.set::<TxCountByAddressKV>(script, new_count)?;
+            task.increment::<TxCountByAddressKV>(script, 1)?;
         }
 
         Ok(())

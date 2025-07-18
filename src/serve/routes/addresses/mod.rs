@@ -3,6 +3,7 @@ pub mod all_rune_utxos;
 pub mod runes_by_tx;
 pub mod specific_rune_balance;
 pub mod specific_rune_utxos;
+pub mod tx_count_by_address;
 pub mod utxos_by_address;
 
 use axum::{Router, routing::get};
@@ -14,6 +15,10 @@ pub fn router() -> Router<AppState> {
         .route(
             "/{address}/utxos",
             get(utxos_by_address::addresses_utxos_by_address),
+        )
+        .route(
+            "/{address}/tx_count",
+            get(tx_count_by_address::addresses_tx_count_by_address),
         )
         .route(
             "/{address}/runes/utxos",

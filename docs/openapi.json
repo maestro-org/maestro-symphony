@@ -307,6 +307,59 @@
         }
       }
     },
+    "/addresses/{address}/tx_count": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Transaction Count by Address",
+        "description": "Returns the number of transactions in which the address controlled an input or output",
+        "operationId": "addresses_tx_count_by_address",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_u64"
+                },
+                "example": "{\n  \"data\": 21086,\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"0000000004af5483f4e54ebf8f1d728b003d19ebc184761b82c50b8e86ec2a0a\",\n      \"block_height\": 91625\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested entity not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/addresses/{address}/utxos": {
       "get": {
         "tags": [
@@ -1039,6 +1092,23 @@
                 }
               }
             }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_u64": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
           },
           "indexer_info": {
             "$ref": "#/components/schemas/IndexerInfo"

@@ -56,8 +56,6 @@ macro_rules! impl_to_varuint {
 }
 
 impl_to_varuint!(usize);
-impl_to_varuint!(u8);
-impl_to_varuint!(u16);
 impl_to_varuint!(u32);
 impl_to_varuint!(u64);
 impl_to_varuint!(u128);
@@ -78,8 +76,6 @@ macro_rules! impl_try_from_varuint {
 }
 
 impl_try_from_varuint!(usize);
-impl_try_from_varuint!(u8);
-impl_try_from_varuint!(u16);
 impl_try_from_varuint!(u32);
 impl_try_from_varuint!(u64);
 impl_try_from_varuint!(u128);

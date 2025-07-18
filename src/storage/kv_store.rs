@@ -73,7 +73,7 @@ impl<'a> IndexingTask<'a> {
         };
 
         trace!(
-            "fetching {} from storage (merge op: {merge_op:?}",
+            "fetching {} from storage (merge op: {merge_op:?})",
             hex::encode(&encoded_key)
         );
 

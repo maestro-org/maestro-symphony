@@ -325,11 +325,19 @@ impl gasket::framework::Worker<Stage> for Worker {
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
 
+                // Calculate sync percentage
+                let progress = if tip.height > 0 {
+                    (point.height as f64 / tip.height as f64 * 100.0).min(100.0)
+                } else {
+                    100.0
+                };
+
                 info!(
                     ?point,
                     mutable = self.mutable,
                     timings = timings.log(),
-                    "finished indexing"
+                    progress = format!("{:.2}%", progress),
+                    "indexed block"
                 );
             }
             ChainEvent::RollBack(rb_point) => {
@@ -471,6 +479,12 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
+
+                // Log mempool indexing completion
+                info!(
+                    "finished indexing mempool blocks, timings = {}",
+                    timings.log()
+                );
 
                 // TODO delta refresh
             }

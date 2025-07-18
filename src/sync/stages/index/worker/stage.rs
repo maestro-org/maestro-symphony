@@ -368,12 +368,6 @@ impl gasket::framework::Worker<Stage> for Worker {
                     return Ok(());
                 }
 
-                info!(
-                    "indexing {} mempool blocks (snapshot: {})...",
-                    mempool_blocks.len(),
-                    info.timestamp
-                );
-
                 // Start measuring the entire process
                 let total_start = Instant::now();
                 let mut timings = IndexingTimings::new(self.indexers.len());
@@ -482,8 +476,10 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 // Log mempool indexing completion
                 info!(
-                    "finished indexing mempool blocks, timings = {}",
-                    timings.log()
+                    blocks = mempool_blocks.len(),
+                    snapshot_ts = info.timestamp,
+                    timings = timings.log(),
+                    "indexed mempool blocks",
                 );
 
                 // TODO delta refresh

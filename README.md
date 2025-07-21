@@ -307,6 +307,35 @@ curl -X GET "http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID>" | jq .
 
 Pull requests and issues are welcome! See the [Kanban board](https://github.com/orgs/maestro-org/projects/16/views/1) for project status and tasks.
 
+### Feature Checklist
+
+- [ ] **Addresses**
+  - [x] Runes by address
+  - [x] Runes by address and rune ID
+  - [x] Runes by address and transaction ID
+  - [x] Rune UTXOs by address
+  - [x] Rune UTXOs by address and rune ID
+  - [x] UTXOs by address
+  - [ ] Satoshi balance by address
+  - [ ] BRC20 by address
+  - [ ] Inscriptions by address
+  - [ ] Transactions by address
+- [ ] **Runes**
+  - [x] Rune info by rune ID
+  - [x] Rune balance by rune ID and UTXO
+  - [ ] List runes
+  - [ ] Holders by rune
+  - [ ] UTXOs by rune
+- [ ] **Wallet activity**
+  - [ ] **Addresses**
+    - [ ] Satoshi activity by address
+    - [ ] Metaprotocol activity by address
+    - [ ] Historical satoshi balance by address
+    - [ ] Inscription activity by address
+    - [ ] Address statistics
+- [ ] **Alkanes**
+- [ ] **Webhook Notifications**
+
 ---
 
 ## License

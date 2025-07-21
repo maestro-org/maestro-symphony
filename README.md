@@ -312,3 +312,11 @@ Pull requests and issues are welcome! See the [Kanban board](https://github.com/
 ## License
 
 This project is licensed under the [Apache 2.0 License](./LICENSE).
+---
+
+## Major Developments Checklist
+
+- [ ] **Indexers & Endpoints**
+  - [ ] *(subchecklist to be populated)*
+- [ ] **Webhook Notifications**
+  - [ ] *(subchecklist to be populated)*

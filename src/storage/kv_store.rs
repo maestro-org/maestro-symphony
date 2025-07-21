@@ -10,6 +10,13 @@ use tracing::{info, trace};
 
 use crate::{
     error::Error,
+    storage::{
+        encdec::encode::VarUIntEncoded,
+        merge_operation::{
+            MergeOperation, apply_merge_to_value, combine_merge_operations, create_merge_operator,
+            create_partial_merge_operator,
+        },
+    },
     sync::stages::{
         Point,
         index::indexers::core::{
@@ -53,25 +60,24 @@ impl<'a> IndexingTask<'a> {
         let encoded_key = T::encode_key(key);
 
         // Check the write buffer first
-        if let Some(action) = self.write_buffer.get(&encoded_key) {
+        let merge_op = if let Some(action) = self.write_buffer.get(&encoded_key) {
             trace!("fetching {} from writebuf", hex::encode(&encoded_key));
 
             match action {
                 StorageAction::Set(value) => return Ok(Some(T::Value::decode_all(value)?)),
                 StorageAction::Delete => return Ok(None),
+                StorageAction::Merge(op) => Some(op),
             }
-        }
+        } else {
+            None
+        };
 
-        trace!("fetching {} from storage", hex::encode(&encoded_key));
+        trace!(
+            "fetching {} from storage (merge op: {merge_op:?})",
+            hex::encode(&encoded_key)
+        );
 
-        let mut read_opts = ReadOptions::default();
-        read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
-
-        // Else read from the database
-        self.db
-            .get_cf_opt(self.cf_handle, encoded_key, &read_opts)?
-            .map(|x| T::Value::decode(&x).map(|y| y.0).map_err(|e| e.into()))
-            .transpose()
+        self.get_inner::<T>(&encoded_key, merge_op)
     }
 
     /// Result type for multi_get: a vector of (key, Option<value>) pairs.
@@ -95,6 +101,7 @@ impl<'a> IndexingTask<'a> {
                 let value = match action {
                     StorageAction::Set(value) => Some(T::Value::decode_all(value)?),
                     StorageAction::Delete => None,
+                    StorageAction::Merge(op) => self.get_inner::<T>(&encoded_key, Some(op))?,
                 };
 
                 out.push((key, value))
@@ -189,6 +196,124 @@ impl<'a> IndexingTask<'a> {
             mempool: self.mempool,
         }
     }
+
+    /// Generic merge operation helper
+    fn merge_op<T>(&mut self, key: T::Key, op: MergeOperation) -> Result<(), Error>
+    where
+        T: Table,
+    {
+        let encoded_key = T::encode_key(&key);
+
+        trace!(
+            "applying {:?} operation on {}",
+            op,
+            hex::encode(&encoded_key)
+        );
+
+        // Store original KV if mutable
+        self.maybe_store_original_kv(&encoded_key)?;
+
+        // Check if there's already an operation for this key
+        if let Some(existing_action) = self.write_buffer.get(&encoded_key) {
+            match existing_action {
+                // If there's already a Set operation, apply the merge to the existing value
+                StorageAction::Set(existing_value) => {
+                    // Apply the operation to the existing value
+                    let result = apply_merge_to_value(&op, existing_value)?;
+
+                    // Update the write buffer with a new Set operation
+                    self.write_buffer
+                        .insert(encoded_key, StorageAction::Set(result.encode()));
+
+                    return Ok(());
+                }
+                // If there's already a Merge operation, try to combine them
+                StorageAction::Merge(existing_op) => {
+                    let merged_op = combine_merge_operations(existing_op, &op);
+
+                    // Update the write buffer with the new Merge operation
+                    self.write_buffer
+                        .insert(encoded_key, StorageAction::Merge(merged_op));
+
+                    return Ok(());
+                }
+                // For Delete operations, we can just replace with our merge
+                StorageAction::Delete => (),
+            }
+        }
+
+        // Update the write buffer with the new operation
+        self.write_buffer
+            .insert(encoded_key, StorageAction::Merge(op));
+
+        Ok(())
+    }
+
+    /// Increment a numeric counter value without needing to read it first
+    pub fn increment<T>(&mut self, key: T::Key, amount: T::Value) -> Result<(), Error>
+    where
+        T: Table,
+        T::Value: VarUIntEncoded,
+    {
+        self.merge_op::<T>(key, MergeOperation::Increment(amount.as_u128()))
+    }
+
+    /// Decrement a numeric counter value without needing to read it first
+    pub fn decrement<T>(&mut self, key: T::Key, amount: T::Value) -> Result<(), Error>
+    where
+        T: Table,
+        T::Value: VarUIntEncoded,
+    {
+        self.merge_op::<T>(key, MergeOperation::Decrement(amount.as_u128()))
+    }
+
+    /// Helper method to get the value for a key from storage, which takes into account if there is
+    /// a merge operation in the write buffer which needs to be applied to the fetched value
+    fn get_inner<T>(
+        &self,
+        encoded_key: &[u8],
+        merge_op: Option<&MergeOperation>,
+    ) -> Result<Option<T::Value>, Error>
+    where
+        T: Table,
+    {
+        let mut read_opts = ReadOptions::default();
+        read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
+
+        // Get the original value from the database
+        let base_value = self
+            .db
+            .get_cf_opt(self.cf_handle, encoded_key, &read_opts)?;
+
+        // Apply any pending merge operations from the write buffer
+        if let Some(op) = merge_op {
+            match op {
+                // Handle numeric operations (increment/decrement)
+                MergeOperation::Increment(delta) | MergeOperation::Decrement(delta) => {
+                    // Get the base value (or 0 if none)
+                    // we are using increment, so it must be a varuint.
+                    let base = match &base_value {
+                        Some(bytes) => u128::decode_all(bytes)?,
+                        None => 0,
+                    };
+
+                    // Apply the operation
+                    let result = match op {
+                        MergeOperation::Increment(_) => base.saturating_add(*delta),
+                        MergeOperation::Decrement(_) => base.saturating_sub(*delta),
+                    };
+
+                    return Ok(Some(T::Value::decode_all(&result.encode())?));
+                }
+            }
+        }
+
+        // If we don't have any merge operations or don't know how to handle them,
+        // just return the base value decoded as the expected type
+        base_value
+            .map(|bytes| T::Value::decode_all(&bytes).map_err(|e| e.into()))
+            .transpose()
+    }
 }
 
 pub struct FinalizedTask {
@@ -212,6 +337,13 @@ impl StorageHandler {
         db_opts.create_if_missing(true);
 
         let mut cf_opts = Options::default();
+
+        cf_opts.set_merge_operator(
+            "extensible_merge",
+            create_merge_operator(),
+            create_partial_merge_operator(),
+        );
+
         cf_opts.set_comparator_with_ts(
             U64Comparator::NAME,
             U64Timestamp::SIZE,
@@ -298,8 +430,9 @@ impl StorageHandler {
         // apply storage actions
         for (key, action) in task.write_buffer {
             match action {
-                StorageAction::Set(value) => wb.put_cf_with_ts(cf, key, ts, value),
-                StorageAction::Delete => wb.delete_cf_with_ts(cf, key, ts),
+                StorageAction::Set(value) => wb.put_cf(cf, key, value),
+                StorageAction::Delete => wb.delete_cf(cf, key),
+                StorageAction::Merge(op) => wb.merge_cf(cf, key, op.encode()),
             }
         }
 
@@ -315,7 +448,7 @@ impl StorageHandler {
                     key,
                 });
 
-                wb.put_cf_with_ts(cf, rollback_key, ts, original.encode())
+                wb.put_cf(cf, rollback_key, original.encode())
             }
 
             if !task.mempool {
@@ -337,10 +470,9 @@ impl StorageHandler {
 
         // TODO: better to only update confirmed ts if point height is greater. if we do that, then
         // consider the timestamp low setting below will need to change
-        wb.put_cf_with_ts(
+        wb.put_cf(
             cf,
             TimestampsKV::encode_key(&timestamps_key),
-            ts,
             TimestampEntry {
                 tip_height: point.height,
                 tip_hash: point.hash.to_byte_array(),
@@ -433,6 +565,7 @@ impl Reader {
 pub enum StorageAction {
     Set(RawValue),
     Delete,
+    Merge(MergeOperation),
 }
 
 #[derive(Encode, Decode, Debug, Clone)]

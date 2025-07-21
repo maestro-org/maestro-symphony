@@ -27,6 +27,9 @@ pub enum Error {
 
     #[error("{0:?}")]
     MissingUtxo(TxoRef),
+
+    #[error("invalid merge operator combination")]
+    MergeOperator,
 }
 
 impl Error {

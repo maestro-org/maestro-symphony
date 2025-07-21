@@ -40,11 +40,22 @@ impl Encode for VarUInt {
     }
 }
 
+pub trait VarUIntEncoded {
+    fn as_u128(&self) -> u128;
+}
+
 macro_rules! impl_varuint_encode {
     ($type:ty) => {
         impl Encode for $type {
             fn encode(&self) -> Vec<u8> {
                 Into::<VarUInt>::into(*self).encode()
+            }
+        }
+
+        // Implement the VarUint marker trait
+        impl VarUIntEncoded for $type {
+            fn as_u128(&self) -> u128 {
+                *self as u128
             }
         }
     };

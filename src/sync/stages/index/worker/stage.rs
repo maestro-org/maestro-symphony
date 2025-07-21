@@ -28,6 +28,7 @@ use crate::{
 use bitcoin::{BlockHash, hashes::Hash};
 use gasket::framework::*;
 use rocksdb::WriteBatch;
+use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
 /*
@@ -254,10 +255,13 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 /* index the block */
 
-                info!("indexing {point:?} (mutable: {})...", self.mutable);
+                let total_start = Instant::now();
+                let mut timings = IndexingTimings::new(self.indexers.len());
 
                 let mut task = stage.db.begin_indexing_task(self.mutable);
 
+                // Time: create_context
+                let create_context_start = Instant::now();
                 let mut ctx = IndexingContext::new(
                     &mut task,
                     txs,
@@ -266,17 +270,28 @@ impl gasket::framework::Worker<Stage> for Worker {
                     &mut stage.utxo_cache,
                 )
                 .or_restart()?;
+                timings.create_context = create_context_start.elapsed();
+
+                let mut update_utxo_time = std::time::Duration::default();
 
                 for (block_index, tx) in txs.iter().enumerate() {
-                    for indexer in &self.indexers {
+                    for (i, indexer) in self.indexers.iter().enumerate() {
+                        let indexer_start = Instant::now();
+
                         indexer
                             .process_tx(&mut task, tx, block_index, &mut ctx)
                             .or_restart()?;
+
+                        timings.indexers[i] += indexer_start.elapsed();
                     }
 
+                    let utxo_start = Instant::now();
                     ctx.update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
                         .or_restart()?;
+                    update_utxo_time += utxo_start.elapsed();
                 }
+
+                timings.update_utxo = update_utxo_time;
 
                 IndexerInfoKV::set_info(
                     &mut task,
@@ -293,10 +308,12 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let original_kvs = task.original_kvs.clone();
 
+                let apply_task_start = Instant::now();
                 stage
                     .db
                     .apply_indexing_task(task, point, stage.max_rollbacks, None)
                     .or_restart()?;
+                timings.apply_task = apply_task_start.elapsed();
 
                 stage.last_processed = *point;
 
@@ -304,6 +321,24 @@ impl gasket::framework::Worker<Stage> for Worker {
                 if let Some(original_kvs) = original_kvs {
                     stage.rollback_buffer.add_block(*point, original_kvs);
                 }
+
+                // Record total time and log timings
+                timings.total = total_start.elapsed();
+
+                // Calculate sync percentage
+                let progress = if tip.height > 0 {
+                    (point.height as f64 / tip.height as f64 * 100.0).min(100.0)
+                } else {
+                    100.0
+                };
+
+                info!(
+                    ?point,
+                    mutable = self.mutable,
+                    timings = timings.log(),
+                    progress = format!("{:.2}%", progress),
+                    "indexed block"
+                );
             }
             ChainEvent::RollBack(rb_point) => {
                 info!("rolling back to {rb_point:?}...");
@@ -333,11 +368,9 @@ impl gasket::framework::Worker<Stage> for Worker {
                     return Ok(());
                 }
 
-                info!(
-                    "indexing {} mempool blocks (snapshot: {})...",
-                    mempool_blocks.len(),
-                    info.timestamp
-                );
+                // Start measuring the entire process
+                let total_start = Instant::now();
+                let mut timings = IndexingTimings::new(self.indexers.len());
 
                 let mut task = stage.db.begin_mempool_indexing_task();
 
@@ -345,6 +378,8 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let mut mempool_tip_height = stage.last_processed.height;
 
+                // Time: create_context
+                let create_context_start = Instant::now();
                 let mut ctx = IndexingContext::new(
                     &mut task,
                     &mempool_txs,
@@ -353,6 +388,9 @@ impl gasket::framework::Worker<Stage> for Worker {
                     &mut stage.utxo_cache,
                 )
                 .or_restart()?;
+                timings.create_context = create_context_start.elapsed();
+
+                let mut update_utxo_time = std::time::Duration::default();
 
                 for (i, txs) in mempool_blocks.iter().enumerate() {
                     mempool_tip_height = stage.last_processed.height + 1 + i as u64;
@@ -366,14 +404,20 @@ impl gasket::framework::Worker<Stage> for Worker {
                     ctx.update_point(pseudo_point);
 
                     for (block_index, tx) in txs.iter().enumerate() {
-                        for indexer in &self.indexers {
+                        for (i, indexer) in self.indexers.iter().enumerate() {
+                            let indexer_start = Instant::now();
+
                             indexer
                                 .process_tx(&mut task, tx, block_index, &mut ctx)
                                 .or_restart()?;
+
+                            timings.indexers[i] += indexer_start.elapsed();
                         }
 
+                        let utxo_start = Instant::now();
                         ctx.update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
                             .or_restart()?;
+                        update_utxo_time += utxo_start.elapsed();
                     }
 
                     IndexerInfoKV::set_info(
@@ -388,6 +432,8 @@ impl gasket::framework::Worker<Stage> for Worker {
                     .or_restart()?;
                 }
 
+                timings.update_utxo = update_utxo_time;
+
                 // TODO: block-level indexers (might have to change utxo resolver removal to after)
 
                 let task = task.finalize();
@@ -399,6 +445,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     hash: stage.last_processed.hash,
                 };
 
+                let apply_task_start = Instant::now();
                 stage
                     .db
                     .apply_indexing_task(
@@ -408,6 +455,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                         Some(info.timestamp),
                     )
                     .or_restart()?;
+                timings.apply_task = apply_task_start.elapsed();
 
                 stage.processed_mempool = true;
 
@@ -423,6 +471,17 @@ impl gasket::framework::Worker<Stage> for Worker {
                         .add_block(mempool_rbbuf_point, original_kvs);
                 }
 
+                // Record total time and log timings
+                timings.total = total_start.elapsed();
+
+                // Log mempool indexing completion
+                info!(
+                    blocks = mempool_blocks.len(),
+                    snapshot_ts = info.timestamp,
+                    timings = timings.log(),
+                    "indexed mempool blocks",
+                );
+
                 // TODO delta refresh
             }
         };
@@ -432,5 +491,41 @@ impl gasket::framework::Worker<Stage> for Worker {
 
     async fn teardown(&mut self) -> Result<(), WorkerError> {
         Ok(())
+    }
+}
+
+/// Structure to store timing information for different parts of the indexing process
+#[derive(Default, Debug)]
+struct IndexingTimings {
+    /// Time spent creating the indexing context
+    create_context: std::time::Duration,
+    /// Time spent by each indexer (indexed by position)
+    indexers: Vec<std::time::Duration>,
+    /// Time spent updating the UTXO set
+    update_utxo: std::time::Duration,
+    /// Time spent applying the indexing task
+    apply_task: std::time::Duration,
+    /// Total time spent on the entire process
+    total: std::time::Duration,
+}
+
+impl IndexingTimings {
+    fn new(indexer_count: usize) -> Self {
+        Self {
+            indexers: vec![std::time::Duration::default(); indexer_count],
+            ..Default::default()
+        }
+    }
+
+    fn log(&self) -> String {
+        let mut indexer_times = String::new();
+        for (i, duration) in self.indexers.iter().enumerate() {
+            indexer_times.push_str(&format!("indexer{i}={duration:?} "));
+        }
+
+        format!(
+            "total={:?} context={:?} {}utxo={:?} apply={:?}",
+            self.total, self.create_context, indexer_times, self.update_utxo, self.apply_task
+        )
     }
 }

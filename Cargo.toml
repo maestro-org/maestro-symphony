@@ -1,7 +1,7 @@
 [package]
 name = "maestro-symphony"
 description = "Orchestrating Bitcoin blocks into readable harmony"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 authors = ["info@gomaestro.org"]
 license = "Apache-2.0"

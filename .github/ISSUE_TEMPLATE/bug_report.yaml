@@ -55,6 +55,6 @@ body:
       attributes:
           label: Maestro-Symphony version or commit hash
           description: Which version or commit hash of Maestro-Symphony are you running?
-          placeholder: v0.1.0
+          placeholder: v0.1.1
       validations:
           required: true

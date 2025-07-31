@@ -43,6 +43,7 @@ pub struct Stage {
     node_rpc_auth: RpcAuth,
     network: Network,
     mempool_enabled: bool,
+    intersect: Option<Point>,
 
     db: StorageHandler,
 
@@ -60,6 +61,7 @@ impl Stage {
         node_rpc_auth: RpcAuth,
         network: Network,
         mempool_enabled: bool,
+        intersect: Option<Point>,
         db: StorageHandler,
         shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
     ) -> Self {
@@ -74,6 +76,7 @@ impl Stage {
             node_rpc_auth,
             network,
             mempool_enabled,
+            intersect,
             db,
             should_shutdown,
             has_shutdown,
@@ -103,9 +106,12 @@ impl gasket::framework::Worker<Stage> for Worker {
         let reader = stage.db.reader(Timestamp::from_u64(u64::MAX)); // TODO ts
 
         // TODO move into stage? so that we dont send duplicate chain actions
-        let intersect_options =
-            HashByHeightKV::intersect_options(&reader, stage.network.genesis_block().block_hash())
-                .or_panic()?;
+        let intersect_options = HashByHeightKV::intersect_options(
+            &reader,
+            stage.network.genesis_block().block_hash(),
+            stage.intersect,
+        )
+        .or_panic()?;
 
         // let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
         //     .await
@@ -409,6 +415,7 @@ impl Worker {
             let mut options = HashByHeightKV::intersect_options(
                 &reader,
                 stage.network.genesis_block().block_hash(), // TODO dont compute
+                stage.intersect,
             )
             .or_panic()?;
 

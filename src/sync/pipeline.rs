@@ -47,6 +47,7 @@ pub fn pipeline(
         rpc_auth,
         config.network,
         config.mempool,
+        config.intersect,
         db,
         shutdown_signals,
     );

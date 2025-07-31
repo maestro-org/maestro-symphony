@@ -88,7 +88,7 @@ impl ProcessTransaction for RunesIndexer {
 
         let artifact = Runestone::decipher(tx);
 
-        let mut unallocated = unallocated(task, tx, ctx.resolver())?;
+        let mut unallocated = unallocated(ctx, task, tx)?;
 
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
 
@@ -299,9 +299,9 @@ impl ProcessTransaction for RunesIndexer {
 
 /// Discover runes in transaction inputs
 fn unallocated(
+    ctx: &mut IndexingContext,
     task: &mut IndexingTask,
     tx: &Transaction,
-    resolver: &HashMap<TxoRef, Utxo>,
 ) -> Result<HashMap<RuneId, u128>, Error> {
     // map of rune ID to un-allocated balance of that rune
     let mut unallocated: HashMap<RuneId, u128> = HashMap::new();
@@ -312,7 +312,16 @@ fn unallocated(
         if !input.previous_output.is_null() {
             let txo_ref = input.previous_output.into();
 
-            let utxo = resolver.get(&txo_ref).expect("todo");
+            let utxo = match ctx.resolve_input(&txo_ref) {
+                Some(u) => u,
+                None => {
+                    if !ctx.partial_sync() {
+                        return Err(Error::MissingUtxo(txo_ref));
+                    } else {
+                        continue;
+                    }
+                }
+            };
 
             // TODO: helper
             let runes = match utxo.extended.get(&TransactionIndexer::Runes) {
@@ -597,9 +606,18 @@ fn collect_input_totals(
         }
 
         let txo_ref = input.previous_output.into();
-        let Some(utxo) = ctx.resolve_input(&txo_ref) else {
-            continue;
-        }; // orphaned input
+
+        let utxo = match ctx.resolve_input(&txo_ref) {
+            Some(u) => u,
+            None => {
+                if !ctx.partial_sync() {
+                    return Err(Error::MissingUtxo(txo_ref));
+                } else {
+                    continue;
+                }
+            }
+        };
+
         let Some(raw) = utxo.extended.get(&TransactionIndexer::Runes) else {
             continue;
         };

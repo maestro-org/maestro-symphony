@@ -2,6 +2,8 @@ use bitcoin::{Block, consensus::Decodable, p2p::Magic};
 use serde::Deserialize;
 use stages::index::indexers::custom::TransactionIndexerFactory;
 
+use crate::sync::stages::Point;
+
 pub mod pipeline;
 pub mod stages;
 
@@ -20,6 +22,8 @@ pub struct Config {
     /// Max in-flight messages between the pull and index stage
     pub stage_queue_size: Option<usize>,
     pub stage_timeout_secs: Option<u64>,
+
+    pub intersect: Option<Point>,
 
     pub indexers: IndexersConfig,
 

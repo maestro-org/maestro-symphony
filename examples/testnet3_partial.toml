@@ -2,7 +2,6 @@ db_path = "tmp/symphony"
 
 [sync.node]
 p2p_address = "51.79.82.75:18333"
-# rpc_address = "http://localhost:8332"
 # RPC user
 rpc_user = "..."
 # RPC password

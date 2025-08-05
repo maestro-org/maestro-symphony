@@ -27,6 +27,7 @@ use utoipa::OpenApi;
         addresses::tx_count_by_address::addresses_tx_count_by_address,
         runes::rune_info_batch::runes_rune_info_batch,
         runes::rune_balance_at_utxo::rune_balance_at_utxo,
+        transactions::submit_transaction,
     ),
     components(schemas(
         IndexerInfo,
@@ -40,12 +41,15 @@ use utoipa::OpenApi;
         ServeResponse<String>,
         ServeResponse<AddressUtxo>,
         ServeResponse<HashMap<String, Option<RuneInfo>>>,
+        ServeResponse<super::routes::transactions::SubmitTransactionResponse>,
         // ---
         RuneAndAmount,
         RuneUtxo,
         RuneEdict,
         AddressUtxo,
         RuneInfo,
+        super::routes::transactions::SubmitTransactionRequest,
+        super::routes::transactions::SubmitTransactionResponse,
     )),
 )]
 pub struct APIDoc;

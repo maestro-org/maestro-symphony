@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use bitcoin::BlockHash;
+use bitcoin::{BlockHash, Transaction};
 use bitcoincore_rpc::{
     Auth as RpcAuth, Client as RpcClient, RpcApi,
     json::{GetBlockTemplateModes, GetBlockTemplateRules},
@@ -49,6 +49,7 @@ pub struct Stage {
 
     should_shutdown: Option<Receiver<()>>,
     has_shutdown: Option<mpsc::Sender<()>>,
+    tx_submission_recv: Option<mpsc::UnboundedReceiver<Transaction>>,
 
     pub downstream: DownstreamPort,
     pub health_downstream: DownstreamPort,
@@ -64,6 +65,7 @@ impl Stage {
         intersect: Option<Point>,
         db: StorageHandler,
         shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
+        tx_submission_recv: Option<mpsc::UnboundedReceiver<Transaction>>,
     ) -> Self {
         let (should_shutdown, has_shutdown) = match shutdown_signals {
             Some((x, y)) => (Some(x), Some(y)),
@@ -80,6 +82,7 @@ impl Stage {
             db,
             should_shutdown,
             has_shutdown,
+            tx_submission_recv,
             downstream: Default::default(),
             health_downstream: Default::default(),
         }
@@ -154,7 +157,6 @@ impl gasket::framework::Worker<Stage> for Worker {
             tip_reached: false,
             has_shutdown: stage.has_shutdown.clone(),
             initialised: false,
-
             tip,
         })
     }
@@ -209,6 +211,18 @@ impl gasket::framework::Worker<Stage> for Worker {
         }
 
         // TODO: timed stats
+
+        // Handle transaction submissions
+        if let Some(ref mut tx_recv) = stage.tx_submission_recv {
+            while let Ok(transaction) = tx_recv.try_recv() {
+                info!("Submitting transaction: {}", transaction.compute_txid());
+                if let Err(e) = self.peer_session.submit_transaction(transaction).await {
+                    error!("Failed to submit transaction: {:?}", e);
+                } else {
+                    info!("Transaction submitted successfully");
+                }
+            }
+        }
 
         let mut units = vec![];
 

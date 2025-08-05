@@ -153,6 +153,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         .route("/tip", get(tip))
         .nest("/addresses", routes::addresses::router())
         .nest("/runes", routes::runes::router())
+        .nest("/transactions", routes::transactions::router())
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             auto_refresh,
@@ -231,3 +232,6 @@ async fn tip(State(state): State<AppState>) -> impl IntoResponse {
 
     json.into_response()
 }
+
+// Re-export the transaction submission function
+pub use routes::transactions::set_tx_submission_sender;

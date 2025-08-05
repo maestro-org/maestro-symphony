@@ -40,6 +40,12 @@ pub fn pipeline(
 
     let rpc_auth = Auth::UserPass(config.node.rpc_user, config.node.rpc_pass);
 
+    // Initialize transaction submission channel
+    let (tx_sender, tx_receiver) = mpsc::unbounded_channel();
+
+    // Store the sender in the global static for the HTTP endpoint to use
+    crate::serve::set_tx_submission_sender(tx_sender);
+
     // create Pull stage for pulling blocks/mempool from node
     let mut pull = pull::Stage::new(
         config.node.p2p_address,
@@ -50,6 +56,7 @@ pub fn pipeline(
         config.intersect,
         db,
         shutdown_signals,
+        Some(tx_receiver),
     );
 
     // // create Health stage for exposing health info

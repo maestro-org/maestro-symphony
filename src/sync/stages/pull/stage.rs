@@ -39,7 +39,7 @@ pub type DownstreamPort = gasket::messaging::OutputPort<ChainEvent>;
 #[stage(name = "pull", unit = "Vec<ChainEvent>", worker = "Worker")]
 pub struct Stage {
     node_p2p_address: String,
-    node_rpc_address: String,
+    node_rpc_address: Option<String>,
     node_rpc_auth: RpcAuth,
     network: Network,
     mempool_enabled: bool,
@@ -57,7 +57,7 @@ pub struct Stage {
 impl Stage {
     pub fn new(
         node_p2p_address: String,
-        node_rpc_address: String,
+        node_rpc_address: Option<String>,
         node_rpc_auth: RpcAuth,
         network: Network,
         mempool_enabled: bool,
@@ -91,7 +91,7 @@ impl gasket::framework::Worker<Stage> for Worker {
     async fn bootstrap(stage: &Stage) -> Result<Self, WorkerError> {
         info!("connecting to node {}...", stage.node_p2p_address);
 
-        let peer_session = Peer::connect(&stage.node_p2p_address, stage.network.magic())
+        let mut peer_session = Peer::connect(&stage.node_p2p_address, stage.network.magic())
             .await
             .or_retry()?;
 
@@ -113,28 +113,35 @@ impl gasket::framework::Worker<Stage> for Worker {
         )
         .or_panic()?;
 
-        // let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
-        //     .await
-        //     .or_panic()?;
+        let mut peer_rpc = if let Some(address) = stage.node_rpc_address.clone() {
+            Some(RpcClient::new(&address, stage.node_rpc_auth.clone()).or_panic()?)
+        } else {
+            None
+        };
 
-        // info!("got tip estimate {tip_estimate:?}");
+        let tip = if let Some(rpc) = peer_rpc.as_mut() {
+            let tip = rpc
+                .get_chain_tips()
+                .or_restart()?
+                .into_iter()
+                .max_by_key(|x| x.height)
+                .ok_or_else(|| {
+                    error!("No chaintip found");
+                    WorkerError::Restart
+                })?;
 
-        let peer_rpc =
-            RpcClient::new(&stage.node_rpc_address, stage.node_rpc_auth.clone()).or_panic()?;
+            Point {
+                height: tip.height,
+                hash: tip.hash,
+            }
+        } else {
+            let tip_estimate = estimate_tip(&mut peer_session, *intersect_options.first().unwrap())
+                .await
+                .or_panic()?;
 
-        let tip = peer_rpc
-            .get_chain_tips()
-            .or_restart()?
-            .into_iter()
-            .max_by_key(|x| x.height)
-            .ok_or_else(|| {
-                error!("No chaintip found");
-                WorkerError::Restart
-            })?;
+            info!("got tip estimate {tip_estimate:?}");
 
-        let tip = Point {
-            height: tip.height,
-            hash: tip.hash,
+            tip_estimate
         };
 
         info!("bootstrapped pull stage (tip: {tip:?})");
@@ -176,22 +183,23 @@ impl gasket::framework::Worker<Stage> for Worker {
             {
                 info!("it seems the node is still syncing, waiting 60s before retrying...");
 
-                // refresh tip
-                let tip = self
-                    .peer_rpc
-                    .get_chain_tips()
-                    .or_restart()?
-                    .into_iter()
-                    .max_by_key(|x| x.height)
-                    .ok_or_else(|| {
-                        error!("No chaintip found");
-                        WorkerError::Restart
-                    })?;
+                // // refresh tip
+                // let tip = self
+                //     .peer_rpc
+                //     .m
+                //     .get_chain_tips()
+                //     .or_restart()?
+                //     .into_iter()
+                //     .max_by_key(|x| x.height)
+                //     .ok_or_else(|| {
+                //         error!("No chaintip found");
+                //         WorkerError::Restart
+                //     })?;
 
-                self.tip = Point {
-                    height: tip.height,
-                    hash: tip.hash,
-                };
+                // self.tip = Point {
+                //     height: tip.height,
+                //     hash: tip.hash,
+                // };
 
                 tokio::time::sleep(Duration::from_secs(60)).await;
                 return Ok(WorkSchedule::Idle);
@@ -228,43 +236,44 @@ impl gasket::framework::Worker<Stage> for Worker {
             let new_actions = self.fetch_chain_actions(stage).await?;
             units.extend(new_actions);
 
-            // Try fetch mempool (TODO: temporary mempool logic)
-            if stage.mempool_enabled {
-                let timestamp = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .expect("Time went backwards")
-                    .as_secs();
+            if let Some(rpc) = self.peer_rpc.as_mut() {
+                // Try fetch mempool (TODO: temporary mempool logic)
+                if stage.mempool_enabled {
+                    let timestamp = std::time::SystemTime::now()
+                        .duration_since(std::time::UNIX_EPOCH)
+                        .expect("Time went backwards")
+                        .as_secs();
 
-                let block_template = self
-                    .peer_rpc
-                    .get_block_template(
-                        GetBlockTemplateModes::Template,
-                        &[
-                            GetBlockTemplateRules::SegWit,
-                            GetBlockTemplateRules::Taproot,
-                        ],
-                        &[],
-                    )
-                    .or_restart()?;
+                    let block_template = rpc
+                        .get_block_template(
+                            GetBlockTemplateModes::Template,
+                            &[
+                                GetBlockTemplateRules::SegWit,
+                                GetBlockTemplateRules::Taproot,
+                            ],
+                            &[],
+                        )
+                        .or_restart()?;
 
-                let prev_bh = block_template.previous_block_hash;
+                    let prev_bh = block_template.previous_block_hash;
 
-                let block_txs = block_template
-                    .transactions
-                    .into_iter()
-                    .map(|x| TransactionWithId {
-                        tx_id: x.txid,
-                        tx: x.transaction().unwrap(),
-                    })
-                    .collect::<Vec<_>>();
+                    let block_txs = block_template
+                        .transactions
+                        .into_iter()
+                        .map(|x| TransactionWithId {
+                            tx_id: x.txid,
+                            tx: x.transaction().unwrap(),
+                        })
+                        .collect::<Vec<_>>();
 
-                units.push(ChainEvent::MempoolBlocks(
-                    MempoolSnapshotInfo {
-                        timestamp,
-                        tip: prev_bh,
-                    },
-                    vec![block_txs],
-                ));
+                    units.push(ChainEvent::MempoolBlocks(
+                        MempoolSnapshotInfo {
+                            timestamp,
+                            tip: prev_bh,
+                        },
+                        vec![block_txs],
+                    ));
+                }
             }
         }
 
@@ -301,7 +310,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
 pub struct Worker {
     peer_session: Peer,
-    peer_rpc: RpcClient,
+    peer_rpc: Option<RpcClient>,
     cursor: Vec<Point>,
     stats: PullStats,
     initialised: bool,

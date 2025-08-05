@@ -18,6 +18,7 @@ impl HashByHeightKV {
     pub fn intersect_options(
         reader: &Reader,
         genesis_hash: BlockHash,
+        genesis_override: Option<Point>,
     ) -> Result<Vec<Point>, Error> {
         let mut out = vec![];
 
@@ -49,7 +50,9 @@ impl HashByHeightKV {
 
                 index = index.saturating_sub(step);
 
-                if index == 0 {
+                let stop = genesis_override.map(|x| x.height).unwrap_or(0);
+
+                if index <= stop {
                     break;
                 }
             }
@@ -63,6 +66,10 @@ impl HashByHeightKV {
                     height,
                     hash: BlockHash::from_byte_array(hash),
                 });
+            }
+        } else {
+            if let Some(genesis_override) = genesis_override {
+                return Ok(vec![genesis_override]);
             }
         }
 

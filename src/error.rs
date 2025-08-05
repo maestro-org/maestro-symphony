@@ -25,7 +25,7 @@ pub enum Error {
     #[error("{0}")]
     P2P(#[from] P2PError),
 
-    #[error("{0:?}")]
+    #[error("missing utxo {0:?}")]
     MissingUtxo(TxoRef),
 
     #[error("invalid merge operator combination")]

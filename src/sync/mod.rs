@@ -11,8 +11,10 @@ pub struct Config {
     pub network: Network,
     /// Index estimated future blocks using transactions in mempool
     pub mempool: bool,
-    /// Rough size in bytes to use for UTxO cache (0 = disabled, default 1/6 RAM)
+    /// Size in bytes to use for UTxO cache (0 = disabled, default 0.5GB)
     pub utxo_cache_size: Option<u64>,
+    /// Total memory budget for RocksDB in bytes (default 2GB)
+    pub rocksdb_memory_budget: Option<u64>,
 
     /// Max number of blocks to pull from the node at once
     pub block_page_size: Option<usize>,

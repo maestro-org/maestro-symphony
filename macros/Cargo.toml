@@ -8,7 +8,7 @@ description = "Procedural macros for the maestro-symphony project."
 license = "Apache-2.0"
 
 [dependencies]
-proc-macro2 = "1.0.95"
+proc-macro2 = "1.0.96"
 quote = "1.0.40"
 syn = { version = "2.0.104", features = ["full"] }
 

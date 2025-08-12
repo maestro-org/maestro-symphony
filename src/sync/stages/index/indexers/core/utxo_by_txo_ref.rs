@@ -47,6 +47,7 @@ impl UtxoByTxoRefKV {
         task: &IndexingTask,
         txs: &BlockTxs,
         cache: &mut Option<UtxoCache>,
+        partial_sync: bool,
     ) -> Result<ResolvedUtxos, Error> {
         let start = Instant::now();
         let mut cache_hits = 0;
@@ -112,7 +113,11 @@ impl UtxoByTxoRefKV {
                     Some(u) => {
                         resolver.insert(txo_ref, u);
                     }
-                    None => panic!("missing non chained utxo {txo_ref:?}"),
+                    None => {
+                        if !partial_sync {
+                            panic!("missing non chained utxo {txo_ref:?}")
+                        }
+                    }
                 }
             }
         }

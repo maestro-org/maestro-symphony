@@ -51,9 +51,16 @@ impl ProcessTransaction for TxCountByAddressIndexer {
             for input in &tx.input {
                 let txo_ref = input.previous_output.into();
 
-                let utxo = ctx
-                    .resolve_input(&txo_ref)
-                    .ok_or_else(|| Error::missing_utxo(txo_ref))?;
+                let utxo = match ctx.resolve_input(&txo_ref) {
+                    Some(u) => u,
+                    None => {
+                        if !ctx.partial_sync() {
+                            return Err(Error::MissingUtxo(txo_ref));
+                        } else {
+                            continue;
+                        }
+                    }
+                };
 
                 seen_scripts.insert(utxo.script.clone());
             }

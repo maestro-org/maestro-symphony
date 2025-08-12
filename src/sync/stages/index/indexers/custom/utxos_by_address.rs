@@ -54,7 +54,17 @@ impl ProcessTransaction for UtxosByAddressIndexer {
         if !tx.is_coinbase() {
             for input in tx.input.iter() {
                 let txo_ref = input.previous_output.into();
-                let utxo = ctx.resolve_input(&txo_ref).unwrap();
+
+                let utxo = match ctx.resolve_input(&txo_ref) {
+                    Some(u) => u,
+                    None => {
+                        if !ctx.partial_sync() {
+                            return Err(Error::MissingUtxo(txo_ref));
+                        } else {
+                            continue;
+                        }
+                    }
+                };
 
                 // delete kv for consumed utxo
 

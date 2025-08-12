@@ -1,4 +1,5 @@
 use bitcoin::{BlockHash, Transaction, Txid, block::Header};
+use serde::Deserialize;
 
 pub mod index;
 pub mod pull;
@@ -9,6 +10,25 @@ pub type BlockHeight = u64;
 pub struct Point {
     pub height: BlockHeight,
     pub hash: BlockHash,
+}
+
+impl<'de> Deserialize<'de> for Point {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        // Only accept array format [height, hash]
+        #[derive(Deserialize)]
+        struct PointArray(BlockHeight, BlockHash);
+
+        let point_array = PointArray::deserialize(deserializer)
+            .map_err(|_| serde::de::Error::custom("expected format: [height, \"hash\"]"))?;
+
+        Ok(Point {
+            height: point_array.0,
+            hash: point_array.1,
+        })
+    }
 }
 
 #[derive(Debug, Clone)]

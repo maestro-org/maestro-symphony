@@ -1,11 +1,12 @@
 use std::{
+    collections::HashMap,
     net::{IpAddr, Ipv4Addr, SocketAddr},
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
 
 use bitcoin::{
-    Block, BlockHash, VarInt,
+    Block, BlockHash, Transaction, VarInt,
     block::Header,
     consensus::{self, Decodable, Encodable, ReadExt, encode},
     hashes::Hash,
@@ -46,6 +47,7 @@ pub enum DecodedMessage {
     Inv(Vec<Inventory>),
     Headers(Vec<Header>),
     Block(RawBlock),
+    GetData(Vec<Inventory>),
     Unused,
 }
 
@@ -90,6 +92,7 @@ impl Decodable for DecodedMessage {
             "verack" => DecodedMessage::Verack,
             "ping" => DecodedMessage::Ping(Decodable::consensus_decode(payload)?),
             "inv" => DecodedMessage::Inv(Decodable::consensus_decode(payload)?),
+            "getdata" => DecodedMessage::GetData(Decodable::consensus_decode(payload)?),
             "headers" => DecodedMessage::Headers({
                 let len = VarInt::consensus_decode(payload)?.0 as usize;
                 let mut headers = Vec::with_capacity(len);
@@ -150,6 +153,7 @@ enum Request {
     NewHeaders(GetHeadersMessage),
     Blocks(Vec<Inventory>),
     MempoolIds,
+    SendTransaction(Transaction),
 }
 
 impl Request {
@@ -171,6 +175,10 @@ impl Request {
     #[allow(dead_code)]
     fn get_mempool_ids() -> Request {
         Request::MempoolIds
+    }
+
+    fn send_transaction(tx: Transaction) -> Request {
+        Request::SendTransaction(tx)
     }
 }
 
@@ -297,6 +305,16 @@ impl Peer {
     pub async fn get_mempool(&mut self) -> Result<(), P2PError> {
         unimplemented!()
     }
+
+    /// Submit a transaction by sending inventory first, then handling getdata requests
+    pub async fn submit_transaction(&mut self, tx: Transaction) -> Result<(), P2PError> {
+        self.request_send
+            .send(Request::send_transaction(tx))
+            .await
+            .map_err(|_| P2PError::EgressChannelClosed)?;
+
+        Ok(())
+    }
 }
 
 struct Ingress {
@@ -410,6 +428,7 @@ struct PeerHandler {
     ingress_recv: mpsc::Receiver<DecodedMessage>,
     egress_handle: JoinHandle<Result<(), P2PError>>,
     egress_send: mpsc::Sender<RawNetworkMessage>,
+    pending_transactions: HashMap<bitcoin::Txid, Transaction>,
 }
 
 impl PeerHandler {
@@ -443,6 +462,7 @@ impl PeerHandler {
             ingress_recv,
             egress_handle: egress,
             egress_send,
+            pending_transactions: HashMap::new(),
         }
     }
 
@@ -454,6 +474,13 @@ impl PeerHandler {
                     Request::NewHeaders(msg) => NetworkMessage::GetHeaders(msg),
                     Request::Blocks(inv) => NetworkMessage::GetData(inv),
                     Request::MempoolIds => NetworkMessage::MemPool,
+                    Request::SendTransaction(tx) => {
+                        let txid = tx.compute_txid();
+                        // Store the transaction for later getdata requests
+                        self.pending_transactions.insert(txid, tx);
+                        // Send inventory to announce the transaction
+                        NetworkMessage::Inv(vec![Inventory::Transaction(txid)])
+                    }
                 };
 
                 let to_send = RawNetworkMessage::new(self.magic, to_send);
@@ -491,6 +518,18 @@ impl PeerHandler {
                     DecodedMessage::Block(block) => {
                         trace!("peer sent block {block:?}, relaying");
                         self.blocks_send.send(block).await.map_err(|_| P2PError::PeerChannelClosed("blocks".into()))?;
+                    },
+                    DecodedMessage::GetData(inv_items) => {
+                        trace!("peer sent getdata {inv_items:?}");
+                        // Handle getdata requests for transactions we're broadcasting
+                        for item in inv_items {
+                            if let Inventory::Transaction(txid) = item {
+                                if let Some(tx) = self.pending_transactions.get(&txid) {
+                                    trace!("sending transaction {txid} to peer");
+                                    self.egress_send.send(RawNetworkMessage::new(self.magic, NetworkMessage::Tx(tx.clone()))).await.map_err(|_| P2PError::EgressChannelClosed)?;
+                                }
+                            }
+                        }
                     },
                     DecodedMessage::Unused => (),
                 }

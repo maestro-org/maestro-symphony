@@ -121,13 +121,16 @@ impl IndexingContext {
                 extended: self.utxo_metadata.remove(&txo_ref).unwrap_or_default(),
             };
 
-            if self.chained_txos.contains(&txo_ref) {
-                self.resolver.insert(txo_ref, utxo);
-            } else if let Some(c) = utxo_cache.as_mut() {
-                c.insert(txo_ref, utxo.clone());
-                task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
-            } else {
-                task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+            // dont write unspendables
+            if !output.script_pubkey.is_op_return() {
+                if self.chained_txos.contains(&txo_ref) {
+                    self.resolver.insert(txo_ref, utxo);
+                } else if let Some(c) = utxo_cache.as_mut() {
+                    c.insert(txo_ref, utxo.clone());
+                    task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+                } else {
+                    task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+                }
             }
         }
 

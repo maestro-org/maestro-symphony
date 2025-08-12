@@ -360,12 +360,20 @@ impl StorageHandler {
         // Set the write buffer manager to control total memtable memory
         db_opts.set_write_buffer_manager(&write_buffer_manager);
 
+        db_opts.set_max_background_jobs(2);
+        db_opts.set_advise_random_on_open(true);
+
         let mut cf_opts = Options::default();
 
         // Use the same cache for block cache in the column family
         let mut block_opts = BlockBasedOptions::default();
         block_opts.set_block_cache(&cache);
+        block_opts.set_cache_index_and_filter_blocks(true);
+        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
         cf_opts.set_block_based_table_factory(&block_opts);
+
+        cf_opts.set_max_write_buffer_number(2);
+        cf_opts.set_max_write_buffer_size_to_maintain(0);
 
         cf_opts.set_merge_operator(
             "extensible_merge",

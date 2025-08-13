@@ -1,3 +1,10 @@
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 use std::fs;
 
 use crate::error::Error;
@@ -107,7 +114,7 @@ async fn main() -> Result<(), ()> {
 
     match args.command {
         Command::Sync(_) => {
-            let db = StorageHandler::open(db_path.into(), false);
+            let db = StorageHandler::open(db_path.into(), false, config.sync.rocksdb_memory_budget);
 
             info!(
                 "running symphony in sync mode with config: {:?}",
@@ -132,7 +139,7 @@ async fn main() -> Result<(), ()> {
                 .await;
         }
         Command::Serve(_) => {
-            let db = StorageHandler::open(db_path.into(), true);
+            let db = StorageHandler::open(db_path.into(), true, config.sync.rocksdb_memory_budget);
 
             info!(
                 "running symphony in serve mode with config: {:?}",
@@ -148,7 +155,7 @@ async fn main() -> Result<(), ()> {
             }
         }
         Command::Run(_) => {
-            let db = StorageHandler::open(db_path.into(), false);
+            let db = StorageHandler::open(db_path.into(), false, config.sync.rocksdb_memory_budget);
 
             info!("running symphony in sync+serve mode with config: {config:?}",);
 

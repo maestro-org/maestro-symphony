@@ -5,7 +5,10 @@ use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc};
 use bitcoin::hashes::Hash;
 use itertools::Itertools;
 use maestro_symphony_macros::{Decode, Encode};
-use rocksdb::{ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, WriteBatch};
+use rocksdb::{
+    BlockBasedOptions, Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions,
+    WriteBatch, WriteBufferManager,
+};
 use tracing::{info, trace};
 
 use crate::{
@@ -330,13 +333,51 @@ pub struct StorageHandler {
 }
 
 impl StorageHandler {
-    pub fn open(path: PathBuf, read_only: bool) -> Self {
+    pub fn open(path: PathBuf, read_only: bool, rocksdb_memory_budget: Option<u64>) -> Self {
         info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
         db_opts.create_if_missing(true);
 
+        // Set RocksDB memory budget if provided (default 2GB)
+        let memory_budget = rocksdb_memory_budget.unwrap_or(2 * 1024 * 1024 * 1024); // 2GB default
+        info!(
+            "using rocksdb memory budget: {} bytes ({:.2} GB)",
+            memory_budget,
+            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0
+        );
+
+        // Create a shared cache for both block cache and write buffer manager
+        let write_buffer_budget = (memory_budget as f64 * 0.3) as usize;
+
+        let cache = Cache::new_lru_cache(memory_budget.try_into().unwrap());
+        let write_buffer_manager = WriteBufferManager::new_write_buffer_manager_with_cache(
+            write_buffer_budget,
+            false,
+            cache.clone(),
+        );
+
+        // Set the write buffer manager to control total memtable memory
+        db_opts.set_write_buffer_manager(&write_buffer_manager);
+
+        db_opts.set_max_background_jobs(2);
+        db_opts.set_advise_random_on_open(true);
+
+        db_opts.set_max_open_files(500);
+        // db_opts.set_use_direct_reads(true);
+        // db_opts.set_use_direct_io_for_flush_and_compaction(true);
+
         let mut cf_opts = Options::default();
+
+        // Use the same cache for block cache in the column family
+        let mut block_opts = BlockBasedOptions::default();
+        block_opts.set_block_cache(&cache);
+        block_opts.set_cache_index_and_filter_blocks(true);
+        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
+        cf_opts.set_block_based_table_factory(&block_opts);
+
+        cf_opts.set_max_write_buffer_number(2);
+        cf_opts.set_max_write_buffer_size_to_maintain(0);
 
         cf_opts.set_merge_operator(
             "extensible_merge",

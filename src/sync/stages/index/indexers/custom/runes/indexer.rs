@@ -5,11 +5,11 @@ use crate::storage::encdec::Decode;
 use crate::storage::kv_store::IndexingTask;
 use crate::sync::stages::index::indexers::custom::TransactionIndexer;
 use crate::sync::stages::index::indexers::custom::id::ProcessTransaction;
-use crate::sync::stages::index::indexers::types::{TxoRef, Utxo};
+use crate::sync::stages::index::indexers::types::TxoRef;
 use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
-use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
+use bitcoin::{ScriptBuf, Transaction, hashes::Hash};
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
 use serde::Deserialize;
 
@@ -88,7 +88,7 @@ impl ProcessTransaction for RunesIndexer {
 
         let artifact = Runestone::decipher(tx);
 
-        let mut unallocated = unallocated(task, tx, ctx.resolver())?;
+        let mut unallocated = unallocated(ctx, task, tx)?;
 
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
 
@@ -103,12 +103,10 @@ impl ProcessTransaction for RunesIndexer {
 
             let etched = etched(
                 task,
-                ctx.resolver(),
+                ctx,
                 tx_block_index,
                 tx,
                 artifact,
-                height,
-                ctx.network(),
                 self.commitment_confirmations,
             )?;
 
@@ -299,9 +297,9 @@ impl ProcessTransaction for RunesIndexer {
 
 /// Discover runes in transaction inputs
 fn unallocated(
+    ctx: &mut IndexingContext,
     task: &mut IndexingTask,
     tx: &Transaction,
-    resolver: &HashMap<TxoRef, Utxo>,
 ) -> Result<HashMap<RuneId, u128>, Error> {
     // map of rune ID to un-allocated balance of that rune
     let mut unallocated: HashMap<RuneId, u128> = HashMap::new();
@@ -312,7 +310,16 @@ fn unallocated(
         if !input.previous_output.is_null() {
             let txo_ref = input.previous_output.into();
 
-            let utxo = resolver.get(&txo_ref).expect("todo");
+            let utxo = match ctx.resolve_input(&txo_ref) {
+                Some(u) => u,
+                None => {
+                    if !ctx.partial_sync() {
+                        return Err(Error::MissingUtxo(txo_ref));
+                    } else {
+                        continue;
+                    }
+                }
+            };
 
             // TODO: helper
             let runes = match utxo.extended.get(&TransactionIndexer::Runes) {
@@ -375,9 +382,8 @@ fn mint(task: &mut IndexingTask, id: RuneId, height: BlockHeight) -> Result<Opti
 
 fn tx_commits_to_rune(
     tx: &Transaction,
+    ctx: &IndexingContext,
     rune: Rune,
-    height: BlockHeight,
-    resolver: &HashMap<TxoRef, Utxo>,
     confirmations_override: Option<u64>,
 ) -> Result<bool, Error> {
     let commitment = rune.commitment();
@@ -409,9 +415,16 @@ fn tx_commits_to_rune(
 
             let txo_ref = input.previous_output.into();
 
-            let utxo = resolver
-                .get(&txo_ref)
-                .expect("missing txo resolver in rune commit"); // TODO
+            let utxo = match ctx.resolve_input(&txo_ref) {
+                Some(u) => u,
+                None => {
+                    if !ctx.partial_sync() {
+                        return Err(Error::MissingUtxo(txo_ref));
+                    } else {
+                        continue;
+                    }
+                }
+            };
 
             // check taproot
             if !ScriptBuf::from_bytes(utxo.script.clone())
@@ -423,7 +436,8 @@ fn tx_commits_to_rune(
 
             let commit_tx_height = utxo.height;
 
-            let confirmations = height
+            let confirmations = ctx
+                .block_height()
                 .checked_sub(commit_tx_height)
                 .expect("rune commit underflow")
                 .checked_add(1)
@@ -441,12 +455,10 @@ fn tx_commits_to_rune(
 #[allow(clippy::too_many_arguments)]
 fn etched(
     task: &mut IndexingTask,
-    resolver: &HashMap<TxoRef, Utxo>,
+    ctx: &IndexingContext,
     tx_index: usize,
     tx: &Transaction,
     artifact: &Artifact,
-    height: BlockHeight,
-    network: Network,
     confirmations_override: Option<u64>,
 ) -> Result<Option<(RuneId, Rune)>, Error> {
     let tx_index = tx_index.try_into().expect("tx index u32 overflow");
@@ -463,26 +475,26 @@ fn etched(
     };
 
     let minimum = Rune::minimum_at_height(
-        network,
-        Height(height.try_into().expect("height u32 overflow")),
+        ctx.network(),
+        Height(ctx.block_height().try_into().expect("height u32 overflow")),
     );
 
     let rune = if let Some(rune) = rune {
         if rune < minimum
             || rune.is_reserved()
             || task.get::<RuneIdByNameKV>(&rune.n())?.is_some()
-            || !tx_commits_to_rune(tx, rune, height, resolver, confirmations_override)?
+            || !tx_commits_to_rune(tx, ctx, rune, confirmations_override)?
         {
             return Ok(None);
         }
         rune
     } else {
-        Rune::reserved(height, tx_index)
+        Rune::reserved(ctx.block_height(), tx_index)
     };
 
     Ok(Some((
         RuneId {
-            block: height,
+            block: ctx.block_height(),
             tx: tx_index,
         },
         rune,
@@ -597,9 +609,18 @@ fn collect_input_totals(
         }
 
         let txo_ref = input.previous_output.into();
-        let Some(utxo) = ctx.resolve_input(&txo_ref) else {
-            continue;
-        }; // orphaned input
+
+        let utxo = match ctx.resolve_input(&txo_ref) {
+            Some(u) => u,
+            None => {
+                if !ctx.partial_sync() {
+                    return Err(Error::MissingUtxo(txo_ref));
+                } else {
+                    continue;
+                }
+            }
+        };
+
         let Some(raw) = utxo.extended.get(&TransactionIndexer::Runes) else {
             continue;
         };

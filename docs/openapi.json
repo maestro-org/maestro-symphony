@@ -473,6 +473,59 @@
         }
       }
     },
+    "/transactions/submit": {
+      "post": {
+        "tags": [
+          "Transactions"
+        ],
+        "summary": "Propagate Transaction",
+        "description": "Propagate a transaction to the Bitcoin network. If the transaction is not valid it will fail\nsilently as it is directly passed to a peer via P2P.",
+        "operationId": "submit_transaction",
+        "requestBody": {
+          "description": "Transaction to submit",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitTransactionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Transaction submitted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_SubmitTransactionResponse"
+                },
+                "example": {
+                  "data": {
+                    "status": "submitted",
+                    "txid": "c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3"
+                  },
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid transaction data"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/{rune}/utxos/{utxo}/balance": {
       "get": {
         "tags": [
@@ -933,6 +986,35 @@
           }
         }
       },
+      "ServeResponse_SubmitTransactionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "txid",
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Status of the submission"
+              },
+              "txid": {
+                "type": "string",
+                "description": "Transaction ID of the submitted transaction"
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
       "ServeResponse_Vec_AddressUtxo": {
         "type": "object",
         "required": [
@@ -1112,6 +1194,35 @@
           },
           "indexer_info": {
             "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "SubmitTransactionRequest": {
+        "type": "object",
+        "required": [
+          "raw_tx"
+        ],
+        "properties": {
+          "raw_tx": {
+            "type": "string",
+            "description": "Raw transaction bytes encoded as hex string"
+          }
+        }
+      },
+      "SubmitTransactionResponse": {
+        "type": "object",
+        "required": [
+          "txid",
+          "status"
+        ],
+        "properties": {
+          "status": {
+            "type": "string",
+            "description": "Status of the submission"
+          },
+          "txid": {
+            "type": "string",
+            "description": "Transaction ID of the submitted transaction"
           }
         }
       }

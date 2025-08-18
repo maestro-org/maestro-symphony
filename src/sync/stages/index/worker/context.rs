@@ -25,6 +25,7 @@ pub struct IndexingContext {
     utxo_metadata: HashMap<TxoRef, ExtendedUtxoData>,
     chained_txos: HashSet<TxoRef>,
     network: Network,
+    partial_sync: bool,
 }
 
 // Public methods available to custom indexers
@@ -43,6 +44,10 @@ impl IndexingContext {
 
     pub fn network(&self) -> Network {
         self.network
+    }
+
+    pub fn partial_sync(&self) -> bool {
+        self.partial_sync
     }
 
     // Given an input TxoRef return the UTxO information (amount, script, etc)
@@ -72,14 +77,16 @@ impl IndexingContext {
         point: Point,
         network: sync::Network,
         utxo_cache: &mut Option<UtxoCache>,
+        partial_sync: bool,
     ) -> Result<Self, Error> {
         let ResolvedUtxos {
             resolver,
             chained_txos,
-        } = UtxoByTxoRefKV::resolve_inputs(task, txs, utxo_cache)?; // TODO cache
+        } = UtxoByTxoRefKV::resolve_inputs(task, txs, utxo_cache, partial_sync)?;
 
         let network = match network {
             sync::Network::Mainnet => Network::Bitcoin,
+            sync::Network::Testnet3 => Network::Testnet,
             sync::Network::Testnet4 => Network::Testnet4,
             sync::Network::Regtest => Network::Regtest,
         };
@@ -90,6 +97,7 @@ impl IndexingContext {
             utxo_metadata: Default::default(),
             chained_txos,
             network,
+            partial_sync,
         })
     }
 

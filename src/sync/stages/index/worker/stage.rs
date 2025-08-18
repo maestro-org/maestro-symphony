@@ -55,6 +55,8 @@ pub struct Stage {
     // does our processed chain in db reflect mempool blocks (TODO)
     processed_mempool: bool,
     utxo_cache: Option<UtxoCache>,
+    // was an intersect used, meaning we did not sync part of the chain
+    partial_sync: bool,
 
     pub upstream: UpstreamPort,
     pub downstream: DownstreamPort,
@@ -70,6 +72,8 @@ impl Stage {
             info!("using utxo cache with size {utxo_cache_size}");
             Some(UtxoCache::new(utxo_cache_size))
         };
+
+        let partial_sync = config.intersect.is_some();
 
         // TODO: in worker vs stage?
         let rollback_buffer = RollbackBuffer::fetch_from_storage(&config, &db)?;
@@ -90,9 +94,13 @@ impl Stage {
                 hash: BlockHash::from_byte_array(hash),
             }
         } else {
-            Point {
-                height: 0,
-                hash: config.network.genesis_block().block_hash(),
+            if let Some(intersect) = config.intersect {
+                intersect
+            } else {
+                Point {
+                    height: 0,
+                    hash: config.network.genesis_block().block_hash(),
+                }
             }
         };
 
@@ -131,6 +139,7 @@ impl Stage {
             last_processed,
             processed_mempool,
             utxo_cache,
+            partial_sync,
 
             upstream: Default::default(),
             downstream: Default::default(),
@@ -268,6 +277,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     *point,
                     stage.network,
                     &mut stage.utxo_cache,
+                    stage.partial_sync,
                 )
                 .or_restart()?;
                 timings.create_context = create_context_start.elapsed();
@@ -386,6 +396,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     stage.last_processed,
                     stage.network,
                     &mut stage.utxo_cache,
+                    stage.partial_sync,
                 )
                 .or_restart()?;
                 timings.create_context = create_context_start.elapsed();

@@ -1,0 +1,23 @@
+db_path = "tmp/symphony"
+
+[sync.node]
+p2p_address = "137.184.2.124:18333"
+# RPC user
+rpc_user = "..."
+# RPC password
+rpc_pass = "..."
+
+[sync]
+intersect = [4605959, "0000000010943e6e27a31f59d9e7595dc88e81a51547fd1e2d076b90c6613082"]
+network = "testnet3"
+max_rollback = 32
+mempool = true
+
+[sync.indexers]
+transaction_indexers = [
+    { type = "UtxosByAddress" },
+    { type = "Runes", start_height = 30562, index_activity = true }
+]
+
+[server]
+address = "0.0.0.0:8080"

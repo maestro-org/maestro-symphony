@@ -1,7 +1,7 @@
 db_path = "tmp/symphony"
 
 [sync.node]
-p2p_address = "51.79.82.75:18333"
+p2p_address = "137.184.2.124:18333"
 # RPC user
 rpc_user = "..."
 # RPC password

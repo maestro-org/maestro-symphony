@@ -554,6 +554,14 @@ impl StorageHandler {
 
         Ok(())
     }
+
+    pub fn flush_and_compact(&mut self) -> Result<(), Error> {
+        self.db.flush()?;
+        self.db
+            .compact_range_cf(self.cf_handle(), None::<Vec<u8>>, None::<Vec<u8>>);
+
+        Ok(())
+    }
 }
 
 // Pseudo-snapshot, which just reads data as of the specified timestamp

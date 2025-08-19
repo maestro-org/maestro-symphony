@@ -55,6 +55,7 @@ pub struct Stage {
     // does our processed chain in db reflect mempool blocks (TODO)
     processed_mempool: bool,
     utxo_cache: Option<UtxoCache>,
+    stop_after: Option<u64>,
 
     pub upstream: UpstreamPort,
     pub downstream: DownstreamPort,
@@ -137,6 +138,7 @@ impl Stage {
             last_processed,
             processed_mempool,
             utxo_cache,
+            stop_after: config.stop_after,
 
             upstream: Default::default(),
             downstream: Default::default(),
@@ -224,6 +226,17 @@ impl gasket::framework::Worker<Stage> for Worker {
     ) -> Result<WorkSchedule<ChainEvent>, WorkerError> {
         let event = stage.upstream.recv().await.or_panic()?.payload;
 
+        if let Some(stop) = stage.stop_after {
+            if let ChainEvent::RollForward(Point { height, .. }, ..) = event {
+                if height > stop {
+                    info!("passed stop after height, compacting db then stopping indexer...");
+                    stage.db.flush_and_compact().or_panic()?;
+
+                    return Ok(WorkSchedule::Done);
+                }
+            }
+        }
+
         Ok(WorkSchedule::Unit(event))
     }
 
@@ -240,7 +253,7 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let expected_height = stage.last_processed.height + 1;
                 if point.height != expected_height {
-                    // TODO: if pull stage panics, and there are blocks in the pull -> index queue, we may receive
+                    // TODO: if pull stage panics, and there are blocks in the pull -> index queue, we may receive old blocks
                     warn!(
                         "received roll forward for point {}:{} as expecting height {expected_height}...",
                         point.height, point.hash

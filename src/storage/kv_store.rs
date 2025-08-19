@@ -333,14 +333,12 @@ pub struct StorageHandler {
 }
 
 impl StorageHandler {
-    pub fn open(path: PathBuf, read_only: bool, rocksdb_memory_budget: Option<u64>) -> Self {
+    pub fn open(path: PathBuf, read_only: bool, memory_budget: u64) -> Self {
         info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
         db_opts.create_if_missing(true);
 
-        // Set RocksDB memory budget if provided (default 2GB)
-        let memory_budget = rocksdb_memory_budget.unwrap_or(2 * 1024 * 1024 * 1024); // 2GB default
         info!(
             "using rocksdb memory budget: {:.2} GB ({} bytes)",
             memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,

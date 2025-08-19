@@ -16,7 +16,7 @@ rpc_pass = "..."
 network = "mainnet"
 max_rollback = 32
 mempool = true
-# Size in GB to use for UTxO cache (0 = disabled, default 0.5GB)
+# Size in GB to use for UTxO cache (0 = disabled, default 10% of memory)
 utxo_cache_size = 0.5
 
 [sync.indexers]

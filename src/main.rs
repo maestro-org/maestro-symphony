@@ -128,9 +128,7 @@ async fn main() -> Result<(), ()> {
 
     match args.command {
         Command::Sync(_) => {
-            let rocksdb_budget = config.rocksdb_memory_budget();
-
-            let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
+            let db = StorageHandler::open(db_path.into(), false, config.rocksdb_memory_budget());
 
             info!(
                 "running symphony in sync mode with config: {:?}",
@@ -155,9 +153,7 @@ async fn main() -> Result<(), ()> {
                 .await;
         }
         Command::Serve(_) => {
-            let rocksdb_budget = config.rocksdb_memory_budget();
-
-            let db = StorageHandler::open(db_path.into(), true, Some(rocksdb_budget));
+            let db = StorageHandler::open(db_path.into(), true, config.rocksdb_memory_budget());
 
             info!(
                 "running symphony in serve mode with config: {:?}",
@@ -173,9 +169,7 @@ async fn main() -> Result<(), ()> {
             }
         }
         Command::Run(_) => {
-            let rocksdb_budget = config.rocksdb_memory_budget();
-
-            let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
+            let db = StorageHandler::open(db_path.into(), false, config.rocksdb_memory_budget());
 
             info!("running symphony in sync+serve mode with config: {config:?}",);
 

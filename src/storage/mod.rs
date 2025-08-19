@@ -29,10 +29,10 @@ impl Config {
         system.refresh_memory();
 
         let total_memory = system.total_memory();
-        let default_budget = (total_memory as f64 * 0.3) as u64; // 30% of total memory
+        let default_budget = (total_memory as f64 * 0.5) as u64; // 50% of total memory
 
         info!(
-            "No RocksDB memory budget specified, using 30% of system memory: {:.2} GB ({} bytes) out of {:.2} GB total",
+            "No RocksDB memory budget specified, using 50% of system memory: {:.2} GB ({} bytes) out of {:.2} GB total",
             default_budget as f64 / (1024.0 * 1024.0 * 1024.0),
             default_budget,
             total_memory as f64 / (1024.0 * 1024.0 * 1024.0)

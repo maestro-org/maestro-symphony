@@ -143,8 +143,8 @@ impl UtxoCache {
         Self {
             cache: Cache::builder()
                 .weigher(|_key: &TxoRef, value: &Utxo| -> u32 {
-                    // Get byte length of serialized UTxO
-                    value.encode().len() as u32 + 36
+                    // Get byte length of serialized UTxO (1.5x to be conservative)
+                    ((value.encode().len() as u32 + 36) * 3) / 2
                 })
                 .max_capacity(max_size_bytes)
                 .build(),

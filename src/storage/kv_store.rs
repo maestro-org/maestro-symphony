@@ -362,8 +362,8 @@ impl StorageHandler {
         db_opts.set_advise_random_on_open(true);
 
         db_opts.set_max_open_files(500);
-        // db_opts.set_use_direct_reads(true);
-        // db_opts.set_use_direct_io_for_flush_and_compaction(true);
+        db_opts.set_use_direct_reads(true);
+        db_opts.set_use_direct_io_for_flush_and_compaction(true);
 
         let mut cf_opts = Options::default();
 

@@ -23,7 +23,7 @@ impl Config {
     }
 
     fn default_rocksdb_memory_budget() -> u64 {
-        let system = System::new();
+        let system = System::new_all();
 
         let total_memory = system.total_memory();
         let default_budget = (total_memory as f64 * 0.5) as u64; // 50% of total memory

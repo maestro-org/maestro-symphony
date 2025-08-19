@@ -5,7 +5,7 @@ pub mod context;
 pub mod stage;
 
 fn get_default_cache_size() -> u64 {
-    let system = System::new();
+    let system = System::new_all();
 
     let total_memory = system.total_memory();
     let default_budget = (total_memory as f64 * 0.1) as u64; // 10% of total memory

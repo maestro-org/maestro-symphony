@@ -5,12 +5,12 @@ db_path = "tmp/symphony"
 rocksdb_memory_budget = 2.0
 
 [sync.node]
-p2p_address = "localhost:7333"
-rpc_address = "http://localhost:7332"
+p2p_address = "localhost:8333"
+rpc_address = "http://localhost:8332"
 # RPC user
-rpc_user = "maestro"
+rpc_user = "..."
 # RPC password
-rpc_pass = "maestro"
+rpc_pass = "..."
 
 [sync]
 network = "testnet4"

@@ -5,18 +5,22 @@ use stages::index::indexers::custom::TransactionIndexerFactory;
 pub mod pipeline;
 pub mod stages;
 
+pub const DEFAULT_BLOCK_PAGE_SIZE: usize = 50;
+pub const DEFAULT_SYNC_STAGE_QUEUE_SIZE: usize = 20;
+pub const DEFAULT_SYNC_STAGE_TIMEOUT_SECS: u64 = 600;
+
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
     pub node: NodeConfig,
     pub network: Network,
     /// Index estimated future blocks using transactions in mempool
     pub mempool: bool,
-    /// Size in GB to use for UTxO cache (0 = disabled, default 0.5GB)
+    /// Size in GB to use for UTxO cache (0 = disabled, default 10% of memory)
     pub utxo_cache_size: Option<f64>,
-
     /// Max number of blocks to pull from the node at once
     pub block_page_size: Option<usize>,
-
+    /// Indexer will not progress after processing the block with the specified height
+    pub stop_after: Option<u64>,
     /// Max in-flight messages between the pull and index stage
     pub stage_queue_size: Option<usize>,
     pub stage_timeout_secs: Option<u64>,

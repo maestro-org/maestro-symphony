@@ -16,7 +16,7 @@ use crate::{
     error::Error,
     storage::{kv_store::StorageHandler, timestamp::Timestamp},
     sync::{
-        Network,
+        self, DEFAULT_BLOCK_PAGE_SIZE, Network,
         stages::{
             ChainEvent, MempoolSnapshotInfo, Point, TransactionWithId,
             index::indexers::core::hash_by_height::HashByHeightKV,
@@ -57,28 +57,31 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(
-        node_p2p_address: String,
-        node_rpc_address: String,
-        node_rpc_auth: RpcAuth,
-        network: Network,
-        mempool_enabled: bool,
+        config: sync::Config,
+        // node_p2p_address: String,
+        // node_rpc_address: String,
+        // node_rpc_auth: RpcAuth,
+        // network: Network,
+        // mempool_enabled: bool,
         db: StorageHandler,
-        block_page_size: usize,
+        // block_page_size: usize,
         shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
     ) -> Self {
+        let node_rpc_auth = RpcAuth::UserPass(config.node.rpc_user, config.node.rpc_pass);
+
         let (should_shutdown, has_shutdown) = match shutdown_signals {
             Some((x, y)) => (Some(x), Some(y)),
             None => (None, None),
         };
 
         Self {
-            node_p2p_address,
-            node_rpc_address,
+            node_p2p_address: config.node.p2p_address,
+            node_rpc_address: config.node.rpc_address,
             node_rpc_auth,
-            network,
-            mempool_enabled,
+            network: config.network,
+            mempool_enabled: config.mempool,
             db,
-            block_page_size,
+            block_page_size: config.block_page_size.unwrap_or(DEFAULT_BLOCK_PAGE_SIZE),
             should_shutdown,
             has_shutdown,
             downstream: Default::default(),

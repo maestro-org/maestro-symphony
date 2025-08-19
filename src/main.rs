@@ -78,6 +78,19 @@ impl Config {
 
         s.build()?.try_deserialize()
     }
+
+    /// Get the RocksDB memory budget from storage config or return the default value
+    pub fn rocksdb_memory_budget(&self) -> u64 {
+        self.storage
+            .as_ref()
+            .map(|s| s.rocksdb_memory_budget_bytes())
+            .unwrap_or_else(|| {
+                storage::Config {
+                    rocksdb_memory_budget: None,
+                }
+                .rocksdb_memory_budget_bytes()
+            })
+    }
 }
 
 #[tokio::main]
@@ -115,16 +128,7 @@ async fn main() -> Result<(), ()> {
 
     match args.command {
         Command::Sync(_) => {
-            let rocksdb_budget = config
-                .storage
-                .as_ref()
-                .map(|s| s.rocksdb_memory_budget_bytes())
-                .unwrap_or_else(|| {
-                    storage::Config {
-                        rocksdb_memory_budget: None,
-                    }
-                    .rocksdb_memory_budget_bytes()
-                });
+            let rocksdb_budget = config.rocksdb_memory_budget();
 
             let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
 
@@ -151,16 +155,7 @@ async fn main() -> Result<(), ()> {
                 .await;
         }
         Command::Serve(_) => {
-            let rocksdb_budget = config
-                .storage
-                .as_ref()
-                .map(|s| s.rocksdb_memory_budget_bytes())
-                .unwrap_or_else(|| {
-                    storage::Config {
-                        rocksdb_memory_budget: None,
-                    }
-                    .rocksdb_memory_budget_bytes()
-                });
+            let rocksdb_budget = config.rocksdb_memory_budget();
 
             let db = StorageHandler::open(db_path.into(), true, Some(rocksdb_budget));
 
@@ -178,16 +173,7 @@ async fn main() -> Result<(), ()> {
             }
         }
         Command::Run(_) => {
-            let rocksdb_budget = config
-                .storage
-                .as_ref()
-                .map(|s| s.rocksdb_memory_budget_bytes())
-                .unwrap_or_else(|| {
-                    storage::Config {
-                        rocksdb_memory_budget: None,
-                    }
-                    .rocksdb_memory_budget_bytes()
-                });
+            let rocksdb_budget = config.rocksdb_memory_budget();
 
             let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
 

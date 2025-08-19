@@ -344,7 +344,8 @@ impl StorageHandler {
         info!(
             "using rocksdb memory budget: {:.2} GB ({} bytes)",
             memory_budget,
-            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0
+            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
+            memory_budget
         );
 
         // Create a shared cache for both block cache and write buffer manager

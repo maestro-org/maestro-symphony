@@ -62,12 +62,18 @@ pub struct Stage {
 
 impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
-        let utxo_cache_size = config.utxo_cache_size.unwrap_or(get_default_cache_size());
+        let utxo_cache_size = config
+            .utxo_cache_size_bytes()
+            .unwrap_or(get_default_cache_size());
 
         let utxo_cache = if utxo_cache_size == 0 {
             None
         } else {
-            info!("using utxo cache with size {utxo_cache_size}");
+            info!(
+                "using utxo cache with size: {:.2} GB ({} bytes)",
+                utxo_cache_size as f64 / (1024.0 * 1024.0 * 1024.0),
+                utxo_cache_size
+            );
             Some(UtxoCache::new(utxo_cache_size))
         };
 

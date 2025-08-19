@@ -61,6 +61,7 @@ pub struct Config {
     pub db_path: Option<String>,
     pub sync: sync::Config,
     pub server: Option<ServerConfig>,
+    pub storage: Option<storage::Config>,
 }
 
 impl Config {
@@ -114,7 +115,18 @@ async fn main() -> Result<(), ()> {
 
     match args.command {
         Command::Sync(_) => {
-            let db = StorageHandler::open(db_path.into(), false, config.sync.rocksdb_memory_budget);
+            let rocksdb_budget = config
+                .storage
+                .as_ref()
+                .map(|s| s.rocksdb_memory_budget_bytes())
+                .unwrap_or_else(|| {
+                    storage::Config {
+                        rocksdb_memory_budget: None,
+                    }
+                    .rocksdb_memory_budget_bytes()
+                });
+
+            let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
 
             info!(
                 "running symphony in sync mode with config: {:?}",
@@ -139,7 +151,18 @@ async fn main() -> Result<(), ()> {
                 .await;
         }
         Command::Serve(_) => {
-            let db = StorageHandler::open(db_path.into(), true, config.sync.rocksdb_memory_budget);
+            let rocksdb_budget = config
+                .storage
+                .as_ref()
+                .map(|s| s.rocksdb_memory_budget_bytes())
+                .unwrap_or_else(|| {
+                    storage::Config {
+                        rocksdb_memory_budget: None,
+                    }
+                    .rocksdb_memory_budget_bytes()
+                });
+
+            let db = StorageHandler::open(db_path.into(), true, Some(rocksdb_budget));
 
             info!(
                 "running symphony in serve mode with config: {:?}",
@@ -155,7 +178,18 @@ async fn main() -> Result<(), ()> {
             }
         }
         Command::Run(_) => {
-            let db = StorageHandler::open(db_path.into(), false, config.sync.rocksdb_memory_budget);
+            let rocksdb_budget = config
+                .storage
+                .as_ref()
+                .map(|s| s.rocksdb_memory_budget_bytes())
+                .unwrap_or_else(|| {
+                    storage::Config {
+                        rocksdb_memory_budget: None,
+                    }
+                    .rocksdb_memory_budget_bytes()
+                });
+
+            let db = StorageHandler::open(db_path.into(), false, Some(rocksdb_budget));
 
             info!("running symphony in sync+serve mode with config: {config:?}",);
 

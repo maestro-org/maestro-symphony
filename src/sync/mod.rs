@@ -11,10 +11,8 @@ pub struct Config {
     pub network: Network,
     /// Index estimated future blocks using transactions in mempool
     pub mempool: bool,
-    /// Size in bytes to use for UTxO cache (0 = disabled, default 0.5GB)
-    pub utxo_cache_size: Option<u64>,
-    /// Total memory budget for RocksDB in bytes (default 2GB)
-    pub rocksdb_memory_budget: Option<u64>,
+    /// Size in GB to use for UTxO cache (0 = disabled, default 0.5GB)
+    pub utxo_cache_size: Option<f64>,
 
     /// Max number of blocks to pull from the node at once
     pub block_page_size: Option<usize>,
@@ -27,6 +25,13 @@ pub struct Config {
 
     pub max_rollback: Option<usize>,
     pub safe_mode: Option<bool>,
+}
+
+impl Config {
+    pub fn utxo_cache_size_bytes(&self) -> Option<u64> {
+        self.utxo_cache_size
+            .map(|gb| (gb * 1024.0 * 1024.0 * 1024.0) as u64)
+    }
 }
 
 #[derive(Deserialize, Debug, Clone)]

@@ -44,6 +44,8 @@ pub struct Stage {
     network: Network,
     mempool_enabled: bool,
 
+    block_page_size: usize,
+
     db: StorageHandler,
 
     should_shutdown: Option<Receiver<()>>,
@@ -61,6 +63,7 @@ impl Stage {
         network: Network,
         mempool_enabled: bool,
         db: StorageHandler,
+        block_page_size: usize,
         shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
     ) -> Self {
         let (should_shutdown, has_shutdown) = match shutdown_signals {
@@ -75,6 +78,7 @@ impl Stage {
             network,
             mempool_enabled,
             db,
+            block_page_size,
             should_shutdown,
             has_shutdown,
             downstream: Default::default(),
@@ -340,7 +344,7 @@ impl Worker {
         };
 
         // fetch configurable amount of blocks at once
-        headers.truncate(10); // TODO: config
+        headers.truncate(stage.block_page_size);
 
         // fetch blocks for headers
         let blocks = self

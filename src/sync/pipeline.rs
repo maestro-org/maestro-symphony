@@ -7,6 +7,7 @@ use crate::{error::Error, storage::kv_store::StorageHandler, sync::stages::index
 
 use super::{Config, stages::pull};
 
+const DEFAULT_BLOCK_PAGE_SIZE: usize = 50;
 const DEFAULT_SYNC_STAGE_QUEUE_SIZE: usize = 20;
 const DEFAULT_SYNC_STAGE_TIMEOUT_SECS: u64 = 600;
 
@@ -48,6 +49,7 @@ pub fn pipeline(
         config.network,
         config.mempool,
         db,
+        config.block_page_size.unwrap_or(DEFAULT_BLOCK_PAGE_SIZE),
         shutdown_signals,
     );
 

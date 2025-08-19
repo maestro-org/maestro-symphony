@@ -121,7 +121,7 @@ impl IndexingContext {
                 extended: self.utxo_metadata.remove(&txo_ref).unwrap_or_default(),
             };
 
-            // dont write unspendables
+            // don't write unspendables
             if !output.script_pubkey.is_op_return() {
                 if self.chained_txos.contains(&txo_ref) {
                     self.resolver.insert(txo_ref, utxo);

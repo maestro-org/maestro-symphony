@@ -343,7 +343,6 @@ impl StorageHandler {
         let memory_budget = rocksdb_memory_budget.unwrap_or(2 * 1024 * 1024 * 1024); // 2GB default
         info!(
             "using rocksdb memory budget: {:.2} GB ({} bytes)",
-            memory_budget,
             memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
             memory_budget
         );

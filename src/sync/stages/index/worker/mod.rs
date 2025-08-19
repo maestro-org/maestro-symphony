@@ -1,14 +1,11 @@
-use sysinfo::{MemoryRefreshKind, RefreshKind, System};
+use sysinfo::System;
 use tracing::info;
 
 pub mod context;
 pub mod stage;
 
 fn get_default_cache_size() -> u64 {
-    let mut system = System::new_with_specifics(
-        RefreshKind::nothing().with_memory(MemoryRefreshKind::everything()),
-    );
-    system.refresh_memory();
+    let system = System::new();
 
     let total_memory = system.total_memory();
     let default_budget = (total_memory as f64 * 0.1) as u64; // 10% of total memory

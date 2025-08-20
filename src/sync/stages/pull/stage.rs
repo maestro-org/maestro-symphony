@@ -58,13 +58,7 @@ pub struct Stage {
 impl Stage {
     pub fn new(
         config: sync::Config,
-        // node_p2p_address: String,
-        // node_rpc_address: String,
-        // node_rpc_auth: RpcAuth,
-        // network: Network,
-        // mempool_enabled: bool,
         db: StorageHandler,
-        // block_page_size: usize,
         shutdown_signals: Option<(Receiver<()>, mpsc::Sender<()>)>,
     ) -> Self {
         let node_rpc_auth = RpcAuth::UserPass(config.node.rpc_user, config.node.rpc_pass);

@@ -1,3 +1,10 @@
+#[cfg(not(target_env = "msvc"))]
+use tikv_jemallocator::Jemalloc;
+
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: Jemalloc = Jemalloc;
+
 use std::fs;
 
 use crate::error::Error;
@@ -54,6 +61,7 @@ pub struct Config {
     pub db_path: Option<String>,
     pub sync: sync::Config,
     pub server: Option<ServerConfig>,
+    pub storage: Option<storage::Config>,
 }
 
 impl Config {
@@ -69,6 +77,19 @@ impl Config {
         s = s.add_source(config::Environment::with_prefix("SYMPHONY").separator("_"));
 
         s.build()?.try_deserialize()
+    }
+
+    /// Get the RocksDB memory budget from storage config or return the default value
+    pub fn rocksdb_memory_budget(&self) -> u64 {
+        self.storage
+            .as_ref()
+            .map(|s| s.rocksdb_memory_budget_bytes())
+            .unwrap_or_else(|| {
+                storage::Config {
+                    rocksdb_memory_budget: None,
+                }
+                .rocksdb_memory_budget_bytes()
+            })
     }
 }
 
@@ -107,7 +128,7 @@ async fn main() -> Result<(), ()> {
 
     match args.command {
         Command::Sync(_) => {
-            let db = StorageHandler::open(db_path.into(), false);
+            let db = StorageHandler::open(db_path.into(), false, config.rocksdb_memory_budget());
 
             info!(
                 "running symphony in sync mode with config: {:?}",
@@ -132,7 +153,7 @@ async fn main() -> Result<(), ()> {
                 .await;
         }
         Command::Serve(_) => {
-            let db = StorageHandler::open(db_path.into(), true);
+            let db = StorageHandler::open(db_path.into(), true, config.rocksdb_memory_budget());
 
             info!(
                 "running symphony in serve mode with config: {:?}",
@@ -148,7 +169,7 @@ async fn main() -> Result<(), ()> {
             }
         }
         Command::Run(_) => {
-            let db = StorageHandler::open(db_path.into(), false);
+            let db = StorageHandler::open(db_path.into(), false, config.rocksdb_memory_budget());
 
             info!("running symphony in sync+serve mode with config: {config:?}",);
 

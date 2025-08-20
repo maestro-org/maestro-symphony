@@ -13,7 +13,7 @@ categories = ["development-tools"]
 [dependencies]
 thiserror = "2.0.12"
 tempfile = "3.20.0"
-rocksdb = "0.23.0"
+rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0", features = ["jemalloc"]  }
 gasket = { version = "0.9.0", features = ["derive"] }
 tokio = { version = "1.47.1", features = [
     "rt",
@@ -51,8 +51,11 @@ sysinfo = "0.36.1"
 ordinals = "0.0.15"
 bitcoincore-rpc = "0.19.0"
 
-[patch.crates-io]
-rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0" }
+#[patch.crates-io]
+#rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0", features = ["jemalloc"]  }
 
 [workspace]
 members = ["macros"]
+
+[target.'cfg(not(target_env = "msvc"))'.dependencies]
+tikv-jemallocator = "0.6.0"

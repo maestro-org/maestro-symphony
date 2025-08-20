@@ -65,7 +65,7 @@ impl Stage {
     pub fn new(config: sync::Config, db: StorageHandler) -> Result<Self, Error> {
         let utxo_cache_size = config
             .utxo_cache_size_bytes()
-            .unwrap_or(get_default_cache_size());
+            .unwrap_or_else(get_default_cache_size);
 
         let utxo_cache = if utxo_cache_size == 0 {
             None
@@ -355,8 +355,9 @@ impl gasket::framework::Worker<Stage> for Worker {
                     ?point,
                     mutable = self.mutable,
                     timings = timings.log(),
+                    cache = ?stage.utxo_cache.as_ref().map(|x| x.log()),
                     progress = format!("{:.2}%", progress),
-                    "indexed block"
+                    "indexed block",
                 );
             }
             ChainEvent::RollBack(rb_point) => {

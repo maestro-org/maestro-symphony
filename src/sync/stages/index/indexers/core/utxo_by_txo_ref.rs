@@ -169,4 +169,12 @@ impl UtxoCache {
     pub fn contains_key(&self, txo_ref: &TxoRef) -> bool {
         self.cache.contains_key(txo_ref)
     }
+
+    pub fn log(&self) -> String {
+        format!(
+            "entries={} weight={}",
+            self.cache.entry_count(),
+            self.cache.weighted_size(),
+        )
+    }
 }

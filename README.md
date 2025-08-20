@@ -94,11 +94,12 @@ Below is a table describing the main configuration options for `maestro-symphony
 |                   | `rpc_user`             | RPC username for your Bitcoin node                    | `"bitcoin"`               |
 |                   | `rpc_pass`             | RPC password for your Bitcoin node                    | `"password"`              |
 | `[sync]`          | `network`              | Bitcoin network to connect to (`mainnet`, `testnet4`) | `"mainnet"`               |
-|                   | `safe_mode`            | Enable safe mode for sync (recommended)               | `true`                    |
 |                   | `max_rollback`         | Maximum blocks to roll back on reorg                  | `32`                      |
 |                   | `mempool`              | Enable mempool awareness                              | `true`                    |
+|                   | `utxo_cache_size`      | Memory in GB to allocate to UTxO cache (default 30%)  | `1.0`                     |
 | `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options            | See example below         |
 | `[server]`        | `address`              | Address and port for API server to listen on          | `"0.0.0.0:8080"`          |
+| `[storage]`       | `rocksdb_memory_budget`| Memory in GB to allocate to RocksDB (default 30% RAM) | `8.0`                     |
 
 See [examples](examples/) to quickly get started.
 

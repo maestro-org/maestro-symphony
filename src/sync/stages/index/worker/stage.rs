@@ -499,6 +499,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                     blocks = mempool_blocks.len(),
                     snapshot_ts = info.timestamp,
                     timings = timings.log(),
+                    cache = ?stage.utxo_cache.as_ref().map(|x| x.log()),
                     "indexed mempool blocks",
                 );
 

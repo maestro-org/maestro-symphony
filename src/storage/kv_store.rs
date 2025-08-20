@@ -200,6 +200,10 @@ impl<'a> IndexingTask<'a> {
         }
     }
 
+    pub fn mempool(&self) -> bool {
+        self.mempool
+    }
+
     /// Generic merge operation helper
     fn merge_op<T>(&mut self, key: T::Key, op: MergeOperation) -> Result<(), Error>
     where

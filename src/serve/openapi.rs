@@ -7,7 +7,7 @@ use utoipa::OpenApi;
 #[openapi(
     info(
         title = "Maestro Symphony",
-        version = "v0.1.1",
+        version = "v0.1.2",
         description = "Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and other onchain transactions.",
         license(
             name = "Apache 2.0",

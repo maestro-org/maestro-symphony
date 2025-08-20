@@ -13,7 +13,7 @@ categories = ["development-tools"]
 [dependencies]
 thiserror = "2.0.12"
 tempfile = "3.20.0"
-rocksdb = "0.23.0"
+rocksdb = { version = "0.23.0", features = ["jemalloc"] }
 gasket = { version = "0.9.0", features = ["derive"] }
 tokio = { version = "1.47.1", features = [
     "rt",

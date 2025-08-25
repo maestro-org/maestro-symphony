@@ -33,7 +33,7 @@ config = { version = "0.15.13", default-features = false, features = [
 ] }
 socket2 = "0.6.0"
 serde = "1.0.219"
-async-trait = "0.1.88"
+async-trait = "0.1.89"
 maestro-symphony-macros = "0.1.0"
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
 indexmap = "2.10.0"

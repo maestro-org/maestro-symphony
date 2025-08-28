@@ -11,16 +11,16 @@ Snapshots allow you to bootstrap your Symphony indexer with pre-synchronized dat
 
 ## Prerequisites
 
--   [`lz4`](https://github.com/lz4/lz4?tab=readme-ov-file#installation) compression utility
--   [bitcoin-core](https://bitcoin.org/en/bitcoin-core/features/user-interface)
+-   [Bitcoin Core (22+)](https://hub.docker.com/r/bitcoin/bitcoin) with RPC and P2P access
 -   Sufficient disk space (see deployment requirements in [README](../../README.md))
 
 ## Available Snapshots
 
 **Networks supported:**
 
--   Mainnet
--   Testnet4
+-   mainnet
+-   testnet4
+-   regtest
 
 **Snapshots**
 

@@ -108,17 +108,25 @@ See [examples](examples/) to quickly get started.
 
 Skip the initial chain sync by using pre-synced snapshots:
 
+**Snapshots:**
+
+#### Bitcoin
+
+Mainnet: https://snapshots.gomaestro.org/bitcoin-node/mainnet/snapshots/20250826.tar.lz4
+Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4
+
+#### Symphony
+
+Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
+Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
+
 ```bash
 # Download and extract Symphony snapshot
-curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250723.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/symphony
+curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/symphony
 
-# Download and extract Bitcoin node snapshot  
-curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250723.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/bitcoin-data
+# Download and extract Bitcoin node snapshot
+curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/bitcoin-data
 ```
-
-For detailed instructions, see [docs/guides/setup-with-snapshot.md](docs/guides/setup-with-snapshot.md).
-
-**Available snapshots:** [Symphony](https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=symphony%2F) | [Bitcoin Node](https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=bitcoin-node%2F)
 
 For more detailed instructions, refer to our [Snapshot Setup Guide](docs/guides/setup-with-snapshot.md).
 
@@ -329,33 +337,33 @@ Pull requests and issues are welcome! See the [Kanban board](https://github.com/
 
 ### Feature Checklist
 
-- [ ] **Base Indexer**
-    - [ ] **Addresses**
-        - [x] Runes by address
-        - [x] Runes by address and rune ID
-        - [x] Runes by address and transaction ID
-        - [x] Rune UTXOs by address
-        - [x] Rune UTXOs by address and rune ID
-        - [x] UTXOs by address
-        - [ ] Satoshi balance by address
-        - [ ] BRC20 by address
-        - [ ] Inscriptions by address
-        - [ ] Transactions by address
-    - [ ] **Runes**
-        - [x] Rune info by rune ID
-        - [x] Rune balance by rune ID and UTXO
-        - [ ] List runes
-        - [ ] Holders by rune
-        - [ ] UTXOs by rune
-- [ ] **Wallet activity**
-    - [ ] **Addresses**
-        - [ ] Satoshi activity by address
-        - [ ] Metaprotocol activity by address
-        - [ ] Historical satoshi balance by address
-        - [ ] Inscription activity by address
-        - [ ] Address statistics
-- [ ] **Alkanes**
-- [ ] **Webhook Notifications**
+-   [ ] **Base Indexer**
+    -   [ ] **Addresses**
+        -   [x] Runes by address
+        -   [x] Runes by address and rune ID
+        -   [x] Runes by address and transaction ID
+        -   [x] Rune UTXOs by address
+        -   [x] Rune UTXOs by address and rune ID
+        -   [x] UTXOs by address
+        -   [ ] Satoshi balance by address
+        -   [ ] BRC20 by address
+        -   [ ] Inscriptions by address
+        -   [ ] Transactions by address
+    -   [ ] **Runes**
+        -   [x] Rune info by rune ID
+        -   [x] Rune balance by rune ID and UTXO
+        -   [ ] List runes
+        -   [ ] Holders by rune
+        -   [ ] UTXOs by rune
+-   [ ] **Wallet activity**
+    -   [ ] **Addresses**
+        -   [ ] Satoshi activity by address
+        -   [ ] Metaprotocol activity by address
+        -   [ ] Historical satoshi balance by address
+        -   [ ] Inscription activity by address
+        -   [ ] Address statistics
+-   [ ] **Alkanes**
+-   [ ] **Webhook Notifications**
 
 ---
 

@@ -6,36 +6,33 @@ This guide explains how to use pre-synced snapshots to quickly set up Maestro Sy
 
 Snapshots allow you to bootstrap your Symphony indexer with pre-synchronized data:
 
-- **Symphony snapshots**: Pre-indexed blockchain data and database state
-- **Bitcoin node snapshots**: Pre-synced Bitcoin Core blockchain data
+-   **Bitcoin node snapshots**: Pre-synced Bitcoin Core blockchain data
+-   **Symphony snapshots**: Pre-indexed blockchain data and database state
 
 ## Prerequisites
 
-- `lz4` compression utility
-- `curl` for downloading
-- Sufficient disk space (see deployment requirements in [README](../../README.md))
-
-### Install lz4
-
-**macOS:**
-```bash
-brew install lz4
-```
-
-**Ubuntu/Debian:**
-```bash
-sudo apt-get install lz4
-```
+-   [`lz4`](https://github.com/lz4/lz4?tab=readme-ov-file#installation) compression utility
+-   [bitcoin-core](https://bitcoin.org/en/bitcoin-core/features/user-interface)
+-   Sufficient disk space (see deployment requirements in [README](../../README.md))
 
 ## Available Snapshots
 
 **Networks supported:**
-- testnet4
-- mainnet (coming soon)
 
-**Snapshot locations:**
-- Symphony: https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=symphony%2F
-- Bitcoin node: https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=bitcoin-node%2F
+-   Mainnet
+-   Testnet4
+
+**Snapshots**
+
+#### Bitcoin
+
+Mainnet: https://snapshots.gomaestro.org/bitcoin-node/mainnet/snapshots/20250826.tar.lz4
+Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4
+
+#### Symphony
+
+Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
+Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
 
 ## Setup Steps
 
@@ -47,14 +44,17 @@ mkdir -p ~/workspace/{symphony-data,bitcoin-data}
 
 ### 2. Download Both Snapshots
 
+# Download Bitcoin node snapshot
+
+```bash
+curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4 | \
+ lz4 -d | tar -xf - -C ~/workspace/bitcoin-data
+```
+
 ```bash
 # Download Symphony snapshot
-curl -L https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=symphony%2F | \
+curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4 | \
   lz4 -d | tar -xf - -C ~/workspace/symphony-data
-
-# Download Bitcoin node snapshot  
-curl -L https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=bitcoin-node%2F | \
-  lz4 -d | tar -xf - -C ~/workspace/bitcoin-data
 ```
 
 ### 3. Start Bitcoin Core
@@ -122,22 +122,24 @@ If you encounter permission errors:
 
 ```bash
 # Fix ownership
-sudo chown -R $USER:$USER ~/workspace/symphony-data
 sudo chown -R $USER:$USER ~/workspace/bitcoin-data
+sudo chown -R $USER:$USER ~/workspace/symphony-data
 ```
 
 ### Disk Space
 
 Ensure sufficient disk space:
-- Testnet: ~1GB for Symphony + ~50GB for Bitcoin node
-- Mainnet: ~24GB for Symphony + ~600GB for Bitcoin node
+
+-   Testnet: ~1GB for Symphony + ~50GB for Bitcoin node
+-   Mainnet: ~24GB for Symphony + ~600GB for Bitcoin node
 
 ### Snapshot Age
 
 If snapshots are older than expected:
-- Symphony will automatically sync missing blocks
-- Bitcoin Core will resume from snapshot point
-- Initial startup may take longer for older snapshots
+
+-   Symphony will automatically sync missing blocks
+-   Bitcoin Core will resume from snapshot point
+-   Initial startup may take longer for older snapshots
 
 ## Updating Snapshots
 
@@ -155,14 +157,14 @@ Snapshots are updated regularly. To use a newer snapshot:
 
 You have now walked through a guide on how to load both a [Symphony](https://github.com/maestro-org/maestro-symphony) and Bitcoin snapshot.
 
-Be sure to check out [Maestro's additional services](https://www.gomaestro.org/chains/bitcoin) for further assisting your development of building on Bitcoin.
+Be sure to check out [Maestro's additional services](https://docs.gomaestro.org/bitcoin) for further assisting your development of building on Bitcoin.
 
 ---
 
 ## Support
 
 For issues with snapshots:
-- Check [troubleshooting section](../README.md#troubleshooting) in README
-- Report issues on [GitHub](https://github.com/maestro-org/maestro-symphony/issues)
-- Join the [Discord community](https://discord.gg/SJgkEje7)
 
+-   Check [troubleshooting section](../README.md#troubleshooting) in the README
+-   Open an [issue](https://github.com/maestro-org/maestro-symphony/issues)
+-   Join the [Discord community](https://discord.gg/SJgkEje7)

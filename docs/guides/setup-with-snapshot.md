@@ -165,6 +165,5 @@ Be sure to check out [Maestro's additional services](https://docs.gomaestro.org/
 
 For issues with snapshots:
 
--   Check [troubleshooting section](../README.md#troubleshooting) in the README
 -   Open an [issue](https://github.com/maestro-org/maestro-symphony/issues)
 -   Join the [Discord community](https://discord.gg/SJgkEje7)

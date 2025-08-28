@@ -116,7 +116,7 @@ curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250723.tar.
 curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250723.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/bitcoin-data
 ```
 
-For detailed instructions, see [docs/snapshot-guide.md](docs/snapshot-guide.md).
+For detailed instructions, see [docs/guides/setup-with-snapshot.md](docs/guides/setup-with-snapshot.md).
 
 **Available snapshots:** [Symphony](https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=symphony%2F) | [Bitcoin Node](https://dash.cloudflare.com/c4e0407294a743505c3e8823451b1fb1/r2/default/buckets/maestro-org-public-snapshots?prefix=bitcoin-node%2F)
 

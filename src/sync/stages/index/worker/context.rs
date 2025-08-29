@@ -99,7 +99,7 @@ impl IndexingContext {
         tx: &TransactionWithId,
         utxo_cache: &mut Option<UtxoCache>,
     ) -> Result<(), Error> {
-        // remove consumed utxos from resolver and strorage
+        // remove consumed utxos from resolver and storage
         for input in &tx.tx.input {
             let txo_ref = input.previous_output.into();
             self.resolver.remove(&txo_ref);
@@ -121,13 +121,20 @@ impl IndexingContext {
                 extended: self.utxo_metadata.remove(&txo_ref).unwrap_or_default(),
             };
 
-            if self.chained_txos.contains(&txo_ref) {
-                self.resolver.insert(txo_ref, utxo);
-            } else if let Some(c) = utxo_cache.as_mut() {
-                c.insert(txo_ref, utxo.clone());
-                task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
-            } else {
-                task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+            // don't write unspendables
+            if !output.script_pubkey.is_op_return() {
+                if self.chained_txos.contains(&txo_ref) {
+                    self.resolver.insert(txo_ref, utxo);
+                } else if let Some(c) = utxo_cache.as_mut() {
+                    // dont insert mempool outputs into cache
+                    if !task.mempool() {
+                        c.insert(txo_ref, utxo.clone());
+                    }
+
+                    task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+                } else {
+                    task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
+                }
             }
         }
 

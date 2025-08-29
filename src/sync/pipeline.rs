@@ -1,14 +1,14 @@
 use std::time::Duration;
 
-use bitcoincore_rpc::Auth;
 use tokio::sync::{mpsc, oneshot::Receiver};
 
-use crate::{error::Error, storage::kv_store::StorageHandler, sync::stages::index};
+use crate::{
+    error::Error,
+    storage::kv_store::StorageHandler,
+    sync::{DEFAULT_SYNC_STAGE_QUEUE_SIZE, DEFAULT_SYNC_STAGE_TIMEOUT_SECS, stages::index},
+};
 
 use super::{Config, stages::pull};
-
-const DEFAULT_SYNC_STAGE_QUEUE_SIZE: usize = 20;
-const DEFAULT_SYNC_STAGE_TIMEOUT_SECS: u64 = 600;
 
 // TODO: Config
 fn gasket_policy(stage_timeout: u64) -> gasket::runtime::Policy {
@@ -38,18 +38,10 @@ pub fn pipeline(
     // create Index stage for processing blocks and storing data
     let mut index = index::worker::stage::Stage::new(config.clone(), db.clone())?;
 
-    let rpc_auth = Auth::UserPass(config.node.rpc_user, config.node.rpc_pass);
+    // let rpc_auth = Auth::UserPass(config.node.rpc_user, config.node.rpc_pass);
 
     // create Pull stage for pulling blocks/mempool from node
-    let mut pull = pull::Stage::new(
-        config.node.p2p_address,
-        config.node.rpc_address,
-        rpc_auth,
-        config.network,
-        config.mempool,
-        db,
-        shutdown_signals,
-    );
+    let mut pull = pull::Stage::new(config.clone(), db, shutdown_signals);
 
     // // create Health stage for exposing health info
     // let mut health = health::Stage::new();

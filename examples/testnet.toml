@@ -1,4 +1,4 @@
-db_path = "tmp/symphony"
+db_path = "/srv/symphony"
 
 [storage]
 # Total memory budget for RocksDB in GB (default 30% of available system memory)
@@ -8,9 +8,9 @@ rocksdb_memory_budget = 2.0
 p2p_address = "bitcoin-node:8333"
 rpc_address = "http://bitcoin-node:8332"
 # RPC user
-rpc_user = "..."
+rpc_user = "symphony"
 # RPC password
-rpc_pass = "..."
+rpc_pass = "symphony"
 
 [sync]
 network = "testnet4"

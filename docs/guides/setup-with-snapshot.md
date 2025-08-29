@@ -12,6 +12,7 @@ Snapshots allow you to bootstrap your Symphony indexer with pre-synchronized dat
 ## Prerequisites
 
 -   [Bitcoin Core (22+)](https://hub.docker.com/r/bitcoin/bitcoin) with RPC and P2P access
+-   [lz4](https://github.com/lz4/lz4)
 -   Sufficient disk space (see deployment requirements in [README](../../README.md))
 
 ## Available Snapshots
@@ -38,11 +39,13 @@ Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar
 
 ### 1. Prepare Directories
 
+_The following are to be excuted within maestro-symphony repo directory_.
+
 ```bash
 mkdir -p ./tmp/{symphony-data,bitcoin-data}
 ```
 
-### 2. Download snapshots
+### 2. Download Snapshots
 
 Bitcoin node snapshot:
 
@@ -58,7 +61,7 @@ curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.
   lz4 -d | tar -xf - -C ./tmp/symphony-data
 ```
 
-### 3. Start Symphony
+### 3. Start Services
 
 ```bash
 make COMPOSE_FILE=docker-compose.yml compose-up
@@ -66,12 +69,20 @@ make COMPOSE_FILE=docker-compose.yml compose-up
 
 ## Verification
 
-Once started, verify the setup:
+Once the services are started, verify the setup:
 
 ### Check Symphony Status
 
 ```bash
 curl http://localhost:8080/addresses/tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx/utxos | jq '.indexer_info'
+```
+
+### Stop Services
+
+When you are finished interacting with Symphony, be sure to stop the services as well.
+
+```bash
+make compose-down
 ```
 
 ## Troubleshooting
@@ -95,11 +106,13 @@ If snapshots are older than expected:
 
 Snapshots are updated regularly. To use a newer snapshot:
 
-1. Stop Symphony and Bitcoin Core
+1. Stop Docker services
 2. Backup any important data
 3. Remove old data directories
 4. Download and extract new snapshots
-5. Restart services
+5. Restart Docker services
+
+**Note:** Ensure that no other bitcoin node containers are running as this may cause conflicts.
 
 ---
 

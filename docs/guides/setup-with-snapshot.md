@@ -34,68 +34,34 @@ Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827
 Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
 Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
 
-## Setup Steps
+## Testnet setup example
 
 ### 1. Prepare Directories
 
 ```bash
-mkdir -p ~/workspace/{symphony-data,bitcoin-data}
+mkdir -p ./tmp/{symphony-data,bitcoin-data}
 ```
 
-### 2. Download Both Snapshots
+### 2. Download snapshots
 
-# Download Bitcoin node snapshot
+Bitcoin node snapshot:
 
 ```bash
 curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4 | \
- lz4 -d | tar -xf - -C ~/workspace/bitcoin-data
+ lz4 -d | tar -xf - -C ./tmp/bitcoin-data
 ```
 
+Symphony snapshot:
+
 ```bash
-# Download Symphony snapshot
 curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4 | \
-  lz4 -d | tar -xf - -C ~/workspace/symphony-data
+  lz4 -d | tar -xf - -C ./tmp/symphony-data
 ```
 
-### 3. Start Bitcoin Core
+### 3. Start Symphony
 
 ```bash
-bitcoind -testnet -datadir=~/workspace/bitcoin-data -server -rpcuser=bitcoin -rpcpassword=password
-```
-
-### 4. Configure Symphony
-
-Create `snapshot-testnet.toml`:
-
-```toml
-db_path = "~/workspace/symphony-data"
-
-[sync.node]
-p2p_address = "localhost:18333"
-rpc_address = "http://localhost:18332"
-rpc_user = "bitcoin"
-rpc_pass = "password"
-
-[sync]
-network = "testnet4"
-safe_mode = true
-mempool = true
-
-[sync.indexers]
-transaction_indexers = [
-    { name = "runes" },
-    { name = "utxos_by_address" },
-    { name = "tx_count_by_address" }
-]
-
-[server]
-address = "0.0.0.0:8080"
-```
-
-### 5. Start Symphony
-
-```bash
-make run CONFIG=snapshot-testnet.toml
+make COMPOSE_FILE=docker-compose.yml compose-up
 ```
 
 ## Verification
@@ -108,23 +74,7 @@ Once started, verify the setup:
 curl http://localhost:8080/addresses/tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx/utxos | jq '.indexer_info'
 ```
 
-### Check Bitcoin Core
-
-```bash
-bitcoin-cli -testnet getblockchaininfo
-```
-
 ## Troubleshooting
-
-### Permission Issues
-
-If you encounter permission errors:
-
-```bash
-# Fix ownership
-sudo chown -R $USER:$USER ~/workspace/bitcoin-data
-sudo chown -R $USER:$USER ~/workspace/symphony-data
-```
 
 ### Disk Space
 

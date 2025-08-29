@@ -18,7 +18,7 @@ services:
       - "8333:8333" # P2P port
       - "8332:8332" # RPC port
     volumes:
-      - bitcoin-data:/srv/bitcoin/node
+      - ./tmp/bitcoin-data:/srv/bitcoin/node
     logging:
       options:
         max-size: "30m"
@@ -37,7 +37,7 @@ services:
       - "8080:8080"
     volumes:
       - ./examples/mainnet.toml:/etc/symphony/config.toml
-      - symphony-data:/srv/symphony
+      - ./tmp/symphony-data:/srv/symphony
     depends_on:
       - bitcoin-node
     logging:
@@ -48,6 +48,4 @@ services:
 
 volumes:
   bitcoin-data:
-    driver: local
   symphony-data:
-    driver: local

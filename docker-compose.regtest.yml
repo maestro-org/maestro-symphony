@@ -29,6 +29,7 @@ services:
   symphony:
     build:
       context: .
+    user: "${UID}:${GID}"
     command:
       - /etc/symphony/config.toml
       - run

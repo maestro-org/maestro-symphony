@@ -36,7 +36,7 @@ serde = "1.0.219"
 async-trait = "0.1.89"
 maestro-symphony-macros = "0.1.0"
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
-indexmap = "2.10.0"
+indexmap = "2.11.0"
 itertools = "0.14.0"
 clap = { version = "4.5.43", features = ["derive"] }
 axum = "0.8.4"

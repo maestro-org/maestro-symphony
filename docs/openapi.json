@@ -473,6 +473,58 @@
         }
       }
     },
+    "/runes/{rune}": {
+      "get": {
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
+        "summary": "Info by Rune",
+        "description": "Given a rune identifier (name or id), returns the rune info.",
+        "operationId": "rune_info",
+        "parameters": [
+          {
+            "name": "rune",
+            "in": "path",
+            "description": "Rune identifier (name or id)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_RuneInfo"
+                },
+                "example": "{\n  \"data\": {\n    \"id\": \"30562:50\",\n    \"name\": \"BESTINSLOTXYZ\",\n    \"spaced_name\": \"BESTINSLOT•XYZ\",\n    \"symbol\": \"ʃ\",\n    \"divisibility\": 8,\n    \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n    \"etching_height\": 30562,\n    \"terms\": {\n      \"amount\": \"100000000\",\n      \"cap\": \"3402823669209384634633746074316\",\n      \"start_height\": null,\n      \"end_height\": null\n    },\n    \"premine\": \"100000000\"\n  },\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Requested rune not found on-chain"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/{rune}/utxos/{utxo}/balance": {
       "get": {
         "tags": [
@@ -911,6 +963,73 @@
             },
             "propertyNames": {
               "type": "string"
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_RuneInfo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "id",
+              "name",
+              "spaced_name",
+              "divisibility",
+              "etching_tx",
+              "etching_height",
+              "premine"
+            ],
+            "properties": {
+              "divisibility": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "etching_height": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              "etching_tx": {
+                "type": "string"
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "premine": {
+                "type": "string"
+              },
+              "spaced_name": {
+                "type": "string"
+              },
+              "symbol": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "terms": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RuneTerms"
+                  }
+                ]
+              }
             }
           },
           "indexer_info": {

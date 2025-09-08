@@ -14,9 +14,9 @@ use ordinals::{Rune, SpacedRune};
 #[utoipa::path(
     tag = "Runes (Metaprotocol)",
     get,
-    path = "/runes/{rune_id}",
+    path = "/runes/{rune}",
     params(
-        ("rune_id" = String, Path, description = "Rune identifier (name or id)"),
+        ("rune" = String, Path, description = "Rune identifier (name or id)"),
         ("mempool" = inline(Option<bool>), Query, description = "Mempool-aware"),
     ),
     responses(
@@ -27,7 +27,7 @@ use ordinals::{Rune, SpacedRune};
             example = json!(EXAMPLE_RESPONSE)
         ),
         (status = 400, description = "Malformed query parameters"),
-        (status = 404, description = "Requested entity not found on-chain"),
+        (status = 404, description = "Requested rune not found on-chain"),
         (status = 500, description = "Internal server error"),
     )
 )]
@@ -36,34 +36,19 @@ use ordinals::{Rune, SpacedRune};
 /// Given a rune identifier (name or id), returns the rune info.
 pub async fn rune_info(
     State(state): State<AppState>,
-    Path(rune_id_str): Path<String>,
+    Path(rune): Path<String>,
     Query(params): Query<MempoolParam>,
 ) -> Result<impl IntoResponse, ServeError> {
     let (storage, indexer_info) = state.start_reader(params.mempool).await?;
 
-    let rune_id_str = rune_id_str.trim();
-    if rune_id_str.is_empty() {
-        return Err(ServeError::NotFound);
-    }
-
-    let rune_id_res = RuneIdentifier::parse(rune_id_str);
-
-    let rune_id = match rune_id_res {
-        Ok(RuneIdentifier::Id(id)) => id,
-        Ok(RuneIdentifier::Name(name_num)) => {
-            match storage.get_maybe::<RuneIdByNameKV>(&name_num)? {
-                Some(id) => id,
-                None => {
-                    return Err(ServeError::NotFound);
-                }
-            }
-        }
-        Err(_) => {
-            return Err(ServeError::NotFound);
-        }
+    let specified_rune = match RuneIdentifier::parse(&rune)? {
+        RuneIdentifier::Id(id) => id,
+        RuneIdentifier::Name(n) => storage
+            .get_maybe::<RuneIdByNameKV>(&n)?
+            .ok_or_else(|| ServeError::NotFound)?,
     };
 
-    let rune_info = match storage.get_maybe::<RuneInfoByIdKV>(&rune_id)? {
+    let rune_info = match storage.get_maybe::<RuneInfoByIdKV>(&specified_rune)? {
         Some(info) => info,
         None => {
             return Err(ServeError::NotFound);
@@ -74,7 +59,7 @@ pub async fn rune_info(
     let spaced = SpacedRune::new(rune, rune_info.spacers);
 
     let info = RuneInfo {
-        id: rune_id.to_string(),
+        id: specified_rune.to_string(),
         name: rune.to_string(),
         spaced_name: spaced.to_string(),
         symbol: rune_info.symbol.and_then(char::from_u32),

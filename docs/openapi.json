@@ -473,7 +473,7 @@
         }
       }
     },
-    "/runes/{rune_id}": {
+    "/runes/{rune}": {
       "get": {
         "tags": [
           "Runes (Metaprotocol)"
@@ -483,7 +483,7 @@
         "operationId": "rune_info",
         "parameters": [
           {
-            "name": "rune_id",
+            "name": "rune",
             "in": "path",
             "description": "Rune identifier (name or id)",
             "required": true,
@@ -517,7 +517,7 @@
             "description": "Malformed query parameters"
           },
           "404": {
-            "description": "Requested entity not found on-chain"
+            "description": "Requested rune not found on-chain"
           },
           "500": {
             "description": "Internal server error"

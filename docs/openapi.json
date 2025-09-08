@@ -40,6 +40,15 @@
             "schema": {
               "type": "boolean"
             }
+          },
+          {
+            "name": "include_info",
+            "in": "query",
+            "description": "Include rune info for each balance (default: false)",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
           }
         ],
         "responses": {
@@ -48,9 +57,9 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneAndAmount"
+                  "$ref": "#/components/schemas/ServeResponse_Vec_RuneBalanceWithInfo"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"id\": \"30562:50\",\n      \"amount\": \"100000000\"\n    },\n    {\n      \"id\": \"65103:2\",\n      \"amount\": \"300000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": "{\n  \"data\": [\n    {\n      \"id\": \"30562:50\",\n      \"amount\": \"100000000\",\n      \"info\": {\n        \"id\": \"30562:50\",\n        \"name\": \"BESTINSLOTXYZ\",\n        \"spaced_name\": \"BESTINSLOT•XYZ\",\n        \"symbol\": \"ʃ\",\n        \"divisibility\": 8,\n        \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n        \"etching_height\": 30562,\n        \"terms\": {\n          \"amount\": \"100000000\",\n          \"cap\": \"3402823669209384634633746074316\",\n          \"start_height\": null,\n          \"end_height\": null\n        },\n        \"premine\": \"100000000\"\n      }\n    },\n    {\n      \"id\": \"65103:2\",\n      \"amount\": \"300000\",\n      \"info\": null\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
               }
             }
           },
@@ -700,6 +709,42 @@
           }
         }
       },
+      "RuneBalanceWithInfo": {
+        "type": "object",
+        "required": [
+          "id",
+          "amount"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "info": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuneInfo"
+              }
+            ]
+          }
+        }
+      },
+      "RuneBalancesParam": {
+        "type": "object",
+        "properties": {
+          "include_info": {
+            "type": "boolean"
+          },
+          "mempool": {
+            "type": "boolean"
+          }
+        }
+      },
       "RuneEdict": {
         "type": "object",
         "required": [
@@ -1115,6 +1160,46 @@
                 },
                 "id": {
                   "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_RuneBalanceWithInfo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "amount"
+              ],
+              "properties": {
+                "amount": {
+                  "type": "string"
+                },
+                "id": {
+                  "type": "string"
+                },
+                "info": {
+                  "oneOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RuneInfo"
+                    }
+                  ]
                 }
               }
             }

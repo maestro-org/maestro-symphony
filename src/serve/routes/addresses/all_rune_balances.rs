@@ -93,30 +93,26 @@ pub async fn addresses_all_rune_balances(
 
     for (rune_id, amount) in balances.into_iter().sorted_by_key(|(rid, _)| *rid) {
         let rune_info = if params.include_info {
-            match storage.get_maybe::<RuneInfoByIdKV>(&rune_id)? {
-                Some(info) => {
-                    let rune = Rune(info.name);
-                    let spaced = SpacedRune::new(rune, info.spacers);
+            let info = storage.get_expected::<RuneInfoByIdKV>(&rune_id)?;
+            let rune = Rune(info.name);
+            let spaced = SpacedRune::new(rune, info.spacers);
 
-                    Some(RuneInfo {
-                        id: rune_id.to_string(),
-                        name: rune.to_string(),
-                        spaced_name: spaced.to_string(),
-                        symbol: info.symbol.and_then(char::from_u32),
-                        divisibility: info.divisibility,
-                        etching_tx: Txid::from_byte_array(info.etching_tx).to_string(),
-                        etching_height: info.etching_height,
-                        terms: info.terms.map(|x| RuneTerms {
-                            amount: x.amount.map(|y| y.to_string()),
-                            cap: x.cap.map(|y| y.to_string()),
-                            start_height: x.start_height,
-                            end_height: x.end_height,
-                        }),
-                        premine: info.premine.to_string(),
-                    })
-                }
-                None => None,
-            }
+            Some(RuneInfo {
+                id: rune_id.to_string(),
+                name: rune.to_string(),
+                spaced_name: spaced.to_string(),
+                symbol: info.symbol.and_then(char::from_u32),
+                divisibility: info.divisibility,
+                etching_tx: Txid::from_byte_array(info.etching_tx).to_string(),
+                etching_height: info.etching_height,
+                terms: info.terms.map(|x| RuneTerms {
+                    amount: x.amount.map(|y| y.to_string()),
+                    cap: x.cap.map(|y| y.to_string()),
+                    start_height: x.start_height,
+                    end_height: x.end_height,
+                }),
+                premine: info.premine.to_string(),
+            })
         } else {
             None
         };
@@ -159,9 +155,24 @@ static EXAMPLE_RESPONSE: &str = r##"{
       }
     },
     {
-      "id": "65103:2",
-      "amount": "300000",
-      "info": null
+      "id": "63523:1",
+      "amount": "990000",
+      "info": {
+        "id": "63523:1",
+        "name": "JFMJFMJFMHHHAAA",
+        "spaced_name": "JFMJFMJFMHHHAAA",
+        "symbol": "J",
+        "divisibility": 2,
+        "etching_tx": "3bcc9e8f8eaf120ea5af65a378925b703f6fb1960435629eef5cb5900c19bec9",
+        "etching_height": 63523,
+        "terms": {
+          "amount": "100000",
+          "cap": "100",
+          "start_height": 63515,
+          "end_height": null
+        },
+        "premine": "1000000"
+      }
     }
   ],
   "indexer_info": {

@@ -34,8 +34,10 @@ use utoipa::OpenApi;
         ChainTip,
         EstimatedBlock,
         MempoolParam,
+        RuneBalancesParam,
         // --
         ServeResponse<Vec<RuneAndAmount>>,
+        ServeResponse<Vec<RuneBalanceWithInfo>>,
         ServeResponse<Vec<RuneUtxo>>,
         ServeResponse<Vec<RuneEdict>>,
         ServeResponse<String>,
@@ -43,10 +45,12 @@ use utoipa::OpenApi;
         ServeResponse<HashMap<String, Option<RuneInfo>>>,
         // ---
         RuneAndAmount,
+        RuneBalanceWithInfo,
         RuneUtxo,
         RuneEdict,
         AddressUtxo,
         RuneInfo,
+        RuneTerms,
     )),
 )]
 pub struct APIDoc;

@@ -27,13 +27,13 @@ Snapshots allow you to bootstrap your Symphony indexer with pre-synchronized dat
 
 #### Bitcoin
 
-Mainnet: https://snapshots.gomaestro.org/bitcoin-node/mainnet/snapshots/20250826.tar.lz4
-Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4
+* Mainnet: https://snapshots.gomaestro.org/bitcoin-node/mainnet/snapshots/20250826.tar.lz4
+* Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4
 
 #### Symphony
 
-Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
-Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
+* Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
+* Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
 
 ## Testnet setup example
 

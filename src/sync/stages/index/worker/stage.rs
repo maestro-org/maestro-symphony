@@ -353,15 +353,9 @@ impl gasket::framework::Worker<Stage> for Worker {
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
 
-                // Log RocksDB stats if block processing took more than 5 seconds
-                if timings.total.as_secs() >= 5 {
-                    // Log RocksDB statistics for slow blocks
-                    if let Some(stats) = stage.db.get_statistics() {
-                        info!(
-                            "Block processed slowly, dumping RocksDB metrics:\n{}",
-                            stats
-                        );
-                    }
+                if timings.total.as_secs() >= 10 {
+                    warn!("Block processed slowly, dumping RocksDB metrics...");
+                    stage.db.print_perf_snapshot();
                 }
 
                 // Calculate sync percentage
@@ -520,18 +514,9 @@ impl gasket::framework::Worker<Stage> for Worker {
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
 
-                // Log RocksDB stats if mempool processing took more than 5 seconds
-                if timings.total.as_secs() >= 5 {
-                    warn!(
-                        blocks = mempool_blocks.len(),
-                        duration_secs = timings.total.as_secs_f64(),
-                        "Mempool processing took longer than 5 seconds"
-                    );
-
-                    // Log RocksDB statistics for slow mempool processing
-                    if let Some(stats) = stage.db.get_statistics() {
-                        info!("RocksDB Statistics for slow mempool processing:\n{}", stats);
-                    }
+                if timings.total.as_secs() >= 10 {
+                    warn!("Mempool blocks processed slowly, dumping RocksDB metrics...");
+                    stage.db.print_perf_snapshot();
                 }
 
                 // Log mempool indexing completion

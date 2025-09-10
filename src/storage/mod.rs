@@ -5,6 +5,7 @@ use tracing::info;
 pub mod encdec;
 pub mod kv_store;
 pub mod merge_operation;
+pub mod stats_logger;
 pub mod table;
 pub mod timestamp;
 

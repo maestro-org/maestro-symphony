@@ -11,6 +11,7 @@ use crate::sync::stages::{BlockHeight, TransactionWithId};
 use bitcoin::Txid;
 use bitcoin::{Network, ScriptBuf, Transaction, hashes::Hash};
 use ordinals::{Artifact, Edict, Etching, Height, Rune, RuneId, Runestone};
+use rustc_hash::FxHashMap;
 use serde::Deserialize;
 
 use super::tables::{
@@ -301,7 +302,7 @@ impl ProcessTransaction for RunesIndexer {
 fn unallocated(
     task: &mut IndexingTask,
     tx: &Transaction,
-    resolver: &HashMap<TxoRef, Utxo>,
+    resolver: &FxHashMap<TxoRef, Utxo>,
 ) -> Result<HashMap<RuneId, u128>, Error> {
     // map of rune ID to un-allocated balance of that rune
     let mut unallocated: HashMap<RuneId, u128> = HashMap::new();
@@ -377,7 +378,7 @@ fn tx_commits_to_rune(
     tx: &Transaction,
     rune: Rune,
     height: BlockHeight,
-    resolver: &HashMap<TxoRef, Utxo>,
+    resolver: &FxHashMap<TxoRef, Utxo>,
     confirmations_override: Option<u64>,
 ) -> Result<bool, Error> {
     let commitment = rune.commitment();
@@ -441,7 +442,7 @@ fn tx_commits_to_rune(
 #[allow(clippy::too_many_arguments)]
 fn etched(
     task: &mut IndexingTask,
-    resolver: &HashMap<TxoRef, Utxo>,
+    resolver: &FxHashMap<TxoRef, Utxo>,
     tx_index: usize,
     tx: &Transaction,
     artifact: &Artifact,

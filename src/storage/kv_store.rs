@@ -6,10 +6,11 @@ use bitcoin::hashes::Hash;
 use itertools::Itertools;
 use maestro_symphony_macros::{Decode, Encode};
 use rocksdb::{
-    BlockBasedOptions, Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions,
-    WriteBatch, WriteBufferManager,
+    Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, SliceTransform,
+    WriteBatch, WriteOptions,
 };
-use tracing::{info, trace};
+use sysinfo::{Pid, System};
+use tracing::{info, trace, warn};
 
 use crate::{
     error::Error,
@@ -343,43 +344,39 @@ impl StorageHandler {
         db_opts.create_missing_column_families(true);
         db_opts.create_if_missing(true);
 
-        // info!(
-        //     "using rocksdb memory budget: {:.2} GB ({} bytes)",
-        //     memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
-        //     memory_budget
-        // );
+        // Enable RocksDB statistics for monitoring
+        db_opts.enable_statistics();
+        db_opts.set_report_bg_io_stats(true);
 
-        // // Create a shared cache for both block cache and write buffer manager
-        // let write_buffer_budget = (memory_budget as f64 * 0.3) as usize;
+        info!(
+            "using rocksdb memory budget: {:.2} GB ({} bytes)",
+            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
+            memory_budget
+        );
 
-        // let cache = Cache::new_lru_cache(memory_budget.try_into().unwrap());
-        // let write_buffer_manager = WriteBufferManager::new_write_buffer_manager_with_cache(
-        //     write_buffer_budget,
-        //     false,
-        //     cache.clone(),
-        // );
+        let block_cache_budget = (memory_budget as f64 * 0.75) as usize;
+        let memtable_budget = (memory_budget as f64 * 0.25) as usize;
 
-        // // Set the write buffer manager to control total memtable memory
-        // db_opts.set_write_buffer_manager(&write_buffer_manager);
+        let cache = Cache::new_lru_cache(block_cache_budget);
 
-        // db_opts.set_max_background_jobs(2);
-        // db_opts.set_advise_random_on_open(true);
-
-        // db_opts.set_max_open_files(500);
-        // db_opts.set_use_direct_reads(true);
-        // db_opts.set_use_direct_io_for_flush_and_compaction(true);
+        let sys = System::new_all();
+        let cpus = sys.cpus().len() as u32;
+        let background_jobs = std::cmp::max(2, cpus);
+        db_opts.set_max_background_jobs(background_jobs.try_into().unwrap());
+        db_opts.set_max_subcompactions(cpus);
 
         let mut cf_opts = Options::default();
 
-        // Use the same cache for block cache in the column family
-        // let mut block_opts = BlockBasedOptions::default();
-        // block_opts.set_block_cache(&cache);
-        // // block_opts.set_cache_index_and_filter_blocks(true);
-        // // block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
-        // cf_opts.set_block_based_table_factory(&block_opts);
+        let mut block_opts = rocksdb::BlockBasedOptions::default();
+        block_opts.set_block_cache(&cache);
+        cf_opts.set_block_based_table_factory(&block_opts);
 
-        // cf_opts.set_max_write_buffer_number(2);
-        // cf_opts.set_max_write_buffer_size_to_maintain(0);
+        let per_memtable_cap = 512 * 1024 * 1024;
+        cf_opts.set_write_buffer_size(std::cmp::min(memtable_budget / 2, per_memtable_cap));
+        cf_opts.set_max_write_buffer_number(2);
+        cf_opts.set_max_write_buffer_size_to_maintain(0);
+
+        cf_opts.set_prefix_extractor(SliceTransform::create_fixed_prefix(2));
 
         cf_opts.set_merge_operator(
             "extensible_merge",
@@ -409,6 +406,24 @@ impl StorageHandler {
             db: Arc::new(db),
             previous_timestamp: None, // TODO detect from DB?
             read_only,
+        }
+    }
+
+    /// Get RocksDB statistics as a formatted string
+    pub fn get_statistics(&self) -> Option<String> {
+        // RocksDB statistics are accumulated at the database level
+        // We need to get them from the actual database instance
+        // For now, we'll access via the DB property interface
+        match self.db.property_value_cf(self.cf_handle(), "rocksdb.stats") {
+            Ok(Some(stats)) => Some(stats),
+            Ok(None) => {
+                warn!("RocksDB statistics not available");
+                None
+            }
+            Err(e) => {
+                warn!("Failed to get RocksDB statistics: {}", e);
+                None
+            }
         }
     }
 
@@ -528,7 +543,10 @@ impl StorageHandler {
         // TODO: hide within write batch wrapper? or use tx?
         wb.update_timestamps_with_size(ts, U64Timestamp::SIZE)?;
 
-        self.db.write(wb)?;
+        let mut wopts = WriteOptions::default();
+        wopts.disable_wal(true);
+
+        self.db.write_opt(wb, &wopts)?;
 
         if !task.mempool {
             // allow data for blocks before this confirmed block to be GC'd
@@ -631,5 +649,72 @@ impl From<Option<RawValue>> for PreviousValue {
             Some(value) => PreviousValue::Present(value),
             None => PreviousValue::NotPresent,
         }
+    }
+}
+
+impl StorageHandler {
+    pub fn print_perf_snapshot(&self) {
+        let cf = self.cf_handle();
+
+        let rocks_stats = self
+            .db
+            .property_value_cf(cf, "rocksdb.stats")
+            .unwrap_or(Some("N/A".to_string()))
+            .unwrap_or_default();
+        let memtables = self
+            .db
+            .property_value_cf(cf, "rocksdb.cur-size-all-mem-tables")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+        let block_cache = self
+            .db
+            .property_value("rocksdb.block-cache-usage")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+        let block_cache_cf = self
+            .db
+            .property_value_cf(cf, "rocksdb.block-cache-usage")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+        let pending_compaction = self
+            .db
+            .property_value("rocksdb.estimate-pending-compaction-bytes")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+        let num_running_compactions = self
+            .db
+            .property_value("rocksdb.num-running-compactions")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        let sys = System::new_all();
+        let pid = std::process::id();
+        let process = sys.process(Pid::from_u32(pid)).unwrap();
+        let app_mem_mb = process.memory() / 1024;
+
+        let free_mem_mb = sys.free_memory() / 1024;
+        let total_mem_mb = sys.total_memory() / 1024;
+
+        println!("RocksDB Performanc Stats");
+        println!("App memory: {} MB", app_mem_mb);
+        println!(
+            "RocksDB memtables: {} MB",
+            memtables.parse::<u64>().unwrap_or(0) / 1024 / 1024
+        );
+        println!(
+            "RocksDB block cache: {} MB ({} cf)",
+            block_cache.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            block_cache_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024
+        );
+        println!(
+            "Pending compaction bytes: {} MB",
+            pending_compaction.parse::<u64>().unwrap_or(0) / 1024 / 1024
+        );
+        println!("Running compactions: {}", num_running_compactions);
+        println!(
+            "System free memory: {} MB / {} MB",
+            free_mem_mb, total_mem_mb
+        );
+        println!("RocksDB stats:\n{}", rocks_stats);
     }
 }

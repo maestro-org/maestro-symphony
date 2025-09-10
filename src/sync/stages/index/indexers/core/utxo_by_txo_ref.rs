@@ -11,10 +11,9 @@
 /// - **Value**: [`Utxo`] - The unspent transaction output, containing details such as the amount,
 ///   script, block height, and extended metadata.
 /// - **Indexer**: [`CoreIndexer::UtxoByTxoRef`] - The indexer responsible for managing this table.
-use std::collections::{HashMap, HashSet};
-
 use bitcoin::hashes::Hash;
 use mini_moka::sync::Cache;
+use rustc_hash::{FxHashMap, FxHashSet};
 use tokio::time::Instant;
 use tracing::debug;
 
@@ -38,8 +37,9 @@ define_core_table! {
 }
 
 pub struct ResolvedUtxos {
-    pub resolver: HashMap<TxoRef, Utxo>,
-    pub chained_txos: HashSet<TxoRef>,
+    pub resolver: FxHashMap<TxoRef, Utxo>,
+    pub chained_txos: FxHashSet<TxoRef>,
+    pub cache_hits: usize,
 }
 
 impl UtxoByTxoRefKV {
@@ -54,7 +54,7 @@ impl UtxoByTxoRefKV {
         let tx_ids = txs
             .iter()
             .map(|x| x.tx_id.to_byte_array())
-            .collect::<HashSet<_>>();
+            .collect::<FxHashSet<_>>();
 
         // skip first tx if it is coinbase (mempool block txs dont have one)
         let skip = if txs
@@ -75,16 +75,17 @@ impl UtxoByTxoRefKV {
                 tx_hash: x.previous_output.txid.to_byte_array(),
                 txo_index: x.previous_output.vout,
             })
-            .collect::<HashSet<_>>();
+            .collect::<FxHashSet<_>>();
 
         let total_inputs = input_refs.len();
 
-        let mut resolver = HashMap::with_capacity(total_inputs);
+        let mut resolver = FxHashMap::default();
+        resolver.reserve(total_inputs);
 
         let mut fetch_from_db = Vec::with_capacity(total_inputs);
 
         // txos which are not found in db must be produced and consumed within the block ("chained")
-        let mut chained_txos = HashSet::new();
+        let mut chained_txos = FxHashSet::default();
 
         // first try resolve input utxos using cache
         for input_ref in input_refs {
@@ -130,6 +131,7 @@ impl UtxoByTxoRefKV {
         Ok(ResolvedUtxos {
             resolver,
             chained_txos,
+            cache_hits,
         })
     }
 }

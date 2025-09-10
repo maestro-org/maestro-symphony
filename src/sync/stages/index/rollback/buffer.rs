@@ -53,6 +53,10 @@ impl RollbackBuffer {
         self.size
     }
 
+    pub fn total_actions(&self) -> usize {
+        self.points.iter().map(|x| x.original_kvs.len()).sum()
+    }
+
     /// Find the position of a point within the buffer
     pub fn position(&self, point: &Point) -> Option<usize> {
         self.points.iter().position(|p| p.point.eq(point))

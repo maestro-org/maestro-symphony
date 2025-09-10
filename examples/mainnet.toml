@@ -1,7 +1,7 @@
 db_path = "/srv/symphony"
 
 # [storage]
-# Total memory budget for RocksDB in GB (default 50% of available system memory)
+# Total memory budget for RocksDB in GB (default 40% of available system memory)
 # rocksdb_memory_budget = 2.0
 
 [sync.node]
@@ -16,7 +16,7 @@ rpc_pass = "symphony"
 network = "mainnet"
 max_rollback = 32
 mempool = true
-# Size in GB to use for UTxO cache (0 = disabled, default 10% of memory)
+# Size in GB to use for UTxO cache (0 = disabled, default 20% of memory)
 # utxo_cache_size = 0.5
 
 [sync.indexers]

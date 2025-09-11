@@ -695,8 +695,8 @@ impl StorageHandler {
         let free_mem_mb = sys.free_memory() / 1024;
         let total_mem_mb = sys.total_memory() / 1024;
 
-        println!("RocksDB Performanc Stats");
-        println!("App memory: {} MB", app_mem_mb);
+        println!("RocksDB Performance Stats");
+        println!("App memory: {} KB", app_mem_mb);
         println!(
             "RocksDB memtables: {} MB",
             memtables.parse::<u64>().unwrap_or(0) / 1024 / 1024

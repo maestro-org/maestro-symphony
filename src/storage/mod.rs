@@ -5,6 +5,7 @@ use tracing::info;
 pub mod encdec;
 pub mod kv_store;
 pub mod merge_operation;
+pub mod stats_logger;
 pub mod table;
 pub mod timestamp;
 
@@ -32,10 +33,10 @@ impl Config {
             .map(|x| x.total_memory)
             .unwrap_or_else(|| system.total_memory());
 
-        let default_budget = (total_memory as f64 * 0.5) as u64; // 50% of total memory
+        let default_budget = (total_memory as f64 * 0.25) as u64;
 
         info!(
-            "No RocksDB memory budget specified, using 50% of system memory: {:.2} GB ({} bytes) out of {:.2} GB total",
+            "No RocksDB memory budget specified, using 25% of system memory: {:.2} GB ({} bytes) out of {:.2} GB total",
             default_budget as f64 / (1024.0 * 1024.0 * 1024.0),
             default_budget,
             total_memory as f64 / (1024.0 * 1024.0 * 1024.0)

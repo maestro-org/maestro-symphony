@@ -11,6 +11,12 @@ pub struct Point {
     pub hash: BlockHash,
 }
 
+impl std::fmt::Display for Point {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "({}, {})", self.height, self.hash)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct TransactionWithId {
     tx_id: Txid,

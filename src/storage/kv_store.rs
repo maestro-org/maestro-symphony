@@ -354,10 +354,16 @@ impl StorageHandler {
             memory_budget
         );
 
-        let block_cache_budget = (memory_budget as f64 * 0.75) as usize;
-        let memtable_budget = (memory_budget as f64 * 0.25) as usize;
+        // max 2 write buffers, each max 512MB
+        let memtable_budget = (memory_budget as f64 * 0.25) as u64;
+        let per_memtable_cap = 512 * 1024 * 1024;
+        let write_buffer_size = std::cmp::min(memtable_budget / 2, per_memtable_cap);
+        let memtable_budget = write_buffer_size * 2;
 
-        let cache = Cache::new_lru_cache(block_cache_budget);
+        // remaining budget on block cache (with indexes/filters)
+        let block_cache_budget = memory_budget - memtable_budget;
+
+        let cache = Cache::new_lru_cache(block_cache_budget as usize);
 
         let sys = System::new_all();
         let cpus = sys.cpus().len() as u32;
@@ -368,11 +374,13 @@ impl StorageHandler {
         let mut cf_opts = Options::default();
 
         let mut block_opts = rocksdb::BlockBasedOptions::default();
+        block_opts.set_cache_index_and_filter_blocks(true);
+        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
+
         block_opts.set_block_cache(&cache);
         cf_opts.set_block_based_table_factory(&block_opts);
 
-        let per_memtable_cap = 512 * 1024 * 1024;
-        cf_opts.set_write_buffer_size(std::cmp::min(memtable_budget / 2, per_memtable_cap));
+        cf_opts.set_write_buffer_size(write_buffer_size as usize);
         cf_opts.set_max_write_buffer_number(2);
         cf_opts.set_max_write_buffer_size_to_maintain(0);
 

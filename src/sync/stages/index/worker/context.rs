@@ -149,6 +149,10 @@ impl IndexingContext {
             }
         }
 
+        if let Some(c) = utxo_cache.as_mut() {
+            c.wipe_if_mem_usage_high();
+        }
+
         Ok(outs_written)
     }
 

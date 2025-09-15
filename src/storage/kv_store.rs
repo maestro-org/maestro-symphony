@@ -686,6 +686,16 @@ impl StorageHandler {
             .property_value("rocksdb.num-running-compactions")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
+        let estimate_table_readers_mem = self
+            .db
+            .property_value("rocksdb.estimate-table-readers-mem")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+        let estimate_table_readers_mem_cf = self
+            .db
+            .property_value_cf(cf, "rocksdb.estimate-table-readers-mem")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
 
         let sys = System::new_all();
         let pid = std::process::id();
@@ -714,6 +724,11 @@ impl StorageHandler {
         println!(
             "System free memory: {} MB / {} MB",
             free_mem_mb, total_mem_mb
+        );
+        println!(
+            "Estimate table readers mem: {} ({} cf)",
+            estimate_table_readers_mem.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            estimate_table_readers_mem_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024
         );
         println!("RocksDB stats:\n{}", rocks_stats);
     }

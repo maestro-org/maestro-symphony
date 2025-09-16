@@ -817,7 +817,7 @@ dependencies = [
  "futures-core",
  "futures-sink",
  "http",
- "indexmap 2.11.0",
+ "indexmap 2.11.1",
  "slab",
  "tokio",
  "tokio-util",
@@ -994,9 +994,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "2.11.0"
+version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f2481980430f9f78649238835720ddccc57e52df14ffce1c6f37391d61b563e9"
+checksum = "206a8042aec68fa4a62e8d3f7aa4ceb508177d9324faf261e1959e495b7a1921"
 dependencies = [
  "equivalent",
  "hashbrown 0.15.3",
@@ -1176,7 +1176,7 @@ dependencies = [
  "config",
  "gasket",
  "hex",
- "indexmap 2.11.0",
+ "indexmap 2.11.1",
  "itertools 0.14.0",
  "maestro-symphony-macros 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "mini-moka",
@@ -1726,7 +1726,7 @@ dependencies = [
  "chrono",
  "hex",
  "indexmap 1.9.3",
- "indexmap 2.11.0",
+ "indexmap 2.11.1",
  "serde",
  "serde_derive",
  "serde_json",
@@ -2177,7 +2177,7 @@ version = "5.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2fcc29c80c21c31608227e0912b2d7fddba57ad76b606890627ba8ee7964e993"
 dependencies = [
- "indexmap 2.11.0",
+ "indexmap 2.11.1",
  "serde",
  "serde_json",
  "utoipa-gen",

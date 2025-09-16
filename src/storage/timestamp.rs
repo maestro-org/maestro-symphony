@@ -5,6 +5,8 @@ impl Default for Timestamp {
 }
 use std::cmp::Ordering;
 
+use tracing::warn;
+
 /*
     Symphony TS, which is made up of both a unix timestamp (physical) and a counter which is used to
     separate timestamps created within the same unix timestamp (logical). (Same as TiKV TS)
@@ -40,7 +42,14 @@ impl Timestamp {
             .expect("Time went backwards")
             .as_secs();
 
-        let logical = if unix_ts == prev.physical {
+        if unix_ts < prev.physical {
+            warn!(
+                "unix ts earlier than previous: {unix_ts} < {}",
+                prev.physical
+            )
+        }
+
+        let logical = if unix_ts <= prev.physical {
             // increment counter to distinguish this timestamp within same second
             prev.logical + 1
         } else {

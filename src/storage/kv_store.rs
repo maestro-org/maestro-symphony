@@ -9,7 +9,7 @@ use rocksdb::{
     BlockBasedOptions, Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions,
     WriteBatch, WriteBufferManager,
 };
-use tracing::{info, trace};
+use tracing::{info, trace, warn};
 
 use crate::{
     error::Error,
@@ -461,6 +461,8 @@ impl StorageHandler {
     ) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
+        let prev_ts = self.previous_timestamp.clone();
+
         let commit_ts = self
             .previous_timestamp
             .map(Timestamp::after)
@@ -532,7 +534,9 @@ impl StorageHandler {
 
         if !task.mempool {
             // allow data for blocks before this confirmed block to be GC'd
-            self.db.increase_full_history_ts_low(cf, ts)?;
+            if let Err(e) = self.db.increase_full_history_ts_low(cf, ts) {
+                warn!("failed to increase gc safepoint: {commit_ts:?} {prev_ts:?} {e}")
+            }
         }
 
         self.previous_timestamp = Some(commit_ts);

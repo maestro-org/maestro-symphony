@@ -354,13 +354,12 @@ impl StorageHandler {
             memory_budget
         );
 
-        // max 2 write buffers, each max 512MB
         let memtable_budget = (memory_budget as f64 * 0.25) as u64;
         let per_memtable_cap = 512 * 1024 * 1024;
         let write_buffer_size = std::cmp::min(memtable_budget / 2, per_memtable_cap);
         let memtable_budget = write_buffer_size * 2;
 
-        // remaining budget on block cache (with indexes/filters)
+        // remaining budget on block cache
         let block_cache_budget = memory_budget - memtable_budget;
 
         let cache = Cache::new_lru_cache(block_cache_budget as usize);
@@ -374,15 +373,24 @@ impl StorageHandler {
         let mut cf_opts = Options::default();
 
         let mut block_opts = rocksdb::BlockBasedOptions::default();
-        block_opts.set_cache_index_and_filter_blocks(true);
-        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
+
+        // 8KB block size instead of 4KB reduces index block size 2x
+        block_opts.set_block_size(8 * 1024);
+        // use jemmalloc friendly memory filters
+        block_opts.set_optimize_filters_for_memory(true);
 
         block_opts.set_block_cache(&cache);
         cf_opts.set_block_based_table_factory(&block_opts);
 
+        // 2 memtables, max 512MB each
         cf_opts.set_write_buffer_size(write_buffer_size as usize);
         cf_opts.set_max_write_buffer_number(2);
         cf_opts.set_max_write_buffer_size_to_maintain(0);
+
+        // don't build bloom filters on last level if we expect most Gets() to find the key
+        // (which is the case for resolving utxos, a large amount of our Gets)
+        // TODO: if we move utxos to their own CF, we can disable this elsewhere
+        cf_opts.set_optimize_filters_for_hits(true);
 
         cf_opts.set_prefix_extractor(SliceTransform::create_fixed_prefix(2));
 

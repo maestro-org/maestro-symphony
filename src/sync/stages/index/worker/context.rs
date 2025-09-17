@@ -111,7 +111,12 @@ impl IndexingContext {
         // remove consumed utxos from resolver and storage
         for input in &tx.tx.input {
             let txo_ref = input.previous_output.into();
-            self.resolver.remove(&txo_ref);
+
+            // dont remove from cache if mempool block
+            if !task.mempool() {
+                self.resolver.remove(&txo_ref);
+            }
+
             task.delete::<UtxoByTxoRefKV>(txo_ref)?;
         }
 

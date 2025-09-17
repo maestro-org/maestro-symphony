@@ -21,7 +21,7 @@ use crate::serve::AppState;
 #[utoipa::path(
     tag = "Runes (Metaprotocol)",
     get,
-    path = "/{rune}/utxos/{utxo}/balance",
+    path = "/runes/{rune}/utxos/{utxo}/balance",
     params(
         ("utxo" = String, Path, description = "UTXO reference in format txid:index", example="c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3:1"),
         ("rune" = String, Path, description = "Rune ID or name (spaced or unspaced)", example="65103:2", example="BITCOIN•PIZZAS"),
@@ -32,7 +32,7 @@ use crate::serve::AppState;
             status = 200,
             description = "Requested data",
             body = ServeResponse<String>,
-            example = json!(EXAMPLE_RESPONSE)
+            example = json!(serde_json::Value::from_str(EXAMPLE_RESPONSE).unwrap())
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested rune or UTXO not found on-chain"),

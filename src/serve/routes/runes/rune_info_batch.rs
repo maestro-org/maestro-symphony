@@ -13,6 +13,7 @@ use ordinals::{Rune, SpacedRune};
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::str::FromStr;
 
 #[utoipa::path(
     tag = "Runes (Metaprotocol)",
@@ -27,7 +28,7 @@ use std::collections::HashSet;
             status = 200,
             description = "Requested data",
             body = ServeResponse<HashMap<String, Option<RuneInfo>>>,
-            example = json!(EXAMPLE_RESPONSE)
+            example = json!(serde_json::Value::from_str(EXAMPLE_RESPONSE).unwrap())
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested entity not found on-chain"),

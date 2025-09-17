@@ -11,7 +11,6 @@ pub mod timestamp;
 
 #[derive(Deserialize, Debug, Clone)]
 pub struct Config {
-    /// Total memory budget for RocksDB in GB (default 30% of available system memory)
     pub rocksdb_memory_budget: Option<f64>,
 }
 

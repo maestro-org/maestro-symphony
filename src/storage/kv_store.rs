@@ -7,7 +7,7 @@ use rocksdb::{
     Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, SliceTransform,
     WriteBatch, WriteOptions,
 };
-use sysinfo::{Pid, System};
+use sysinfo::System;
 use tracing::{error, info, trace, warn};
 
 use crate::{
@@ -690,75 +690,46 @@ impl StorageHandler {
             .property_value_cf(cf, "rocksdb.stats")
             .unwrap_or(Some("N/A".to_string()))
             .unwrap_or_default();
+
         let memtables = self
             .db
             .property_value_cf(cf, "rocksdb.cur-size-all-mem-tables")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
-        let block_cache = self
-            .db
-            .property_value("rocksdb.block-cache-usage")
-            .unwrap_or(Some("0".to_string()))
-            .unwrap_or_default();
+
         let block_cache_cf = self
             .db
             .property_value_cf(cf, "rocksdb.block-cache-usage")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
+
         let pending_compaction = self
             .db
             .property_value("rocksdb.estimate-pending-compaction-bytes")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
+
         let num_running_compactions = self
             .db
             .property_value("rocksdb.num-running-compactions")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
-        let estimate_table_readers_mem = self
-            .db
-            .property_value("rocksdb.estimate-table-readers-mem")
-            .unwrap_or(Some("0".to_string()))
-            .unwrap_or_default();
+
         let estimate_table_readers_mem_cf = self
             .db
             .property_value_cf(cf, "rocksdb.estimate-table-readers-mem")
             .unwrap_or(Some("0".to_string()))
             .unwrap_or_default();
 
-        let sys = System::new_all();
-        let pid = std::process::id();
-        let process = sys.process(Pid::from_u32(pid)).unwrap();
-        let app_mem_mb = process.memory() / 1024;
-
-        let free_mem_mb = sys.free_memory() / 1024;
-        let total_mem_mb = sys.total_memory() / 1024;
-
-        println!("RocksDB Performance Stats");
-        println!("App memory: {} KB", app_mem_mb);
-        println!(
-            "RocksDB memtables: {} MB",
-            memtables.parse::<u64>().unwrap_or(0) / 1024 / 1024
-        );
-        println!(
-            "RocksDB block cache: {} MB ({} cf)",
-            block_cache.parse::<u64>().unwrap_or(0) / 1024 / 1024,
-            block_cache_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024
-        );
-        println!(
-            "Pending compaction bytes: {} MB",
-            pending_compaction.parse::<u64>().unwrap_or(0) / 1024 / 1024
-        );
-        println!("Running compactions: {}", num_running_compactions);
-        println!(
-            "System free memory: {} MB / {} MB",
-            free_mem_mb, total_mem_mb
-        );
-        println!(
-            "Estimate table readers mem: {} ({} cf)",
-            estimate_table_readers_mem.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+        info!(
+            "RocksDB stats: memtables {}MB, blockcache {}MB, compact pending {}MB running {}, table readers {}MB",
+            memtables.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            block_cache_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            pending_compaction.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            num_running_compactions,
             estimate_table_readers_mem_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024
         );
-        println!("RocksDB stats:\n{}", rocks_stats);
+
+        info!("RocksDB stats:\n{}", rocks_stats);
     }
 }

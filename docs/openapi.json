@@ -15,9 +15,7 @@
   "paths": {
     "/addresses/{address}/runes/balances": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Rune Balances by Address",
         "description": "Returns total rune balances held in UTxOs controlled by the provided address, sorted by rune ID.",
         "operationId": "addresses_all_rune_balances",
@@ -59,7 +57,58 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneBalanceWithInfo"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"id\": \"30562:50\",\n      \"amount\": \"100000000\",\n      \"info\": {\n        \"id\": \"30562:50\",\n        \"name\": \"BESTINSLOTXYZ\",\n        \"spaced_name\": \"BESTINSLOT•XYZ\",\n        \"symbol\": \"ʃ\",\n        \"divisibility\": 8,\n        \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n        \"etching_height\": 30562,\n        \"terms\": {\n          \"amount\": \"100000000\",\n          \"cap\": \"3402823669209384634633746074316\",\n          \"start_height\": null,\n          \"end_height\": null\n        },\n        \"premine\": \"100000000\"\n      }\n    },\n    {\n      \"id\": \"63523:1\",\n      \"amount\": \"990000\",\n      \"info\": {\n        \"id\": \"63523:1\",\n        \"name\": \"JFMJFMJFMHHHAAA\",\n        \"spaced_name\": \"JFMJFMJFMHHHAAA\",\n        \"symbol\": \"J\",\n        \"divisibility\": 2,\n        \"etching_tx\": \"3bcc9e8f8eaf120ea5af65a378925b703f6fb1960435629eef5cb5900c19bec9\",\n        \"etching_height\": 63523,\n        \"terms\": {\n          \"amount\": \"100000\",\n          \"cap\": \"100\",\n          \"start_height\": 63515,\n          \"end_height\": null\n        },\n        \"premine\": \"1000000\"\n      }\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": [
+                    {
+                      "amount": "100000000",
+                      "id": "30562:50",
+                      "info": {
+                        "divisibility": 8,
+                        "etching_height": 30562,
+                        "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                        "id": "30562:50",
+                        "name": "BESTINSLOTXYZ",
+                        "premine": "100000000",
+                        "spaced_name": "BESTINSLOT•XYZ",
+                        "symbol": "ʃ",
+                        "terms": {
+                          "amount": "100000000",
+                          "cap": "3402823669209384634633746074316",
+                          "end_height": null,
+                          "start_height": null
+                        }
+                      }
+                    },
+                    {
+                      "amount": "990000",
+                      "id": "63523:1",
+                      "info": {
+                        "divisibility": 2,
+                        "etching_height": 63523,
+                        "etching_tx": "3bcc9e8f8eaf120ea5af65a378925b703f6fb1960435629eef5cb5900c19bec9",
+                        "id": "63523:1",
+                        "name": "JFMJFMJFMHHHAAA",
+                        "premine": "1000000",
+                        "spaced_name": "JFMJFMJFMHHHAAA",
+                        "symbol": "J",
+                        "terms": {
+                          "amount": "100000",
+                          "cap": "100",
+                          "end_height": null,
+                          "start_height": 63515
+                        }
+                      }
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -77,9 +126,7 @@
     },
     "/addresses/{address}/runes/balances/{rune}": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Rune Balance by Address and Rune",
         "description": "Returns the total amount of the provided rune kind held in UTxOs controlled by the provided address.",
         "operationId": "addresses_specific_rune_balance",
@@ -122,7 +169,17 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_String"
                 },
-                "example": "{\n  \"data\": \"100000000\",\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": "100000000",
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -140,9 +197,7 @@
     },
     "/addresses/{address}/runes/txs/{txid}": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Rune Edicts by Address and Transaction",
         "operationId": "addresses_runes_by_tx",
         "parameters": [
@@ -184,7 +239,24 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneEdict"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"rune_id\": \"30562:50\",\n      \"amount\": \"100000000\",\n      \"output\": 1,\n      \"block_height\": 30562\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": [
+                    {
+                      "amount": "100000000",
+                      "block_height": 30562,
+                      "output": 1,
+                      "rune_id": "30562:50"
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -202,9 +274,7 @@
     },
     "/addresses/{address}/runes/utxos": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Rune UTxOs by Address",
         "description": "Returns all UTxOs controlled by the provided address which contain runes, sorted by height.",
         "operationId": "addresses_all_rune_utxos",
@@ -237,7 +307,30 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": [
+                    {
+                      "height": 30562,
+                      "output_index": 1,
+                      "runes": [
+                        {
+                          "amount": "100000000",
+                          "id": "30562:50"
+                        }
+                      ],
+                      "satoshis": "10000",
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -255,9 +348,7 @@
     },
     "/addresses/{address}/runes/utxos/{rune}": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Rune UTxOs by Address and Rune",
         "description": "Returns UTxOs controlled by the provided address which contain the provided rune, sorted by height.",
         "operationId": "addresses_specific_rune_utxos",
@@ -300,7 +391,30 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_RuneUtxo"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\",\n      \"runes\": [\n        {\n          \"id\": \"30562:50\",\n          \"amount\": \"100000000\"\n        }\n      ]\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": [
+                    {
+                      "height": 30562,
+                      "output_index": 1,
+                      "runes": [
+                        {
+                          "amount": "100000000",
+                          "id": "30562:50"
+                        }
+                      ],
+                      "satoshis": "10000",
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -318,9 +432,7 @@
     },
     "/addresses/{address}/tx_count": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "Transaction Count by Address",
         "description": "Returns the number of transactions in which the address controlled an input or output",
         "operationId": "addresses_tx_count_by_address",
@@ -353,7 +465,17 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_u64"
                 },
-                "example": "{\n  \"data\": 21086,\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"0000000004af5483f4e54ebf8f1d728b003d19ebc184761b82c50b8e86ec2a0a\",\n      \"block_height\": 91625\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": 21086,
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "0000000004af5483f4e54ebf8f1d728b003d19ebc184761b82c50b8e86ec2a0a",
+                      "block_height": 91625
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -371,9 +493,7 @@
     },
     "/addresses/{address}/utxos": {
       "get": {
-        "tags": [
-          "Addresses"
-        ],
+        "tags": ["Addresses"],
         "summary": "UTxOs by Address",
         "description": "Returns UTxOs controlled by the provided address, sorted by height.",
         "operationId": "addresses_utxos_by_address",
@@ -406,7 +526,24 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_Vec_AddressUtxo"
                 },
-                "example": "{\n  \"data\": [\n    {\n      \"tx_hash\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"output_index\": 1,\n      \"height\": 30562,\n      \"satoshis\": \"10000\"\n    }\n  ],\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": [
+                    {
+                      "height": 30562,
+                      "output_index": 1,
+                      "satoshis": "10000",
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -424,9 +561,7 @@
     },
     "/runes/info": {
       "post": {
-        "tags": [
-          "Runes (Metaprotocol)"
-        ],
+        "tags": ["Runes (Metaprotocol)"],
         "summary": "Info by Rune (Batch)",
         "description": "Given a list of rune identifiers (name or id), returns a map of identifiers to rune info (or null if no info found).",
         "operationId": "runes_rune_info_batch",
@@ -450,10 +585,7 @@
                   "type": "string"
                 }
               },
-              "example": [
-                "BESTINSLOTXYZ",
-                "ABCDEF"
-              ]
+              "example": ["BESTINSLOTXYZ", "ABCDEF"]
             }
           },
           "required": true
@@ -466,7 +598,35 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_HashMap_String_Option_RuneInfo"
                 },
-                "example": "{\n  \"data\": {\n    \"30562:50\": {\n      \"id\": \"30562:50\",\n      \"name\": \"BESTINSLOTXYZ\",\n      \"spaced_name\": \"BESTINSLOT•XYZ\",\n      \"symbol\": \"ʃ\",\n      \"divisibility\": 8,\n      \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n      \"etching_height\": 30562,\n      \"terms\": {\n        \"amount\": \"100000000\",\n        \"cap\": \"3402823669209384634633746074316\",\n        \"start_height\": null,\n        \"end_height\": null\n      },\n      \"premine\": \"100000000\"\n    },\n    \"ABCDEF\": null\n  },\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": {
+                    "30562:50": {
+                      "divisibility": 8,
+                      "etching_height": 30562,
+                      "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                      "id": "30562:50",
+                      "name": "BESTINSLOTXYZ",
+                      "premine": "100000000",
+                      "spaced_name": "BESTINSLOT•XYZ",
+                      "symbol": "ʃ",
+                      "terms": {
+                        "amount": "100000000",
+                        "cap": "3402823669209384634633746074316",
+                        "end_height": null,
+                        "start_height": null
+                      }
+                    },
+                    "ABCDEF": null
+                  },
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -484,9 +644,7 @@
     },
     "/runes/{rune}": {
       "get": {
-        "tags": [
-          "Runes (Metaprotocol)"
-        ],
+        "tags": ["Runes (Metaprotocol)"],
         "summary": "Info by Rune",
         "description": "Given a rune identifier (name or id), returns the rune info.",
         "operationId": "rune_info",
@@ -518,7 +676,32 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_RuneInfo"
                 },
-                "example": "{\n  \"data\": {\n    \"id\": \"30562:50\",\n    \"name\": \"BESTINSLOTXYZ\",\n    \"spaced_name\": \"BESTINSLOT•XYZ\",\n    \"symbol\": \"ʃ\",\n    \"divisibility\": 8,\n    \"etching_tx\": \"63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121\",\n    \"etching_height\": 30562,\n    \"terms\": {\n      \"amount\": \"100000000\",\n      \"cap\": \"3402823669209384634633746074316\",\n      \"start_height\": null,\n      \"end_height\": null\n    },\n    \"premine\": \"100000000\"\n  },\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": {
+                    "divisibility": 8,
+                    "etching_height": 30562,
+                    "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                    "id": "30562:50",
+                    "name": "BESTINSLOTXYZ",
+                    "premine": "100000000",
+                    "spaced_name": "BESTINSLOT•XYZ",
+                    "symbol": "ʃ",
+                    "terms": {
+                      "amount": "100000000",
+                      "cap": "3402823669209384634633746074316",
+                      "end_height": null,
+                      "start_height": null
+                    }
+                  },
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -534,11 +717,9 @@
         }
       }
     },
-    "/{rune}/utxos/{utxo}/balance": {
+    "/runes/{rune}/utxos/{utxo}/balance": {
       "get": {
-        "tags": [
-          "Runes (Metaprotocol)"
-        ],
+        "tags": ["Runes (Metaprotocol)"],
         "summary": "Rune Balance by UTXO and Rune",
         "description": "Returns the amount of the specified rune contained in the provided UTXO. If the rune is not\npresent in the UTXO, `0` is returned.",
         "operationId": "rune_balance_at_utxo",
@@ -581,7 +762,17 @@
                 "schema": {
                   "$ref": "#/components/schemas/ServeResponse_String"
                 },
-                "example": "{\n  \"data\": \"100000000\",\n  \"indexer_info\": {\n    \"chain_tip\": {\n      \"block_hash\": \"00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef\",\n      \"block_height\": 31633\n    },\n    \"mempool_timestamp\": null,\n    \"estimated_blocks\": []\n  }\n}"
+                "example": {
+                  "data": "100000000",
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
+                      "block_height": 31633
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  }
+                }
               }
             }
           },
@@ -602,12 +793,7 @@
     "schemas": {
       "AddressUtxo": {
         "type": "object",
-        "required": [
-          "tx_hash",
-          "output_index",
-          "height",
-          "satoshis"
-        ],
+        "required": ["tx_hash", "output_index", "height", "satoshis"],
         "properties": {
           "height": {
             "type": "integer",
@@ -629,10 +815,7 @@
       },
       "ChainTip": {
         "type": "object",
-        "required": [
-          "block_hash",
-          "block_height"
-        ],
+        "required": ["block_hash", "block_height"],
         "properties": {
           "block_hash": {
             "type": "string",
@@ -648,9 +831,7 @@
       },
       "EstimatedBlock": {
         "type": "object",
-        "required": [
-          "block_height"
-        ],
+        "required": ["block_height"],
         "properties": {
           "block_height": {
             "type": "integer",
@@ -661,10 +842,7 @@
       },
       "IndexerInfo": {
         "type": "object",
-        "required": [
-          "chain_tip",
-          "estimated_blocks"
-        ],
+        "required": ["chain_tip", "estimated_blocks"],
         "properties": {
           "chain_tip": {
             "$ref": "#/components/schemas/ChainTip",
@@ -678,10 +856,7 @@
             "description": "Information about any estimated blocks from the mempool that were indexed in addition to the mainchain"
           },
           "mempool_timestamp": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": ["string", "null"],
             "description": "Timestamp of the indexed mempool snapshot, if any estimated blocks from the mempool have been indexed"
           }
         }
@@ -696,10 +871,7 @@
       },
       "RuneAndAmount": {
         "type": "object",
-        "required": [
-          "id",
-          "amount"
-        ],
+        "required": ["id", "amount"],
         "properties": {
           "amount": {
             "type": "string"
@@ -711,10 +883,7 @@
       },
       "RuneBalanceWithInfo": {
         "type": "object",
-        "required": [
-          "id",
-          "amount"
-        ],
+        "required": ["id", "amount"],
         "properties": {
           "amount": {
             "type": "string"
@@ -747,11 +916,7 @@
       },
       "RuneEdict": {
         "type": "object",
-        "required": [
-          "rune_id",
-          "amount",
-          "block_height"
-        ],
+        "required": ["rune_id", "amount", "block_height"],
         "properties": {
           "amount": {
             "type": "string"
@@ -762,10 +927,7 @@
             "minimum": 0
           },
           "output": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "format": "int32",
             "minimum": 0
           },
@@ -812,10 +974,7 @@
             "type": "string"
           },
           "symbol": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "terms": {
             "oneOf": [
@@ -833,30 +992,18 @@
         "type": "object",
         "properties": {
           "amount": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "cap": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": ["string", "null"]
           },
           "end_height": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "format": "int64",
             "minimum": 0
           },
           "start_height": {
-            "type": [
-              "integer",
-              "null"
-            ],
+            "type": ["integer", "null"],
             "format": "int64",
             "minimum": 0
           }
@@ -864,13 +1011,7 @@
       },
       "RuneUtxo": {
         "type": "object",
-        "required": [
-          "tx_hash",
-          "output_index",
-          "height",
-          "satoshis",
-          "runes"
-        ],
+        "required": ["tx_hash", "output_index", "height", "satoshis", "runes"],
         "properties": {
           "height": {
             "type": "integer",
@@ -898,19 +1039,11 @@
       },
       "ServeResponse_AddressUtxo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "object",
-            "required": [
-              "tx_hash",
-              "output_index",
-              "height",
-              "satoshis"
-            ],
+            "required": ["tx_hash", "output_index", "height", "satoshis"],
             "properties": {
               "height": {
                 "type": "integer",
@@ -937,10 +1070,7 @@
       },
       "ServeResponse_HashMap_String_Option_RuneInfo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "object",
@@ -987,10 +1117,7 @@
                       "type": "string"
                     },
                     "symbol": {
-                      "type": [
-                        "string",
-                        "null"
-                      ]
+                      "type": ["string", "null"]
                     },
                     "terms": {
                       "oneOf": [
@@ -1017,10 +1144,7 @@
       },
       "ServeResponse_RuneInfo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "object",
@@ -1060,10 +1184,7 @@
                 "type": "string"
               },
               "symbol": {
-                "type": [
-                  "string",
-                  "null"
-                ]
+                "type": ["string", "null"]
               },
               "terms": {
                 "oneOf": [
@@ -1084,10 +1205,7 @@
       },
       "ServeResponse_String": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "string"
@@ -1099,21 +1217,13 @@
       },
       "ServeResponse_Vec_AddressUtxo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "tx_hash",
-                "output_index",
-                "height",
-                "satoshis"
-              ],
+              "required": ["tx_hash", "output_index", "height", "satoshis"],
               "properties": {
                 "height": {
                   "type": "integer",
@@ -1141,19 +1251,13 @@
       },
       "ServeResponse_Vec_RuneAndAmount": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "id",
-                "amount"
-              ],
+              "required": ["id", "amount"],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1171,19 +1275,13 @@
       },
       "ServeResponse_Vec_RuneBalanceWithInfo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "id",
-                "amount"
-              ],
+              "required": ["id", "amount"],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1211,20 +1309,13 @@
       },
       "ServeResponse_Vec_RuneEdict": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": [
-                "rune_id",
-                "amount",
-                "block_height"
-              ],
+              "required": ["rune_id", "amount", "block_height"],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1235,10 +1326,7 @@
                   "minimum": 0
                 },
                 "output": {
-                  "type": [
-                    "integer",
-                    "null"
-                  ],
+                  "type": ["integer", "null"],
                   "format": "int32",
                   "minimum": 0
                 },
@@ -1255,10 +1343,7 @@
       },
       "ServeResponse_Vec_RuneUtxo": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "array",
@@ -1304,10 +1389,7 @@
       },
       "ServeResponse_u64": {
         "type": "object",
-        "required": [
-          "data",
-          "indexer_info"
-        ],
+        "required": ["data", "indexer_info"],
         "properties": {
           "data": {
             "type": "integer",

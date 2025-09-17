@@ -80,7 +80,7 @@ impl Config {
     }
 
     /// Get the RocksDB memory budget from storage config or return the default value
-    pub fn rocksdb_memory_budget(&self) -> u64 {
+    pub fn rocksdb_memory_budget(&self) -> Option<u64> {
         self.storage
             .as_ref()
             .map(|s| s.rocksdb_memory_budget_bytes())

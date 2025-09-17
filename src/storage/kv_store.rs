@@ -15,6 +15,7 @@ use tracing::{info, trace, warn};
 use crate::{
     error::Error,
     storage::{
+        default_rocksdb_memory_budget,
         encdec::encode::VarUIntEncoded,
         merge_operation::{
             MergeOperation, apply_merge_to_value, combine_merge_operations, create_merge_operator,
@@ -338,7 +339,7 @@ pub struct StorageHandler {
 }
 
 impl StorageHandler {
-    pub fn open(path: PathBuf, read_only: bool, memory_budget: u64) -> Self {
+    pub fn open(path: PathBuf, read_only: bool, config_memory_budget: Option<u64>) -> Self {
         info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
@@ -347,6 +348,8 @@ impl StorageHandler {
         // Enable RocksDB statistics for monitoring
         db_opts.enable_statistics();
         db_opts.set_report_bg_io_stats(true);
+
+        let memory_budget = config_memory_budget.unwrap_or(default_rocksdb_memory_budget());
 
         info!(
             "using rocksdb memory budget: {:.2} GB ({} bytes)",
@@ -381,6 +384,12 @@ impl StorageHandler {
 
         block_opts.set_block_cache(&cache);
         cf_opts.set_block_based_table_factory(&block_opts);
+
+        // if memory budget has been provided, force index and filters into block cache to bound
+        // memory usage.
+        if config_memory_budget.is_some() {
+            block_opts.set_cache_index_and_filter_blocks(true);
+        }
 
         // 2 memtables, max 512MB each
         cf_opts.set_write_buffer_size(write_buffer_size as usize);

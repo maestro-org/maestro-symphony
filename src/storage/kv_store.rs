@@ -113,11 +113,16 @@ impl<'a> IndexingTask<'a> {
             }
         }
 
+        to_fetch.sort_by(|(_, a), (_, b)| a.cmp(b));
+
         let mut read_opts = ReadOptions::default();
         read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
+        read_opts.set_async_io(true);
 
-        let fetched = self.db.multi_get_cf_opt(
-            to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)),
+        let fetched = self.db.batched_multi_get_cf_opt(
+            self.cf_handle,
+            to_fetch.iter().map(|(_, enc_k)| enc_k),
+            true,
             &read_opts,
         );
 
@@ -348,12 +353,6 @@ impl StorageHandler {
         db_opts.set_report_bg_io_stats(true);
 
         let memory_budget = config_memory_budget.unwrap_or(default_rocksdb_memory_budget());
-
-        info!(
-            "using rocksdb memory budget: {:.2} GB ({} bytes)",
-            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
-            memory_budget
-        );
 
         let memtable_budget = (memory_budget as f64 * 0.25) as u64;
         let per_memtable_cap = 512 * 1024 * 1024;

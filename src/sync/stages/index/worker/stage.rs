@@ -255,13 +255,19 @@ impl gasket::framework::Worker<Stage> for Worker {
                 /* check received block against processed chain */
 
                 let expected_height = stage.last_processed.height + 1;
-                if point.height != expected_height {
+                if point.height < expected_height {
                     // TODO: if pull stage panics, and there are blocks in the pull -> index queue, we may receive old blocks
                     warn!(
-                        "received roll forward for point {}:{} as expecting height {expected_height}...",
+                        "received roll forward for point {}:{} but expecting height {expected_height}...",
                         point.height, point.hash
                     );
                     return Ok(());
+                } else if point.height > expected_height {
+                    warn!(
+                        "received roll forward for point {}:{} but expecting height {expected_height}...",
+                        point.height, point.hash
+                    );
+                    return Err(WorkerError::Panic);
                 }
 
                 let expected_prev_bh = stage.last_processed.hash;

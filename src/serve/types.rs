@@ -39,12 +39,27 @@ pub struct MempoolParam {
     pub mempool: bool,
 }
 
+#[derive(Deserialize, ToSchema)]
+pub struct RuneBalancesParam {
+    #[serde(default)]
+    pub mempool: bool,
+    #[serde(default)]
+    pub include_info: bool,
+}
+
 // -- endpoint types
 
 #[derive(Serialize, ToSchema)]
 pub struct RuneAndAmount {
     pub id: String,
     pub amount: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct RuneBalanceWithInfo {
+    pub id: String,
+    pub amount: String,
+    pub info: Option<RuneInfo>,
 }
 
 #[derive(Serialize, ToSchema)]

@@ -1,5 +1,3 @@
-/// Result type for multi_get: a vector of (key, Option<value>) pairs.
-pub type MultiGetResult<K, V> = Vec<(K, Option<V>)>;
 use std::{collections::HashMap, ops::Range, path::PathBuf, sync::Arc};
 
 use bitcoin::hashes::Hash;
@@ -10,7 +8,7 @@ use rocksdb::{
     WriteBatch, WriteOptions,
 };
 use sysinfo::{Pid, System};
-use tracing::{info, trace, warn};
+use tracing::{error, info, trace, warn};
 
 use crate::{
     error::Error,
@@ -501,6 +499,8 @@ impl StorageHandler {
     ) -> Result<(), Error> {
         let mut wb = WriteBatch::new();
 
+        let prev_ts = self.previous_timestamp;
+
         let commit_ts = self
             .previous_timestamp
             .map(Timestamp::after)
@@ -575,7 +575,9 @@ impl StorageHandler {
 
         if !task.mempool {
             // allow data for blocks before this confirmed block to be GC'd
-            self.db.increase_full_history_ts_low(cf, ts)?;
+            if let Err(e) = self.db.increase_full_history_ts_low(cf, ts) {
+                error!("failed to increase gc safepoint: {commit_ts:?} {prev_ts:?} {e}")
+            }
         }
 
         self.previous_timestamp = Some(commit_ts);
@@ -655,6 +657,8 @@ impl Reader {
         TableIterator::<T>::new(iter)
     }
 }
+
+pub type MultiGetResult<K, V> = Vec<(K, Option<V>)>;
 
 pub enum StorageAction {
     Set(RawValue),

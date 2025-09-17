@@ -26,6 +26,7 @@ use utoipa::OpenApi;
         addresses::utxos_by_address::addresses_utxos_by_address,
         addresses::tx_count_by_address::addresses_tx_count_by_address,
         runes::rune_info_batch::runes_rune_info_batch,
+        runes::rune_info::rune_info,
         runes::rune_balance_at_utxo::rune_balance_at_utxo,
     ),
     components(schemas(
@@ -33,8 +34,10 @@ use utoipa::OpenApi;
         ChainTip,
         EstimatedBlock,
         MempoolParam,
+        RuneBalancesParam,
         // --
         ServeResponse<Vec<RuneAndAmount>>,
+        ServeResponse<Vec<RuneBalanceWithInfo>>,
         ServeResponse<Vec<RuneUtxo>>,
         ServeResponse<Vec<RuneEdict>>,
         ServeResponse<String>,
@@ -42,10 +45,12 @@ use utoipa::OpenApi;
         ServeResponse<HashMap<String, Option<RuneInfo>>>,
         // ---
         RuneAndAmount,
+        RuneBalanceWithInfo,
         RuneUtxo,
         RuneEdict,
         AddressUtxo,
         RuneInfo,
+        RuneTerms,
     )),
 )]
 pub struct APIDoc;

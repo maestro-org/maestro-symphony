@@ -82,7 +82,7 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 ---
 
-## Configuration
+### Configuration
 
 Below is a table describing the main configuration options for `maestro-symphony`. See the example configuration for context.
 
@@ -105,35 +105,15 @@ See [examples](examples/) to quickly get started.
 
 ---
 
-## Quick Start with Snapshots
+## Deployment
 
-Skip the initial chain sync by using pre-synced snapshots:
+### Quick Start with Snapshots
 
-**Snapshots:**
-
-#### Bitcoin
-
-Mainnet: https://snapshots.gomaestro.org/bitcoin-node/mainnet/snapshots/20250826.tar.lz4
-Testnet: https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4
-
-#### Symphony
-
-Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250826.tar.lz4
-Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4
-
-```bash
-# Download and extract Symphony snapshot
-curl -L https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250827.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/symphony
-
-# Download and extract Bitcoin node snapshot
-curl -L https://snapshots.gomaestro.org/bitcoin-node/testnet/snapshots/20250827.tar.lz4 | lz4 -d | tar -xf - -C ~/path/to/bitcoin-data
-```
-
-For more detailed instructions, refer to our [Snapshot Setup Guide](docs/guides/setup-with-snapshot.md).
+See instructions [here](docs/guides/setup-with-snapshot.md).
 
 ---
 
-## Running Locally
+### Running Locally
 
 Optionally, use `mise` to easily set up your environment:
 
@@ -141,31 +121,31 @@ Optionally, use `mise` to easily set up your environment:
 mise install
 ```
 
-### Build
+#### Build
 
 ```bash
 make build
 ```
 
-### Sync & Serve
+#### Sync & Serve
 
 ```bash
 make run [CONFIG=examples/testnet.toml]
 ```
 
-### Sync Only
+#### Sync Only
 
 ```bash
 make sync [CONFIG=examples/testnet.toml]
 ```
 
-### Serve Only
+#### Serve Only
 
 ```bash
 make serve [CONFIG=examples/testnet.toml]
 ```
 
-### Generate OpenAPI
+#### Generate OpenAPI
 
 ```bash
 make openapi
@@ -173,15 +153,15 @@ make openapi
 
 ---
 
-## Running with Docker
+### Running with Docker
 
-### Start
+#### Start
 
 ```bash
 make compose-up
 ```
 
-### Stop
+#### Stop
 
 ```bash
 make compose-down

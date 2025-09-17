@@ -359,11 +359,6 @@ impl gasket::framework::Worker<Stage> for Worker {
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
 
-                if timings.total.as_secs() >= 10 {
-                    warn!("Block processed slowly, dumping RocksDB metrics...");
-                    stage.db.print_perf_snapshot();
-                }
-
                 // Calculate sync percentage
                 let progress = if tip.height > 0 {
                     (point.height as f64 / tip.height as f64 * 100.0).min(100.0)
@@ -520,11 +515,6 @@ impl gasket::framework::Worker<Stage> for Worker {
                 // Record total time and log timings
                 timings.total = total_start.elapsed();
 
-                if timings.total.as_secs() >= 10 {
-                    warn!("Mempool blocks processed slowly, dumping RocksDB metrics...");
-                    stage.db.print_perf_snapshot();
-                }
-
                 // Log mempool indexing completion
                 info!(
                     blocks = mempool_blocks.len(),
@@ -534,8 +524,6 @@ impl gasket::framework::Worker<Stage> for Worker {
                     cache = ?stage.utxo_cache.as_ref().map(|x| x.log()),
                     "indexed mempool blocks",
                 );
-
-                // TODO delta refresh
             }
         };
 

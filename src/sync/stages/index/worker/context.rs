@@ -178,11 +178,15 @@ pub struct Stats {
 
 impl Stats {
     pub fn log(&self) -> String {
-        format!(
-            "{}/{}({}%)",
-            self.cache_hits,
-            self.resolved,
-            ((self.cache_hits as f64 / self.resolved as f64) * 100.0) as u64
-        )
+        if self.resolved == 0 {
+            format!("{}/{}(N/A%)", self.cache_hits, self.resolved)
+        } else {
+            format!(
+                "{}/{}({}%)",
+                self.cache_hits,
+                self.resolved,
+                ((self.cache_hits as f64 / self.resolved as f64) * 100.0) as u64
+            )
+        }
     }
 }

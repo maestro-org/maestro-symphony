@@ -85,20 +85,20 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 ### Configuration
 
 Below is a table describing the main configuration options for `maestro-symphony`. See the example configuration for context.
-| Section           | Key/Field              | Description                                                | Example Value             |
+| Section | Key/Field | Description | Example Value |
 | ----------------- | ---------------------- | ---------------------------------------------------------- | ------------------------- |
-| _root_            | `db_path`              | Path to the database directory                             | `"tmp/symphony"`          |
-| `[sync.node]`     | `p2p_address`          | Host/IP and port for P2P connection to Bitcoin node        | `"localhost:8333"`        |
-|                   | `rpc_address`          | URL of your Bitcoin node's RPC endpoint                    | `"http://localhost:8332"` |
-|                   | `rpc_user`             | RPC username for your Bitcoin node                         | `"bitcoin"`               |
-|                   | `rpc_pass`             | RPC password for your Bitcoin node                         | `"password"`              |
-| `[sync]`          | `network`              | Bitcoin network to connect to (`mainnet`, `testnet4`)      | `"mainnet"`               |
-|                   | `max_rollback`         | Number of rollbacked blocks from tip that can be handled   | `32`                      |
-|                   | `mempool`              | Enable mempool awareness                                   | `true`                    |
-|                   | `utxo_cache_size`      | Memory in GB to allocate to UTxO cache (default 40% RAM)   | `1.0`                     |
-| `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options                 | See example below         |
-| `[server]`        | `address`              | Address and port for API server to listen on               | `"0.0.0.0:8080"`          |
-| `[storage]`       | `rocksdb_memory_budget`| Bound RocksDB memory usage in GB (default 25% RAM + ~2% DB)| `3.0`                     |
+| _root_ | `db_path` | Path to the database directory | `"tmp/symphony"` |
+| `[sync.node]` | `p2p_address` | Host/IP and port for P2P connection to Bitcoin node | `"localhost:8333"` |
+| | `rpc_address` | URL of your Bitcoin node's RPC endpoint | `"http://localhost:8332"` |
+| | `rpc_user` | RPC username for your Bitcoin node | `"bitcoin"` |
+| | `rpc_pass` | RPC password for your Bitcoin node | `"password"` |
+| `[sync]` | `network` | Bitcoin network to connect to (`mainnet`, `testnet4`) | `"mainnet"` |
+| | `max_rollback` | Number of rollbacked blocks from tip that can be handled | `32` |
+| | `mempool` | Enable mempool awareness | `true` |
+| | `utxo_cache_size` | Memory in GB to allocate to UTxO cache (default 40% RAM) | `1.0` |
+| `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options | See example below |
+| `[server]` | `address` | Address and port for API server to listen on | `"0.0.0.0:8080"` |
+| `[storage]` | `rocksdb_memory_budget`| Bound RocksDB memory usage in GB (default 25% RAM + ~2% DB)| `3.0` |
 
 See [examples](examples/) to quickly get started.
 
@@ -308,6 +308,18 @@ curl -X GET "http://localhost:8080/addresses/<ADDRESS>/runes/tx/<TXID>" | jq .
     }
 }
 ```
+
+---
+
+## Security
+
+Maestro Symphony has undergone professional security audits to ensure the safety and reliability of the codebase.
+
+### Audit Reports
+
+-   **[Thesis Defense Security Audit (September 2025)](docs/audits/Thesis-Defense-audit-9-18-25.pdf)** - Independent security assessment of the core indexing and API components.
+
+For reporting security vulnerabilities, please see our [Security Policy](SECURITY.md).
 
 ---
 

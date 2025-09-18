@@ -9,13 +9,12 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
 
 <img src="https://github.com/maestro-org/maestro-symphony/raw/main/logo/logo.png" width="100">
+
 ---
 
 ## Overview
 
 Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin indexer and API server. It provides a framework for indexing UTXOs, metaprotocols, and any other onchain activity.
-
-**WARNING:** Symphony has not been battle-tested in production. Use at your own risk.
 
 ---
 
@@ -33,62 +32,17 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 <details>
 <summary><strong>Indexers</strong></summary>
 
-### Runes
-Indexes Bitcoin Runes metaprotocol data including rune definitions, balances, and UTXOs.
-
-**Configuration Options:**
-- `start_height` (optional): Block height to start indexing from. Default: `0`. For mainnet, use `840000` (runes activation height).
-- `index_activity` (optional): Enable transaction-level rune activity logging. Default: `false`. Required for the `/addresses/{address}/runes/txs/{txid}` endpoint.
-- `commitment_confirmations` (optional): Override default confirmations required for rune commitment.
-
-**Required for endpoints:**
-- `GET /addresses/{address}/runes/balances`
-- `GET /addresses/{address}/runes/balances/{rune}`
-- `GET /addresses/{address}/runes/txs/{txid}` (requires `index_activity = true`)
-- `GET /addresses/{address}/runes/utxos`
-- `GET /addresses/{address}/runes/utxos/{rune}`
-- `POST /runes/info`
-- `GET /runes/{rune}/info`
-- `GET /runes/{rune}/balance/utxo/{txid}/{vout}`
-
-**Example configuration:**
-```toml
-{ type = "Runes", start_height = 840000, index_activity = true }
-```
-
-### Transaction count by address
-Indexes the number of transactions per address.
-
-**Configuration Options:** None
-
-**Required for endpoints:**
-- `GET /addresses/{address}/txs/count`
-
-**Example configuration:**
-```toml
-{ type = "TxCountByAddress" }
-```
-
-### UTXOs by address
-Indexes unspent transaction outputs by address.
-
-**Configuration Options:** None
-
-**Required for endpoints:**
-- `GET /addresses/{address}/utxos`
-
-**Example configuration:**
-```toml
-{ type = "UtxosByAddress" }
-```
+-   Runes
+-   Transaction count by address
+-   UTXOs by address
 
 </details>
 
 **Endpoints:** [OpenAPI](docs/openapi.json)
 
-**Rollback Handling:** Symphony can reverse at most `max_rollbacks` (configurable) blocks from the most recently processed block. If a rollback of more than `max_rollbacks` is encountered the data will be corrupted. Therefore you should set `max_rollbacks` to the maximum size of a rollback you expect to see on the network. Increasing `max_rollbacks` will slightly increase storage and memory usage. We recommend `max_rollbacks = 32` for mainnet and `max_rollbacks = 256` for other networks.
+**Mempool Awareness:** Query any endpoint with `?mempool=true` to include pending transactions.
 
-**Mempool Awareness:** Query any endpoint with `?mempool=true` to receive data which reflects pending transactions.
+**Rollback Handling:** Always maintains an index of the longest chain.
 
 ---
 
@@ -107,7 +61,7 @@ Indexes unspent transaction outputs by address.
 <details>
 <summary><strong>Testnet4</strong></summary>
 
--   Disk: 5 GB
+-   Disk: 4 GB
 -   CPU: 2 cores
 -   RAM: 4 GB
 -   Sync time: ~30 minutes
@@ -118,7 +72,7 @@ Indexes unspent transaction outputs by address.
 <summary><strong>Mainnet</strong></summary>
 
 -   Disk: 100 GB
--   CPU: 2 cores
+-   CPU: 4 cores
 -   RAM: 12 GB
 -   Sync time: ~4 days
 
@@ -128,24 +82,24 @@ Indexes unspent transaction outputs by address.
 
 ---
 
-## Configuration
+### Configuration
 
 Below is a table describing the main configuration options for `maestro-symphony`. See the example configuration for context.
 
-| Section           | Key/Field              | Description                                                | Example Value             |
-| ----------------- | ---------------------- | ---------------------------------------------------------- | ------------------------- |
-| _root_            | `db_path`              | Path to the database directory                             | `"tmp/symphony"`          |
-| `[sync.node]`     | `p2p_address`          | Host/IP and port for P2P connection to Bitcoin node        | `"localhost:8333"`        |
-|                   | `rpc_address`          | URL of your Bitcoin node's RPC endpoint                    | `"http://localhost:8332"` |
-|                   | `rpc_user`             | RPC username for your Bitcoin node                         | `"bitcoin"`               |
-|                   | `rpc_pass`             | RPC password for your Bitcoin node                         | `"password"`              |
-| `[sync]`          | `network`              | Bitcoin network to connect to (`mainnet`, `testnet4`)      | `"mainnet"`               |
-|                   | `max_rollback`         | Number of rollbacked blocks from tip that can be handled   | `32`                      |
-|                   | `mempool`              | Enable mempool awareness                                   | `true`                    |
-|                   | `utxo_cache_size`      | Memory in GB to allocate to UTxO cache (default 40% RAM)   | `1.0`                     |
-| `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options                 | See example below         |
-| `[server]`        | `address`              | Address and port for API server to listen on               | `"0.0.0.0:8080"`          |
-| `[storage]`       | `rocksdb_memory_budget`| Bound RocksDB memory usage in GB (default 25% RAM + ~2% DB)| `3.0`                     |
+| Section           | Key/Field              | Description                                               | Example Value             |
+| ----------------- | ---------------------- | --------------------------------------------------------- | ------------------------- |
+| _root_            | `db_path`              | Path to the database directory                            | `"tmp/symphony"`          |
+| `[sync.node]`     | `p2p_address`          | Host/IP and port for P2P connection to Bitcoin node       | `"localhost:8333"`        |
+|                   | `rpc_address`          | URL of your Bitcoin node's RPC endpoint                   | `"http://localhost:8332"` |
+|                   | `rpc_user`             | RPC username for your Bitcoin node                        | `"bitcoin"`               |
+|                   | `rpc_pass`             | RPC password for your Bitcoin node                        | `"password"`              |
+| `[sync]`          | `network`              | Bitcoin network to connect to (`mainnet`, `testnet4`)     | `"mainnet"`               |
+|                   | `max_rollback`         | Maximum blocks to roll back on reorg                      | `32`                      |
+|                   | `mempool`              | Enable mempool awareness                                  | `true`                    |
+|                   | `utxo_cache_size`      | Memory in GB to allocate to UTxO cache (default 10% RAM)  | `1.0`                     |
+| `[sync.indexers]` | `transaction_indexers` | List of enabled indexers and their options                | See example below         |
+| `[server]`        | `address`              | Address and port for API server to listen on              | `"0.0.0.0:8080"`          |
+| `[storage]`       | `rocksdb_memory_budget`| Memory in GB to allocate to RocksDB (default 30% RAM)     | `8.0`                     |
 
 See [examples](examples/) to quickly get started.
 

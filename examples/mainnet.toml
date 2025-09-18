@@ -1,8 +1,8 @@
 db_path = "/srv/symphony"
 
-[storage]
-# Total memory budget for RocksDB in GB (default 30% of available system memory)
-rocksdb_memory_budget = 2.0
+# [storage]
+# Size in GB to bound RocksDB memory usage (default 25% of memory + ~2% of DB size)
+# rocksdb_memory_budget = 2.0
 
 [sync.node]
 p2p_address = "bitcoin-node:8333"
@@ -16,8 +16,8 @@ rpc_pass = "symphony"
 network = "mainnet"
 max_rollback = 32
 mempool = true
-# Size in GB to use for UTxO cache (0 = disabled, default 10% of memory)
-utxo_cache_size = 0.5
+# Size in GB to bound UTxO cache (0 = disabled) (default 40% of memory)
+# utxo_cache_size = 0.5
 
 [sync.indexers]
 transaction_indexers = [

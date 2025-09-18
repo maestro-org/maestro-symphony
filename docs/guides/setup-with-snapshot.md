@@ -91,8 +91,8 @@ make compose-down
 
 Ensure sufficient disk space:
 
--   Testnet: ~1GB for Symphony + ~50GB for Bitcoin node
--   Mainnet: ~24GB for Symphony + ~600GB for Bitcoin node
+-   Testnet: ~5GB for Symphony + ~50GB for Bitcoin node
+-   Mainnet: ~100GB for Symphony + ~600GB for Bitcoin node
 
 ### Snapshot Age
 

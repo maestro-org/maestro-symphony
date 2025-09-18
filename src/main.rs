@@ -80,7 +80,7 @@ impl Config {
     }
 
     /// Get the RocksDB memory budget from storage config or return the default value
-    pub fn rocksdb_memory_budget(&self) -> u64 {
+    pub fn rocksdb_memory_budget(&self) -> Option<u64> {
         self.storage
             .as_ref()
             .map(|s| s.rocksdb_memory_budget_bytes())
@@ -135,6 +135,12 @@ async fn main() -> Result<(), ()> {
                 config.sync
             );
 
+            // Start RocksDB statistics logger
+            let stats_db = db.clone();
+            tokio::spawn(async move {
+                storage::stats_logger::start_stats_logger(stats_db).await;
+            });
+
             let daemon = sync::pipeline::pipeline(config.sync, db, None).unwrap();
 
             // Since daemon.block() is not async, run it in a separate thread
@@ -172,6 +178,12 @@ async fn main() -> Result<(), ()> {
             let db = StorageHandler::open(db_path.into(), false, config.rocksdb_memory_budget());
 
             info!("running symphony in sync+serve mode with config: {config:?}",);
+
+            // Start RocksDB statistics logger
+            let stats_db = db.clone();
+            tokio::spawn(async move {
+                storage::stats_logger::start_stats_logger(stats_db).await;
+            });
 
             let sync_db = db.clone();
 

@@ -4,14 +4,16 @@ use bitcoin::hashes::Hash;
 use itertools::Itertools;
 use maestro_symphony_macros::{Decode, Encode};
 use rocksdb::{
-    BlockBasedOptions, Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions,
-    WriteBatch, WriteBufferManager,
+    Cache, ColumnFamily, ColumnFamilyDescriptor, DB, Options, ReadOptions, SliceTransform,
+    WriteBatch, WriteOptions,
 };
+use sysinfo::System;
 use tracing::{error, info, trace};
 
 use crate::{
     error::Error,
     storage::{
+        default_rocksdb_memory_budget,
         encdec::encode::VarUIntEncoded,
         merge_operation::{
             MergeOperation, apply_merge_to_value, combine_merge_operations, create_merge_operator,
@@ -111,11 +113,16 @@ impl<'a> IndexingTask<'a> {
             }
         }
 
+        to_fetch.sort_by(|(_, a), (_, b)| a.cmp(b));
+
         let mut read_opts = ReadOptions::default();
         read_opts.set_timestamp(self.read_ts.as_rocksdb_ts());
+        read_opts.set_async_io(true);
 
-        let fetched = self.db.multi_get_cf_opt(
-            to_fetch.iter().map(|(_, enc_k)| (self.cf_handle, enc_k)),
+        let fetched = self.db.batched_multi_get_cf_opt(
+            self.cf_handle,
+            to_fetch.iter().map(|(_, enc_k)| enc_k),
+            true,
             &read_opts,
         );
 
@@ -335,49 +342,63 @@ pub struct StorageHandler {
 }
 
 impl StorageHandler {
-    pub fn open(path: PathBuf, read_only: bool, memory_budget: u64) -> Self {
+    pub fn open(path: PathBuf, read_only: bool, config_memory_budget: Option<u64>) -> Self {
         info!("opening db...");
         let mut db_opts = Options::default();
         db_opts.create_missing_column_families(true);
         db_opts.create_if_missing(true);
 
-        info!(
-            "using rocksdb memory budget: {:.2} GB ({} bytes)",
-            memory_budget as f64 / 1024.0 / 1024.0 / 1024.0,
-            memory_budget
-        );
+        // Enable RocksDB statistics for monitoring
+        db_opts.enable_statistics();
+        db_opts.set_report_bg_io_stats(true);
 
-        // Create a shared cache for both block cache and write buffer manager
-        let write_buffer_budget = (memory_budget as f64 * 0.3) as usize;
+        let memory_budget = config_memory_budget.unwrap_or(default_rocksdb_memory_budget());
 
-        let cache = Cache::new_lru_cache(memory_budget.try_into().unwrap());
-        let write_buffer_manager = WriteBufferManager::new_write_buffer_manager_with_cache(
-            write_buffer_budget,
-            false,
-            cache.clone(),
-        );
+        let memtable_budget = (memory_budget as f64 * 0.25) as u64;
+        let per_memtable_cap = 512 * 1024 * 1024;
+        let write_buffer_size = std::cmp::min(memtable_budget / 2, per_memtable_cap);
+        let memtable_budget = write_buffer_size * 2;
 
-        // Set the write buffer manager to control total memtable memory
-        db_opts.set_write_buffer_manager(&write_buffer_manager);
+        // remaining budget on block cache
+        let block_cache_budget = memory_budget - memtable_budget;
 
-        db_opts.set_max_background_jobs(2);
-        db_opts.set_advise_random_on_open(true);
+        let cache = Cache::new_lru_cache(block_cache_budget as usize);
 
-        db_opts.set_max_open_files(500);
-        db_opts.set_use_direct_reads(true);
-        db_opts.set_use_direct_io_for_flush_and_compaction(true);
+        let sys = System::new_all();
+        let cpus = sys.cpus().len() as u32;
+        let background_jobs = std::cmp::max(2, cpus);
+        db_opts.set_max_background_jobs(background_jobs.try_into().unwrap());
+        db_opts.set_max_subcompactions(cpus);
 
         let mut cf_opts = Options::default();
 
-        // Use the same cache for block cache in the column family
-        let mut block_opts = BlockBasedOptions::default();
+        let mut block_opts = rocksdb::BlockBasedOptions::default();
+
+        // 8KB block size instead of 4KB reduces index block size 2x
+        block_opts.set_block_size(8 * 1024);
+        // use jemmalloc friendly memory filters
+        block_opts.set_optimize_filters_for_memory(true);
+
         block_opts.set_block_cache(&cache);
-        block_opts.set_cache_index_and_filter_blocks(true);
-        block_opts.set_pin_l0_filter_and_index_blocks_in_cache(true);
         cf_opts.set_block_based_table_factory(&block_opts);
 
+        // if memory budget has been provided, force index and filters into block cache to bound
+        // memory usage.
+        if config_memory_budget.is_some() {
+            block_opts.set_cache_index_and_filter_blocks(true);
+        }
+
+        // 2 memtables, max 512MB each
+        cf_opts.set_write_buffer_size(write_buffer_size as usize);
         cf_opts.set_max_write_buffer_number(2);
         cf_opts.set_max_write_buffer_size_to_maintain(0);
+
+        // don't build bloom filters on last level if we expect most Gets() to find the key
+        // (which is the case for resolving utxos, a large amount of our Gets)
+        // TODO: if we move utxos to their own CF, we can disable this elsewhere
+        cf_opts.set_optimize_filters_for_hits(true);
+
+        cf_opts.set_prefix_extractor(SliceTransform::create_fixed_prefix(2));
 
         cf_opts.set_merge_operator(
             "extensible_merge",
@@ -528,7 +549,10 @@ impl StorageHandler {
         // TODO: hide within write batch wrapper? or use tx?
         wb.update_timestamps_with_size(ts, U64Timestamp::SIZE)?;
 
-        self.db.write(wb)?;
+        let mut wopts = WriteOptions::default();
+        wopts.disable_wal(true);
+
+        self.db.write_opt(wb, &wopts)?;
 
         if !task.mempool {
             // allow data for blocks before this confirmed block to be GC'd
@@ -635,5 +659,58 @@ impl From<Option<RawValue>> for PreviousValue {
             Some(value) => PreviousValue::Present(value),
             None => PreviousValue::NotPresent,
         }
+    }
+}
+
+impl StorageHandler {
+    pub fn print_perf_snapshot(&self) {
+        let cf = self.cf_handle();
+
+        let rocks_stats = self
+            .db
+            .property_value_cf(cf, "rocksdb.stats")
+            .unwrap_or(Some("N/A".to_string()))
+            .unwrap_or_default();
+
+        let memtables = self
+            .db
+            .property_value_cf(cf, "rocksdb.cur-size-all-mem-tables")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        let block_cache_cf = self
+            .db
+            .property_value_cf(cf, "rocksdb.block-cache-usage")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        let pending_compaction = self
+            .db
+            .property_value("rocksdb.estimate-pending-compaction-bytes")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        let num_running_compactions = self
+            .db
+            .property_value("rocksdb.num-running-compactions")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        let estimate_table_readers_mem_cf = self
+            .db
+            .property_value_cf(cf, "rocksdb.estimate-table-readers-mem")
+            .unwrap_or(Some("0".to_string()))
+            .unwrap_or_default();
+
+        info!(
+            "RocksDB stats: memtables {}MB, blockcache {}MB, compact pending {}MB running {}, table readers {}MB",
+            memtables.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            block_cache_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            pending_compaction.parse::<u64>().unwrap_or(0) / 1024 / 1024,
+            num_running_compactions,
+            estimate_table_readers_mem_cf.parse::<u64>().unwrap_or(0) / 1024 / 1024
+        );
+
+        info!("RocksDB stats:\n{}", rocks_stats);
     }
 }

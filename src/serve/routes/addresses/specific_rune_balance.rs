@@ -30,7 +30,7 @@ use std::str::FromStr;
             status = 200,
             description = "Requested data",
             body = ServeResponse<String>,
-            example = json!(EXAMPLE_RESPONSE)
+            example = json!(serde_json::Value::from_str(EXAMPLE_RESPONSE).unwrap())
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested entity not found on-chain"),

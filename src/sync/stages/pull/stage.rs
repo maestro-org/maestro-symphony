@@ -8,7 +8,7 @@ use bitcoincore_rpc::{
 use gasket::framework::*;
 use tokio::{
     sync::{mpsc, oneshot::Receiver},
-    time::{Instant, timeout},
+    time::timeout,
 };
 use tracing::{error, info, warn};
 
@@ -138,7 +138,6 @@ impl gasket::framework::Worker<Stage> for Worker {
             peer_session,
             peer_rpc,
             cursor: intersect_options,
-            stats: PullStats::new(),
             tip_reached: false,
             has_shutdown: stage.has_shutdown.clone(),
             initialised: false,
@@ -277,7 +276,6 @@ impl gasket::framework::Worker<Stage> for Worker {
     ) -> Result<(), WorkerError> {
         for u in unit {
             self.process_action(stage, u).await.or_panic()?;
-            self.stats.unit_processed();
         }
 
         Ok(())
@@ -298,7 +296,6 @@ pub struct Worker {
     peer_session: Peer,
     peer_rpc: RpcClient,
     cursor: Vec<Point>,
-    stats: PullStats,
     initialised: bool,
     tip: Point,
     tip_reached: bool,
@@ -485,34 +482,6 @@ impl Worker {
                 self.send(stage, p.clone()).await.or_panic()?;
                 Ok(())
             }
-        }
-    }
-}
-
-// TODO: improve
-pub struct PullStats {
-    processed: usize,
-    last_checkpoint: Instant,
-}
-
-impl PullStats {
-    pub fn new() -> Self {
-        Self {
-            processed: 0,
-            last_checkpoint: Instant::now(),
-        }
-    }
-
-    pub fn unit_processed(&mut self) {
-        self.processed += 1;
-
-        if self.processed % 1000 == 0 {
-            let time_taken = self.last_checkpoint.elapsed();
-
-            info!(
-                "last 1000 units in {time_taken:?} ({} u/s)",
-                1000_f64 / time_taken.as_secs_f64()
-            );
         }
     }
 }

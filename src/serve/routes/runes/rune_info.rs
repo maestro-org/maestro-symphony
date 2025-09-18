@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use crate::serve::AppState;
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
@@ -24,7 +26,7 @@ use ordinals::{Rune, SpacedRune};
             status = 200,
             description = "Requested data",
             body = ServeResponse<RuneInfo>,
-            example = json!(EXAMPLE_RESPONSE)
+            example = json!(serde_json::Value::from_str(EXAMPLE_RESPONSE).unwrap())
         ),
         (status = 400, description = "Malformed query parameters"),
         (status = 404, description = "Requested rune not found on-chain"),

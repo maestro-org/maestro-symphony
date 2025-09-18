@@ -1,6 +1,5 @@
-use std::collections::{HashMap, HashSet};
-
 use bitcoin::{BlockHash, Network, hashes::Hash};
+use rustc_hash::{FxHashMap, FxHashSet};
 
 use crate::{
     error::Error,
@@ -21,10 +20,11 @@ use crate::{
 // A context object that encapsulates all the data needed for indexing a transaction
 pub struct IndexingContext {
     point: Point,
-    resolver: HashMap<TxoRef, Utxo>,
-    utxo_metadata: HashMap<TxoRef, ExtendedUtxoData>,
-    chained_txos: HashSet<TxoRef>,
+    resolver: FxHashMap<TxoRef, Utxo>,
+    utxo_metadata: FxHashMap<TxoRef, ExtendedUtxoData>,
+    chained_txos: FxHashSet<TxoRef>,
     network: Network,
+    stats: Stats,
 }
 
 // Public methods available to custom indexers
@@ -37,7 +37,7 @@ impl IndexingContext {
         self.point.hash
     }
 
-    pub fn resolver(&self) -> &HashMap<TxoRef, Utxo> {
+    pub fn resolver(&self) -> &FxHashMap<TxoRef, Utxo> {
         &self.resolver
     }
 
@@ -76,12 +76,18 @@ impl IndexingContext {
         let ResolvedUtxos {
             resolver,
             chained_txos,
-        } = UtxoByTxoRefKV::resolve_inputs(task, txs, utxo_cache)?; // TODO cache
+            cache_hits,
+        } = UtxoByTxoRefKV::resolve_inputs(task, txs, utxo_cache)?;
 
         let network = match network {
             sync::Network::Mainnet => Network::Bitcoin,
             sync::Network::Testnet4 => Network::Testnet4,
             sync::Network::Regtest => Network::Regtest,
+        };
+
+        let stats = Stats {
+            resolved: resolver.len(),
+            cache_hits,
         };
 
         Ok(Self {
@@ -90,6 +96,7 @@ impl IndexingContext {
             utxo_metadata: Default::default(),
             chained_txos,
             network,
+            stats,
         })
     }
 
@@ -98,31 +105,38 @@ impl IndexingContext {
         task: &mut IndexingTask,
         tx: &TransactionWithId,
         utxo_cache: &mut Option<UtxoCache>,
-    ) -> Result<(), Error> {
+    ) -> Result<usize, Error> {
+        let mut outs_written = 0;
+
         // remove consumed utxos from resolver and storage
         for input in &tx.tx.input {
             let txo_ref = input.previous_output.into();
-            self.resolver.remove(&txo_ref);
+
+            // dont remove from cache if mempool block
+            if !task.mempool() {
+                self.resolver.remove(&txo_ref);
+            }
+
             task.delete::<UtxoByTxoRefKV>(txo_ref)?;
         }
 
         // for produced utxos, add those which are consumed later in the block to the resolver, and
         // the rest to storage
         for (output_index, output) in tx.tx.output.iter().enumerate() {
-            let txo_ref = TxoRef {
-                tx_hash: tx.tx_id.to_byte_array(),
-                txo_index: output_index as u32,
-            };
-
-            let utxo = Utxo {
-                satoshis: output.value.to_sat(),
-                script: output.script_pubkey.to_bytes(),
-                height: self.block_height(),
-                extended: self.utxo_metadata.remove(&txo_ref).unwrap_or_default(),
-            };
-
             // don't write unspendables
             if !output.script_pubkey.is_op_return() {
+                let txo_ref = TxoRef {
+                    tx_hash: tx.tx_id.to_byte_array(),
+                    txo_index: output_index as u32,
+                };
+
+                let utxo = Utxo {
+                    satoshis: output.value.to_sat(),
+                    script: output.script_pubkey.to_bytes(),
+                    height: self.block_height(),
+                    extended: self.utxo_metadata.remove(&txo_ref).unwrap_or_default(),
+                };
+
                 if self.chained_txos.contains(&txo_ref) {
                     self.resolver.insert(txo_ref, utxo);
                 } else if let Some(c) = utxo_cache.as_mut() {
@@ -131,17 +145,48 @@ impl IndexingContext {
                         c.insert(txo_ref, utxo.clone());
                     }
 
+                    outs_written += 1;
                     task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
                 } else {
+                    outs_written += 1;
                     task.set::<UtxoByTxoRefKV>(txo_ref, utxo)?;
                 }
             }
         }
 
-        Ok(())
+        if let Some(c) = utxo_cache.as_mut() {
+            c.wipe_if_mem_usage_high();
+        }
+
+        Ok(outs_written)
     }
 
     pub(super) fn update_point(&mut self, point: Point) {
         self.point = point
+    }
+
+    pub(super) fn stats(&self) -> Stats {
+        self.stats
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct Stats {
+    resolved: usize,
+    cache_hits: usize,
+}
+
+impl Stats {
+    pub fn log(&self) -> String {
+        if self.resolved == 0 {
+            format!("{}/{}(N/A%)", self.cache_hits, self.resolved)
+        } else {
+            format!(
+                "{}/{}({}%)",
+                self.cache_hits,
+                self.resolved,
+                ((self.cache_hits as f64 / self.resolved as f64) * 100.0) as u64
+            )
+        }
     }
 }

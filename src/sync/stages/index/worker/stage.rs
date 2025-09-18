@@ -27,7 +27,7 @@ use crate::{
 };
 use bitcoin::{BlockHash, hashes::Hash};
 use gasket::framework::*;
-use rocksdb::WriteBatch;
+use rocksdb::{WriteBatch, WriteOptions};
 use std::time::Instant;
 use tracing::{debug, error, info, warn};
 
@@ -182,8 +182,11 @@ impl Stage {
             }
         }
 
+        let mut wopts = WriteOptions::default();
+        wopts.disable_wal(true);
+
         // TODO: just update ts here instead of using everywhere above?
-        self.db.db.write(wb).or_restart()?;
+        self.db.db.write_opt(wb, &wopts).or_restart()?;
         self.db.previous_timestamp = Some(commit_ts);
 
         self.last_processed = *rb_point;
@@ -297,6 +300,7 @@ impl gasket::framework::Worker<Stage> for Worker {
                 .or_restart()?;
                 timings.create_context = create_context_start.elapsed();
 
+                let mut new_txos = 0;
                 let mut update_utxo_time = std::time::Duration::default();
 
                 for (block_index, tx) in txs.iter().enumerate() {
@@ -311,8 +315,11 @@ impl gasket::framework::Worker<Stage> for Worker {
                     }
 
                     let utxo_start = Instant::now();
-                    ctx.update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
+
+                    new_txos += ctx
+                        .update_utxo_set(&mut task, tx, &mut stage.utxo_cache)
                         .or_restart()?;
+
                     update_utxo_time += utxo_start.elapsed();
                 }
 
@@ -332,6 +339,8 @@ impl gasket::framework::Worker<Stage> for Worker {
                 let task = task.finalize();
 
                 let original_kvs = task.original_kvs.clone();
+
+                let mutations = task.write_buffer.len();
 
                 let apply_task_start = Instant::now();
                 stage
@@ -358,9 +367,13 @@ impl gasket::framework::Worker<Stage> for Worker {
                 };
 
                 info!(
-                    ?point,
+                    %point,
                     mutable = self.mutable,
                     timings = timings.log(),
+                    muts = mutations,
+                    new_txos,
+                    resolver = ctx.stats().log(),
+                    rbbuf = stage.rollback_buffer.total_actions(),
                     cache = ?stage.utxo_cache.as_ref().map(|x| x.log()),
                     progress = format!("{:.2}%", progress),
                     "indexed block",
@@ -464,6 +477,8 @@ impl gasket::framework::Worker<Stage> for Worker {
 
                 let task = task.finalize();
 
+                let mutations = task.write_buffer.len();
+
                 let original_kvs = task.original_kvs.clone();
 
                 let pseudo_point = Point {
@@ -505,11 +520,10 @@ impl gasket::framework::Worker<Stage> for Worker {
                     blocks = mempool_blocks.len(),
                     snapshot_ts = info.timestamp,
                     timings = timings.log(),
+                    muts = mutations,
                     cache = ?stage.utxo_cache.as_ref().map(|x| x.log()),
                     "indexed mempool blocks",
                 );
-
-                // TODO delta refresh
             }
         };
 
@@ -545,14 +559,44 @@ impl IndexingTimings {
     }
 
     fn log(&self) -> String {
-        let mut indexer_times = String::new();
+        let mut result = String::with_capacity(200); // Pre-allocate reasonable capacity
+
+        result.push_str("total=");
+        Self::append_duration(&mut result, &self.total);
+        result.push_str(" ctx=");
+        Self::append_duration(&mut result, &self.create_context);
+        result.push(' ');
+
         for (i, duration) in self.indexers.iter().enumerate() {
-            indexer_times.push_str(&format!("indexer{i}={duration:?} "));
+            result.push_str(&format!("idxr{i}="));
+            Self::append_duration(&mut result, duration);
+            result.push(' ');
         }
 
-        format!(
-            "total={:?} context={:?} {}utxo={:?} apply={:?}",
-            self.total, self.create_context, indexer_times, self.update_utxo, self.apply_task
-        )
+        result.push_str("utxo=");
+        Self::append_duration(&mut result, &self.update_utxo);
+        result.push_str(" apply=");
+        Self::append_duration(&mut result, &self.apply_task);
+
+        result
+    }
+
+    #[inline]
+    fn append_duration(result: &mut String, duration: &std::time::Duration) {
+        let nanos = duration.as_nanos();
+
+        if nanos >= 1_000_000_000 {
+            result.push_str(&duration.as_secs().to_string());
+            result.push('s');
+        } else if nanos >= 1_000_000 {
+            result.push_str(&duration.as_millis().to_string());
+            result.push_str("ms");
+        } else if nanos >= 1_000 {
+            result.push_str(&duration.as_micros().to_string());
+            result.push_str("µs");
+        } else {
+            result.push_str(&nanos.to_string());
+            result.push_str("ns");
+        }
     }
 }

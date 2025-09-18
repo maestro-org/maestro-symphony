@@ -8,7 +8,7 @@ use rocksdb::{
     WriteBatch, WriteOptions,
 };
 use sysinfo::System;
-use tracing::{error, info, trace, warn};
+use tracing::{error, info, trace};
 
 use crate::{
     error::Error,
@@ -428,24 +428,6 @@ impl StorageHandler {
             db: Arc::new(db),
             previous_timestamp: None, // TODO detect from DB?
             read_only,
-        }
-    }
-
-    /// Get RocksDB statistics as a formatted string
-    pub fn get_statistics(&self) -> Option<String> {
-        // RocksDB statistics are accumulated at the database level
-        // We need to get them from the actual database instance
-        // For now, we'll access via the DB property interface
-        match self.db.property_value_cf(self.cf_handle(), "rocksdb.stats") {
-            Ok(Some(stats)) => Some(stats),
-            Ok(None) => {
-                warn!("RocksDB statistics not available");
-                None
-            }
-            Err(e) => {
-                warn!("Failed to get RocksDB statistics: {}", e);
-                None
-            }
         }
     }
 

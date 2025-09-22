@@ -32,7 +32,7 @@ config = { version = "0.15.15", default-features = false, features = [
     "json",
 ] }
 socket2 = "0.6.0"
-serde = "1.0.219"
+serde = "1.0.226"
 async-trait = "0.1.89"
 maestro-symphony-macros = "0.1.0"
 bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }

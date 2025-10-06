@@ -11,7 +11,7 @@ documentation = "https://docs.gomaestro.org/"
 categories = ["development-tools"]
 
 [dependencies]
-thiserror = "2.0.16"
+thiserror = "2.0.17"
 tempfile = "3.22.0"
 rocksdb = { version = "0.23.0", features = ["jemalloc"] }
 gasket = { version = "0.9.0", features = ["derive"] }

@@ -59,4 +59,4 @@ rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8
 members = ["macros"]
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
-tikv-jemallocator = "0.6.0"
+tikv-jemallocator = "0.6.1"

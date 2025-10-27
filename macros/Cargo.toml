@@ -10,7 +10,7 @@ license = "Apache-2.0"
 [dependencies]
 proc-macro2 = "1.0.101"
 quote = "1.0.41"
-syn = { version = "2.0.106", features = ["full"] }
+syn = { version = "2.0.108", features = ["full"] }
 
 [lib]
 name = "maestro_symphony_macros"

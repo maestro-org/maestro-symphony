@@ -2146,6 +2146,7 @@ dependencies = [
  "axum-server",
  "bitcoin",
  "bitcoincore-rpc",
+ "charms-data",
  "charms-lib",
  "chrono",
  "clap",

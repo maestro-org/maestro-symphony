@@ -107,3 +107,22 @@ pub struct RuneTerms {
     pub start_height: Option<u64>,
     pub end_height: Option<u64>,
 }
+
+// -- charms types
+
+#[derive(Serialize, ToSchema)]
+pub struct CharmAndValue {
+    /// Canonical charm app identifier (e.g. "t/identity/vk")
+    pub app: String,
+    /// Decoded charm value (CBOR -> JSON)
+    pub value: serde_json::Value,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct CharmUtxo {
+    pub tx_hash: String,
+    pub output_index: u32,
+    pub height: u64,
+    pub satoshis: String,
+    pub charms: Vec<CharmAndValue>,
+}

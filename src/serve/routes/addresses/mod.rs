@@ -1,6 +1,8 @@
+pub mod all_charm_utxos;
 pub mod all_rune_balances;
 pub mod all_rune_utxos;
 pub mod runes_by_tx;
+pub mod specific_charm_utxos;
 pub mod specific_rune_balance;
 pub mod specific_rune_utxos;
 pub mod tx_count_by_address;
@@ -39,5 +41,13 @@ pub fn router() -> Router<AppState> {
         .route(
             "/{address}/runes/txs/{txid}",
             get(runes_by_tx::addresses_runes_by_tx),
+        )
+        .route(
+            "/{address}/charms/utxos",
+            get(all_charm_utxos::addresses_all_charm_utxos),
+        )
+        .route(
+            "/{address}/charms/utxos/{charm}",
+            get(specific_charm_utxos::addresses_specific_charm_utxos),
         )
 }

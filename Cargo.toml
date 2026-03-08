@@ -54,6 +54,7 @@ bitcoincore-rpc = "0.19.0"
 
 # Charms
 charms-lib = "11"
+charms-data = "11"
 
 [patch.crates-io]
 rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0" }

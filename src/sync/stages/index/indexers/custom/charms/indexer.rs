@@ -33,20 +33,8 @@ impl ProcessTransaction for CharmsIndexer {
         let TransactionWithId { tx, tx_id } = tx;
         let height = ctx.block_height();
 
-        // Only index non-mock spells
-        let charms_tx =
-            charms_lib::tx::Tx::Bitcoin(charms_lib::bitcoin_tx::BitcoinTx::Simple(tx.clone()));
-        let spell = match extract_and_verify_spell(&charms_tx, false) {
-            Ok(spell) => spell,
-            Err(_) => return Ok(()), // No valid spell in this transaction
-        };
-
-        // Resolve app indices: NormalizedCharms uses u32 indices into app_public_inputs keys
-        let apps: Vec<charms_data::App> = spell.app_public_inputs.keys().cloned().collect();
-
-        let beamed = spell.tx.beamed_outs.as_ref();
-
-        // Delete consumed charm UTXOs from index tables
+        // Always clean up consumed charm UTXOs from index tables, even if this tx has no spell
+        // (spending a UTXO with charms without a valid spell destroys those charms)
         for input in &tx.input {
             if !input.previous_output.is_null() {
                 let txo_ref: TxoRef = input.previous_output.into();
@@ -74,6 +62,19 @@ impl ProcessTransaction for CharmsIndexer {
                 }
             }
         }
+
+        // Only index non-mock spells for outputs
+        let charms_tx =
+            charms_lib::tx::Tx::Bitcoin(charms_lib::bitcoin_tx::BitcoinTx::Simple(tx.clone()));
+        let spell = match extract_and_verify_spell(&charms_tx, false) {
+            Ok(spell) => spell,
+            Err(_) => return Ok(()), // No valid spell — inputs cleaned up, nothing to produce
+        };
+
+        // Resolve app indices: NormalizedCharms uses u32 indices into app_public_inputs keys
+        let apps: Vec<charms_data::App> = spell.app_public_inputs.keys().cloned().collect();
+
+        let beamed = spell.tx.beamed_outs.as_ref();
 
         // Process outputs
         for (output_index, (output, n_charms)) in

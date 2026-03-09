@@ -99,9 +99,10 @@ impl ProcessTransaction for CharmsIndexer {
             // Convert NormalizedCharms to UtxoCharms (app string bytes, data CBOR bytes)
             let utxo_charms: UtxoCharms = n_charms
                 .iter()
-                .map(|(&app_idx, data)| {
-                    let app = &apps[app_idx as usize];
-                    (app.to_string().into_bytes(), data.bytes())
+                .filter_map(|(&app_idx, data)| {
+                    apps
+                        .get(app_idx as usize)
+                        .map(|app| (app.to_string().into_bytes(), data.bytes()))
                 })
                 .collect();
 

@@ -8,6 +8,7 @@ use tx_count_by_address::TxCountByAddressIndexer;
 use crate::{
     error::Error, sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressIndexer,
 };
+use crate::sync::stages::index::indexers::custom::charms::indexer::CharmsIndexerConfig;
 
 pub mod charms;
 pub mod id;
@@ -32,7 +33,7 @@ pub enum TransactionIndexerFactory {
     TxCountByAddress,
     Runes(RunesIndexerConfig),
     UtxosByAddress,
-    Charms,
+    Charms(CharmsIndexerConfig),
 }
 
 impl TransactionIndexerFactory {
@@ -41,7 +42,7 @@ impl TransactionIndexerFactory {
             Self::TxCountByAddress => Ok(Box::new(TxCountByAddressIndexer::new())),
             Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
             Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
-            Self::Charms => Ok(Box::new(CharmsIndexer::new())),
+            Self::Charms(c) => Ok(Box::new(CharmsIndexer::new(c))),
         }
     }
 }

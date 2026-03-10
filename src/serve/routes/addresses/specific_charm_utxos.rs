@@ -53,7 +53,7 @@ pub async fn addresses_specific_charm_utxos(
 
     let range = CharmsUtxosByScriptKV::encode_range(
         Some(&(script_pk.clone(), u64::MIN)),
-        Some(&(script_pk, u64::MAX.saturating_add(1))),
+        Some(&(script_pk, u64::MAX)),
     );
 
     let iter = storage.iter_kvs::<CharmsUtxosByScriptKV>(range, false);

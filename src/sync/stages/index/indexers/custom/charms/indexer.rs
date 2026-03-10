@@ -8,17 +8,27 @@ use crate::sync::stages::index::worker::context::IndexingContext;
 use crate::sync::stages::TransactionWithId;
 use bitcoin::hashes::Hash;
 use charms_lib::extract_and_verify_spell;
-
+use serde::Deserialize;
 use super::tables::{
     CharmsUtxosByAppKV, CharmsUtxosByAppKey, CharmsUtxosByScriptKV, CharmsUtxosByScriptKey,
     UtxoCharms,
 };
 
-pub struct CharmsIndexer {}
+#[derive(Clone, Debug, Deserialize)]
+pub struct CharmsIndexerConfig {
+    #[serde(default)]
+    pub start_height: u64,
+}
+
+pub struct CharmsIndexer {
+    start_height: u64,
+}
 
 impl CharmsIndexer {
-    pub fn new() -> Self {
-        CharmsIndexer {}
+    pub fn new(c: CharmsIndexerConfig) -> Self {
+        CharmsIndexer {
+            start_height: c.start_height,
+        }
     }
 }
 
@@ -32,6 +42,10 @@ impl ProcessTransaction for CharmsIndexer {
     ) -> Result<(), Error> {
         let TransactionWithId { tx, tx_id } = tx;
         let height = ctx.block_height();
+
+        if height < self.start_height {
+            return Ok(());
+        }
 
         // Always clean up consumed charm UTXOs from index tables, even if this tx has no spell
         // (spending a UTXO with charms without a valid spell destroys those charms)

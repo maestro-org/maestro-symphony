@@ -4,8 +4,9 @@ APP_NAME = maestro-symphony
 CONFIG ?= examples/testnet.toml
 RUST_LOG ?= info
 COMPOSE_FILE ?= docker-compose.yml
+AUDIT_DB ?= tmp/advisory-db
 
-.PHONY: all build run sync serve compose-up compose-down clean fmt fmt-check lint install-hooks help
+.PHONY: all build run sync serve compose-up compose-down clean fmt fmt-check lint audit install-hooks help
 
 all: build
 
@@ -42,6 +43,10 @@ fmt-check:
 lint:
 	cargo clippy --all-targets --all-features -- -D warnings
 
+audit:
+	@mkdir -p $(dir $(AUDIT_DB))
+	cargo audit --db $(AUDIT_DB)
+
 install-hooks:
 	git config core.hooksPath .githooks
 
@@ -63,6 +68,7 @@ help:
 	@echo "  fmt          Format code with rustfmt"
 	@echo "  fmt-check    Check formatting with rustfmt"
 	@echo "  lint         Lint code with clippy"
+	@echo "  audit        Check dependencies for security vulnerabilities"
 	@echo "  install-hooks Configure Git to use the repository hooks in .githooks"
 	@echo "  clean        Clean build artifacts"
 	@echo "  help         Show this help message"

@@ -35,6 +35,7 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 -   Runes
 -   Transaction count by address
 -   UTXOs by address
+-   Charms
 
 </details>
 
@@ -55,6 +56,7 @@ Maestro Symphony is a **fast**, **mempool-aware**, and **extensible** Bitcoin in
 
 -   [Docker](https://docs.docker.com/compose/install/)
 -   [mise](https://mise.jdx.dev/getting-started.html)
+-   [cargo-audit](https://github.com/RustSec/rustsec/tree/main/cargo-audit)
 
 ### Deployment Requirements
 
@@ -156,7 +158,7 @@ make openapi
 make install-hooks
 ```
 
-The installed `pre-commit` and `pre-push` hooks run `make fmt-check` and `make lint`, matching the CI formatting and clippy checks.
+`pre-push` hook runs `make fmt-check` and `make lint`, matching the CI formatting and clippy checks.
 
 ---
 
@@ -334,36 +336,6 @@ For reporting security vulnerabilities, please see our [Security Policy](SECURIT
 ## Contributing
 
 Pull requests and issues are welcome! See the [Kanban board](https://github.com/orgs/maestro-org/projects/16/views/1) for project status and tasks.
-
-### Feature Checklist
-
--   [ ] **Base Indexer**
-    -   [ ] **Addresses**
-        -   [x] Runes by address
-        -   [x] Runes by address and rune ID
-        -   [x] Runes by address and transaction ID
-        -   [x] Rune UTXOs by address
-        -   [x] Rune UTXOs by address and rune ID
-        -   [x] UTXOs by address
-        -   [ ] Satoshi balance by address
-        -   [ ] BRC20 by address
-        -   [ ] Inscriptions by address
-        -   [ ] Transactions by address
-    -   [ ] **Runes**
-        -   [x] Rune info by rune ID
-        -   [x] Rune balance by rune ID and UTXO
-        -   [ ] List runes
-        -   [ ] Holders by rune
-        -   [ ] UTXOs by rune
--   [ ] **Wallet activity**
-    -   [ ] **Addresses**
-        -   [ ] Satoshi activity by address
-        -   [ ] Metaprotocol activity by address
-        -   [ ] Historical satoshi balance by address
-        -   [ ] Inscription activity by address
-        -   [ ] Address statistics
--   [ ] **Alkanes**
--   [ ] **Webhook Notifications**
 
 ---
 

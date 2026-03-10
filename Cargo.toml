@@ -6,7 +6,7 @@ edition = "2024"
 authors = ["info@gomaestro.org"]
 license = "Apache-2.0"
 repository = "https://github.com/maestro-org/maestro-symphony"
-rust-version = "1.87"
+rust-version = "1.88"
 documentation = "https://docs.gomaestro.org/"
 categories = ["development-tools"]
 

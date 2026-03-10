@@ -150,6 +150,14 @@ make serve [CONFIG=examples/testnet.toml]
 make openapi
 ```
 
+#### Install Git Hooks
+
+```bash
+make install-hooks
+```
+
+The installed `pre-commit` and `pre-push` hooks run `make fmt-check` and `make lint`, matching the CI formatting and clippy checks.
+
 ---
 
 ### Running with Docker

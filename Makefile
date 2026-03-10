@@ -5,7 +5,7 @@ CONFIG ?= examples/testnet.toml
 RUST_LOG ?= info
 COMPOSE_FILE ?= docker-compose.yml
 
-.PHONY: all build run sync serve compose-up compose-down clean fmt lint help
+.PHONY: all build run sync serve compose-up compose-down clean fmt fmt-check lint install-hooks help
 
 all: build
 
@@ -36,8 +36,14 @@ docker-ps:
 fmt:
 	cargo fmt --all
 
+fmt-check:
+	cargo fmt --all -- --check
+
 lint:
 	cargo clippy --all-targets --all-features -- -D warnings
+
+install-hooks:
+	git config core.hooksPath .githooks
 
 clean:
 	cargo clean
@@ -55,6 +61,8 @@ help:
 	@echo "  compose-down Stop stack with Docker Compose (default: docker-compose.yml, override with COMPOSE_FILE=...)"
 	@echo "  docker-ps    Show running containers for the selected Compose file (override with COMPOSE_FILE=...)"
 	@echo "  fmt          Format code with rustfmt"
+	@echo "  fmt-check    Check formatting with rustfmt"
 	@echo "  lint         Lint code with clippy"
+	@echo "  install-hooks Configure Git to use the repository hooks in .githooks"
 	@echo "  clean        Clean build artifacts"
 	@echo "  help         Show this help message"

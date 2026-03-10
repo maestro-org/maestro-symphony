@@ -30,13 +30,13 @@ jobs:
                   cache: false
                   components: rustfmt,clippy
             - name: Check formatting
-              run: cargo fmt --all -- --check
+              run: make fmt-check
             - name: Setup Rust cache
               uses: Swatinem/rust-cache@v2
             - name: Run tests
               run: cargo test --all-targets --all-features
             - name: Run clippy
-              run: cargo clippy --all-targets --all-features -- -D warnings
+              run: make lint
             - name: Run cargo audit
               uses: actions-rs/audit-check@v1
               with:

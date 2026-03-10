@@ -390,6 +390,7 @@ fn tx_commits_to_rune(
         // extracting a tapscript does not indicate that the input being spent
         // was actually a taproot output. this is checked below, when we load the
         // output's entry from the database
+        #[allow(deprecated)]
         let Some(tapscript) = input.witness.tapscript() else {
             continue;
         };

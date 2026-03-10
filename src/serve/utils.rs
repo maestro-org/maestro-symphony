@@ -63,3 +63,9 @@ impl RuneIdentifier {
         }
     }
 }
+
+/// Converts a URI-safe charm path parameter (dashes) to canonical form (slashes).
+/// e.g. "t-identity-vk" -> "t/identity/vk"
+pub fn parse_charm_path(path_param: &str) -> String {
+    path_param.replace('-', "/")
+}

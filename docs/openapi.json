@@ -13,9 +13,125 @@
     "version": "v0.1.2"
   },
   "paths": {
+    "/addresses/{address}/charms/utxos": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Charm UTXOs by Address",
+        "description": "Returns all UTXOs controlled by the provided address which contain charms, sorted by height.",
+        "operationId": "addresses_all_charm_utxos",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware (default: false)",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "All charm UTXOs at address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_CharmUtxo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/addresses/{address}/charms/utxos/{charm}": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Charm UTXOs by Address and Charm",
+        "description": "Returns UTXOs controlled by the provided address which contain the specified charm, sorted by height.",
+        "operationId": "addresses_specific_charm_utxos",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "charm",
+            "in": "path",
+            "description": "Charm app in URI-safe form (dashes instead of slashes)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "t-0000000000000000000000000000000000000000000000000000000000000001-0000000000000000000000000000000000000000000000000000000000000002"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Charm UTXOs for specific charm at address",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_Vec_CharmUtxo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/addresses/{address}/runes/balances": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Rune Balances by Address",
         "description": "Returns total rune balances held in UTxOs controlled by the provided address, sorted by rune ID.",
         "operationId": "addresses_all_rune_balances",
@@ -126,7 +242,9 @@
     },
     "/addresses/{address}/runes/balances/{rune}": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Rune Balance by Address and Rune",
         "description": "Returns the total amount of the provided rune kind held in UTxOs controlled by the provided address.",
         "operationId": "addresses_specific_rune_balance",
@@ -197,7 +315,9 @@
     },
     "/addresses/{address}/runes/txs/{txid}": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Rune Edicts by Address and Transaction",
         "operationId": "addresses_runes_by_tx",
         "parameters": [
@@ -274,7 +394,9 @@
     },
     "/addresses/{address}/runes/utxos": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Rune UTxOs by Address",
         "description": "Returns all UTxOs controlled by the provided address which contain runes, sorted by height.",
         "operationId": "addresses_all_rune_utxos",
@@ -348,7 +470,9 @@
     },
     "/addresses/{address}/runes/utxos/{rune}": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Rune UTxOs by Address and Rune",
         "description": "Returns UTxOs controlled by the provided address which contain the provided rune, sorted by height.",
         "operationId": "addresses_specific_rune_utxos",
@@ -432,7 +556,9 @@
     },
     "/addresses/{address}/tx_count": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "Transaction Count by Address",
         "description": "Returns the number of transactions in which the address controlled an input or output",
         "operationId": "addresses_tx_count_by_address",
@@ -493,7 +619,9 @@
     },
     "/addresses/{address}/utxos": {
       "get": {
-        "tags": ["Addresses"],
+        "tags": [
+          "Addresses"
+        ],
         "summary": "UTxOs by Address",
         "description": "Returns UTxOs controlled by the provided address, sorted by height.",
         "operationId": "addresses_utxos_by_address",
@@ -559,9 +687,125 @@
         }
       }
     },
+    "/charms/{charm}/latest": {
+      "get": {
+        "tags": [
+          "Charms (Metaprotocol)"
+        ],
+        "summary": "Latest Charm UTXO",
+        "description": "Returns the most recently produced UTXO containing the specified charm, along with all charm\nvalues in that UTXO. Useful for getting reference NFT content.",
+        "operationId": "charm_latest",
+        "parameters": [
+          {
+            "name": "charm",
+            "in": "path",
+            "description": "Charm app in URI-safe form (dashes instead of slashes)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "t-0000000000000000000000000000000000000000000000000000000000000001-0000000000000000000000000000000000000000000000000000000000000002"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Latest UTXO containing this charm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_CharmUtxo"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Charm not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/charms/{charm}/utxos/{utxo}/value": {
+      "get": {
+        "tags": [
+          "Charms (Metaprotocol)"
+        ],
+        "summary": "Charm Value at UTXO",
+        "description": "Returns the value of the specified charm at the provided UTXO. For fungible tokens (tag `t`),\nthe value is a u64 amount. For other charms, it can be any JSON value.",
+        "operationId": "charm_value_at_utxo",
+        "parameters": [
+          {
+            "name": "utxo",
+            "in": "path",
+            "description": "UTXO reference in format txid:index",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "c0345bb5906257a05cdc2d11b6580ce75fdfe8b7ac09b7b2711d435e2ba0a9b3:1"
+          },
+          {
+            "name": "charm",
+            "in": "path",
+            "description": "Charm app in URI-safe form (dashes instead of slashes)",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "t-0000000000000000000000000000000000000000000000000000000000000001-0000000000000000000000000000000000000000000000000000000000000002"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Charm value at UTXO",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ServeResponse_CharmAndValue"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "404": {
+            "description": "Charm or UTXO not found"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/runes/info": {
       "post": {
-        "tags": ["Runes (Metaprotocol)"],
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
         "summary": "Info by Rune (Batch)",
         "description": "Given a list of rune identifiers (name or id), returns a map of identifiers to rune info (or null if no info found).",
         "operationId": "runes_rune_info_batch",
@@ -585,7 +829,10 @@
                   "type": "string"
                 }
               },
-              "example": ["BESTINSLOTXYZ", "ABCDEF"]
+              "example": [
+                "BESTINSLOTXYZ",
+                "ABCDEF"
+              ]
             }
           },
           "required": true
@@ -644,7 +891,9 @@
     },
     "/runes/{rune}": {
       "get": {
-        "tags": ["Runes (Metaprotocol)"],
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
         "summary": "Info by Rune",
         "description": "Given a rune identifier (name or id), returns the rune info.",
         "operationId": "rune_info",
@@ -719,7 +968,9 @@
     },
     "/runes/{rune}/utxos/{utxo}/balance": {
       "get": {
-        "tags": ["Runes (Metaprotocol)"],
+        "tags": [
+          "Runes (Metaprotocol)"
+        ],
         "summary": "Rune Balance by UTXO and Rune",
         "description": "Returns the amount of the specified rune contained in the provided UTXO. If the rune is not\npresent in the UTXO, `0` is returned.",
         "operationId": "rune_balance_at_utxo",
@@ -793,7 +1044,12 @@
     "schemas": {
       "AddressUtxo": {
         "type": "object",
-        "required": ["tx_hash", "output_index", "height", "satoshis"],
+        "required": [
+          "tx_hash",
+          "output_index",
+          "height",
+          "satoshis"
+        ],
         "properties": {
           "height": {
             "type": "integer",
@@ -815,7 +1071,10 @@
       },
       "ChainTip": {
         "type": "object",
-        "required": ["block_hash", "block_height"],
+        "required": [
+          "block_hash",
+          "block_height"
+        ],
         "properties": {
           "block_hash": {
             "type": "string",
@@ -829,9 +1088,61 @@
           }
         }
       },
+      "CharmAndValue": {
+        "type": "object",
+        "required": [
+          "app",
+          "value"
+        ],
+        "properties": {
+          "app": {
+            "type": "string",
+            "description": "Canonical charm app identifier (e.g. \"t/identity/vk\")"
+          },
+          "value": {
+            "description": "Decoded charm value (CBOR -> JSON)"
+          }
+        }
+      },
+      "CharmUtxo": {
+        "type": "object",
+        "required": [
+          "tx_hash",
+          "output_index",
+          "height",
+          "satoshis",
+          "charms"
+        ],
+        "properties": {
+          "charms": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CharmAndValue"
+            }
+          },
+          "height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "output_index": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "satoshis": {
+            "type": "string"
+          },
+          "tx_hash": {
+            "type": "string"
+          }
+        }
+      },
       "EstimatedBlock": {
         "type": "object",
-        "required": ["block_height"],
+        "required": [
+          "block_height"
+        ],
         "properties": {
           "block_height": {
             "type": "integer",
@@ -842,7 +1153,10 @@
       },
       "IndexerInfo": {
         "type": "object",
-        "required": ["chain_tip", "estimated_blocks"],
+        "required": [
+          "chain_tip",
+          "estimated_blocks"
+        ],
         "properties": {
           "chain_tip": {
             "$ref": "#/components/schemas/ChainTip",
@@ -856,7 +1170,10 @@
             "description": "Information about any estimated blocks from the mempool that were indexed in addition to the mainchain"
           },
           "mempool_timestamp": {
-            "type": ["string", "null"],
+            "type": [
+              "string",
+              "null"
+            ],
             "description": "Timestamp of the indexed mempool snapshot, if any estimated blocks from the mempool have been indexed"
           }
         }
@@ -871,7 +1188,10 @@
       },
       "RuneAndAmount": {
         "type": "object",
-        "required": ["id", "amount"],
+        "required": [
+          "id",
+          "amount"
+        ],
         "properties": {
           "amount": {
             "type": "string"
@@ -883,7 +1203,10 @@
       },
       "RuneBalanceWithInfo": {
         "type": "object",
-        "required": ["id", "amount"],
+        "required": [
+          "id",
+          "amount"
+        ],
         "properties": {
           "amount": {
             "type": "string"
@@ -916,7 +1239,11 @@
       },
       "RuneEdict": {
         "type": "object",
-        "required": ["rune_id", "amount", "block_height"],
+        "required": [
+          "rune_id",
+          "amount",
+          "block_height"
+        ],
         "properties": {
           "amount": {
             "type": "string"
@@ -927,7 +1254,10 @@
             "minimum": 0
           },
           "output": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int32",
             "minimum": 0
           },
@@ -974,7 +1304,10 @@
             "type": "string"
           },
           "symbol": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "terms": {
             "oneOf": [
@@ -992,18 +1325,30 @@
         "type": "object",
         "properties": {
           "amount": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "cap": {
-            "type": ["string", "null"]
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "end_height": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int64",
             "minimum": 0
           },
           "start_height": {
-            "type": ["integer", "null"],
+            "type": [
+              "integer",
+              "null"
+            ],
             "format": "int64",
             "minimum": 0
           }
@@ -1011,7 +1356,13 @@
       },
       "RuneUtxo": {
         "type": "object",
-        "required": ["tx_hash", "output_index", "height", "satoshis", "runes"],
+        "required": [
+          "tx_hash",
+          "output_index",
+          "height",
+          "satoshis",
+          "runes"
+        ],
         "properties": {
           "height": {
             "type": "integer",
@@ -1039,12 +1390,94 @@
       },
       "ServeResponse_AddressUtxo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "object",
-            "required": ["tx_hash", "output_index", "height", "satoshis"],
+            "required": [
+              "tx_hash",
+              "output_index",
+              "height",
+              "satoshis"
+            ],
             "properties": {
+              "height": {
+                "type": "integer",
+                "format": "int64",
+                "minimum": 0
+              },
+              "output_index": {
+                "type": "integer",
+                "format": "int32",
+                "minimum": 0
+              },
+              "satoshis": {
+                "type": "string"
+              },
+              "tx_hash": {
+                "type": "string"
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_CharmAndValue": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "app",
+              "value"
+            ],
+            "properties": {
+              "app": {
+                "type": "string",
+                "description": "Canonical charm app identifier (e.g. \"t/identity/vk\")"
+              },
+              "value": {
+                "description": "Decoded charm value (CBOR -> JSON)"
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_CharmUtxo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "tx_hash",
+              "output_index",
+              "height",
+              "satoshis",
+              "charms"
+            ],
+            "properties": {
+              "charms": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/CharmAndValue"
+                }
+              },
               "height": {
                 "type": "integer",
                 "format": "int64",
@@ -1070,7 +1503,10 @@
       },
       "ServeResponse_HashMap_String_Option_RuneInfo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "object",
@@ -1117,7 +1553,10 @@
                       "type": "string"
                     },
                     "symbol": {
-                      "type": ["string", "null"]
+                      "type": [
+                        "string",
+                        "null"
+                      ]
                     },
                     "terms": {
                       "oneOf": [
@@ -1144,7 +1583,10 @@
       },
       "ServeResponse_RuneInfo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "object",
@@ -1184,7 +1626,10 @@
                 "type": "string"
               },
               "symbol": {
-                "type": ["string", "null"]
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "terms": {
                 "oneOf": [
@@ -1205,7 +1650,10 @@
       },
       "ServeResponse_String": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "string"
@@ -1217,14 +1665,71 @@
       },
       "ServeResponse_Vec_AddressUtxo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["tx_hash", "output_index", "height", "satoshis"],
+              "required": [
+                "tx_hash",
+                "output_index",
+                "height",
+                "satoshis"
+              ],
               "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "output_index": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                },
+                "satoshis": {
+                  "type": "string"
+                },
+                "tx_hash": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          }
+        }
+      },
+      "ServeResponse_Vec_CharmUtxo": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tx_hash",
+                "output_index",
+                "height",
+                "satoshis",
+                "charms"
+              ],
+              "properties": {
+                "charms": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CharmAndValue"
+                  }
+                },
                 "height": {
                   "type": "integer",
                   "format": "int64",
@@ -1251,13 +1756,19 @@
       },
       "ServeResponse_Vec_RuneAndAmount": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "amount"],
+              "required": [
+                "id",
+                "amount"
+              ],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1275,13 +1786,19 @@
       },
       "ServeResponse_Vec_RuneBalanceWithInfo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["id", "amount"],
+              "required": [
+                "id",
+                "amount"
+              ],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1309,13 +1826,20 @@
       },
       "ServeResponse_Vec_RuneEdict": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "array",
             "items": {
               "type": "object",
-              "required": ["rune_id", "amount", "block_height"],
+              "required": [
+                "rune_id",
+                "amount",
+                "block_height"
+              ],
               "properties": {
                 "amount": {
                   "type": "string"
@@ -1326,7 +1850,10 @@
                   "minimum": 0
                 },
                 "output": {
-                  "type": ["integer", "null"],
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
                   "format": "int32",
                   "minimum": 0
                 },
@@ -1343,7 +1870,10 @@
       },
       "ServeResponse_Vec_RuneUtxo": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "array",
@@ -1389,7 +1919,10 @@
       },
       "ServeResponse_u64": {
         "type": "object",
-        "required": ["data", "indexer_info"],
+        "required": [
+          "data",
+          "indexer_info"
+        ],
         "properties": {
           "data": {
             "type": "integer",

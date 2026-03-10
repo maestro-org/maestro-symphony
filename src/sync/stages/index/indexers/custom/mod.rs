@@ -1,13 +1,16 @@
+use charms::indexer::CharmsIndexer;
 use id::ProcessTransaction;
 use maestro_symphony_macros::{Decode, Encode};
 use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
 use tx_count_by_address::TxCountByAddressIndexer;
 
+use crate::sync::stages::index::indexers::custom::charms::indexer::CharmsIndexerConfig;
 use crate::{
     error::Error, sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressIndexer,
 };
 
+pub mod charms;
 pub mod id;
 pub mod runes;
 pub mod tx_count_by_address;
@@ -21,6 +24,7 @@ pub enum TransactionIndexer {
     TxCountByAddress = 0,
     Runes = 1,
     UtxosByAddress = 2,
+    Charms = 3,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -29,6 +33,7 @@ pub enum TransactionIndexerFactory {
     TxCountByAddress,
     Runes(RunesIndexerConfig),
     UtxosByAddress,
+    Charms(CharmsIndexerConfig),
 }
 
 impl TransactionIndexerFactory {
@@ -37,6 +42,7 @@ impl TransactionIndexerFactory {
             Self::TxCountByAddress => Ok(Box::new(TxCountByAddressIndexer::new())),
             Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
             Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
+            Self::Charms(c) => Ok(Box::new(CharmsIndexer::new(c))),
         }
     }
 }

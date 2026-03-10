@@ -28,7 +28,7 @@ jobs:
               uses: moonrepo/setup-rust@v1
               with:
                   cache: false
-                  channel: 1.88
+                  channel: "1.88.0"
                   components: rustfmt,clippy
             - name: Check formatting
               run: make fmt-check
@@ -99,7 +99,7 @@ jobs:
               uses: moonrepo/setup-rust@v1
               with:
                   cache: true
-                  channel: 1.88
+                  channel: "1.88.0"
             - name: Publish to crates.io
               env:
                   CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}

@@ -1,14 +1,14 @@
-use id::ProcessTransaction;
 use charms::indexer::CharmsIndexer;
+use id::ProcessTransaction;
 use maestro_symphony_macros::{Decode, Encode};
 use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
 use tx_count_by_address::TxCountByAddressIndexer;
 
+use crate::sync::stages::index::indexers::custom::charms::indexer::CharmsIndexerConfig;
 use crate::{
     error::Error, sync::stages::index::indexers::custom::utxos_by_address::UtxosByAddressIndexer,
 };
-use crate::sync::stages::index::indexers::custom::charms::indexer::CharmsIndexerConfig;
 
 pub mod charms;
 pub mod id;

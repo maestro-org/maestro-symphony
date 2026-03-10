@@ -1,6 +1,6 @@
 pub mod charm_latest;
-pub(crate) mod charm_util;
 pub mod charm_value_at_utxo;
+pub(crate) mod charms_util;
 
 use crate::serve::AppState;
 use axum::{Router, routing::get};

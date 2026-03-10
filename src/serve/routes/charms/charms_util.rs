@@ -14,8 +14,9 @@ pub fn decode_utxo_charms(raw: &[u8]) -> Result<Vec<CharmAndValue>, ServeError> 
                 .map_err(|_| ServeError::internal("invalid charm app encoding"))?;
             let data = charms_data::Data::try_from_bytes(&cbor_bytes)
                 .map_err(|e| ServeError::internal(format!("failed to decode charm data: {e}")))?;
-            let value = serde_json::to_value(&data)
-                .map_err(|e| ServeError::internal(format!("failed to serialize charm value: {e}")))?;
+            let value = serde_json::to_value(&data).map_err(|e| {
+                ServeError::internal(format!("failed to serialize charm value: {e}"))
+            })?;
             Ok(CharmAndValue { app, value })
         })
         .collect()

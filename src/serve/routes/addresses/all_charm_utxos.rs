@@ -1,7 +1,7 @@
 use crate::serve::error::ServeError;
 use crate::serve::reader_wrapper::ServeReaderHelper;
 use crate::serve::routes::addresses::AppState;
-use crate::serve::routes::charms::charm_util::decode_utxo_charms;
+use crate::serve::routes::charms::charms_util::decode_utxo_charms;
 use crate::serve::types::{CharmUtxo, MempoolParam, ServeResponse};
 use crate::storage::table::Table;
 use crate::sync::stages::index::indexers::core::utxo_by_txo_ref::UtxoByTxoRefKV;

@@ -15,7 +15,7 @@ use axum::{
 };
 use bitcoin::{Txid, hashes::Hash};
 
-use super::charm_util::decode_utxo_charms;
+use super::charms_util::decode_utxo_charms;
 
 #[utoipa::path(
     tag = "Charms (Metaprotocol)",

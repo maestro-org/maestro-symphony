@@ -1,18 +1,18 @@
-use crate::error::Error;
-use crate::storage::encdec::Decode;
-use crate::storage::kv_store::IndexingTask;
-use crate::sync::stages::index::indexers::custom::TransactionIndexer;
-use crate::sync::stages::index::indexers::custom::id::ProcessTransaction;
-use crate::sync::stages::index::indexers::types::TxoRef;
-use crate::sync::stages::index::worker::context::IndexingContext;
-use crate::sync::stages::TransactionWithId;
-use bitcoin::hashes::Hash;
-use charms_lib::extract_and_verify_spell;
-use serde::Deserialize;
 use super::tables::{
     CharmsUtxosByAppKV, CharmsUtxosByAppKey, CharmsUtxosByScriptKV, CharmsUtxosByScriptKey,
     UtxoCharms,
 };
+use crate::error::Error;
+use crate::storage::encdec::Decode;
+use crate::storage::kv_store::IndexingTask;
+use crate::sync::stages::TransactionWithId;
+use crate::sync::stages::index::indexers::custom::TransactionIndexer;
+use crate::sync::stages::index::indexers::custom::id::ProcessTransaction;
+use crate::sync::stages::index::indexers::types::TxoRef;
+use crate::sync::stages::index::worker::context::IndexingContext;
+use bitcoin::hashes::Hash;
+use charms_lib::extract_and_verify_spell;
+use serde::Deserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct CharmsIndexerConfig {
@@ -114,8 +114,7 @@ impl ProcessTransaction for CharmsIndexer {
             let utxo_charms: UtxoCharms = n_charms
                 .iter()
                 .filter_map(|(&app_idx, data)| {
-                    apps
-                        .get(app_idx as usize)
+                    apps.get(app_idx as usize)
                         .map(|app| (app.to_string().into_bytes(), data.bytes()))
                 })
                 .collect();

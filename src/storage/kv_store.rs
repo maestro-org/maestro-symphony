@@ -439,7 +439,7 @@ impl StorageHandler {
         self.db.cf_handle(SYMPHONY_CF_NAME).expect("cf missing")
     }
 
-    pub fn begin_indexing_task(&mut self, mutable: bool) -> IndexingTask {
+    pub fn begin_indexing_task(&mut self, mutable: bool) -> IndexingTask<'_> {
         let cf = self.cf_handle();
 
         IndexingTask {
@@ -454,7 +454,7 @@ impl StorageHandler {
         }
     }
 
-    pub fn begin_mempool_indexing_task(&mut self) -> IndexingTask {
+    pub fn begin_mempool_indexing_task(&mut self) -> IndexingTask<'_> {
         let cf = self.cf_handle();
 
         IndexingTask {

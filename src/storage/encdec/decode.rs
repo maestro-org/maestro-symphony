@@ -23,7 +23,7 @@ pub fn malformed_input<S: Into<String>>(msg: S, bytes: &[u8]) -> DecodingError {
 pub type DecodingResult<'a, T> = Result<(T, &'a [u8]), DecodingError>;
 
 impl<const N: usize> Decode for [u8; N] {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         bytes
             .get(..N)
             .map(|slice| {
@@ -37,7 +37,7 @@ impl<const N: usize> Decode for [u8; N] {
 }
 
 impl Decode for u8 {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         bytes
             .first()
             .map(|b| (*b, &bytes[1..]))
@@ -46,13 +46,13 @@ impl Decode for u8 {
 }
 
 impl Decode for u16 {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         <[u8; 2]>::decode(bytes).map(|(b, rest)| (u16::from_be_bytes(b), rest))
     }
 }
 
 impl Decode for VarUInt {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let len = *bytes
             .first()
             .ok_or(malformed_input("varuint insufficient bytes", bytes))?
@@ -78,7 +78,7 @@ impl Decode for VarUInt {
 macro_rules! impl_varuint_decode {
     ($t:ty) => {
         impl Decode for $t {
-            fn decode(bytes: &[u8]) -> DecodingResult<$t> {
+            fn decode(bytes: &[u8]) -> DecodingResult<'_, $t> {
                 let (varuint, rem) = VarUInt::decode(bytes)?;
 
                 let casted = Self::try_from(varuint)?;
@@ -95,7 +95,7 @@ impl_varuint_decode!(u64);
 impl_varuint_decode!(u128);
 
 impl<A: Decode> Decode for Vec<A> {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let (len, mut bytes) = usize::decode(bytes)?;
         let mut vec = Vec::with_capacity(len);
 
@@ -115,7 +115,7 @@ where
     K: Decode + Eq + std::hash::Hash,
     V: Decode + Eq + std::hash::Hash,
 {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let mut map = IndexMap::new();
 
         let (len, mut bytes) = usize::decode(bytes)?;
@@ -133,13 +133,13 @@ where
 }
 
 impl Decode for () {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         Ok(((), bytes))
     }
 }
 
 impl Decode for bool {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let (byte, rem) = u8::decode(bytes)?;
 
         match byte {
@@ -151,7 +151,7 @@ impl Decode for bool {
 }
 
 impl<T: Decode> Decode for Option<T> {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let (presence, bytes) = bool::decode(bytes)?;
 
         if !presence {
@@ -164,7 +164,7 @@ impl<T: Decode> Decode for Option<T> {
 }
 
 impl<A: Decode, B: Decode> Decode for (A, B) {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let (first, bytes) = A::decode(bytes)?;
         let (second, bytes) = B::decode(bytes)?;
 

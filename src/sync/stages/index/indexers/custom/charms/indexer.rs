@@ -53,24 +53,24 @@ impl ProcessTransaction for CharmsIndexer {
             if !input.previous_output.is_null() {
                 let txo_ref: TxoRef = input.previous_output.into();
 
-                if let Some(utxo) = ctx.resolve_input(&txo_ref) {
-                    if let Some(raw) = utxo.extended.get(&TransactionIndexer::Charms) {
-                        let utxo_charms = UtxoCharms::decode_all(raw)?;
+                if let Some(utxo) = ctx.resolve_input(&txo_ref)
+                    && let Some(raw) = utxo.extended.get(&TransactionIndexer::Charms)
+                {
+                    let utxo_charms = UtxoCharms::decode_all(raw)?;
 
-                        if !utxo_charms.is_empty() {
-                            task.delete::<CharmsUtxosByScriptKV>(CharmsUtxosByScriptKey {
-                                script: utxo.script.clone(),
+                    if !utxo_charms.is_empty() {
+                        task.delete::<CharmsUtxosByScriptKV>(CharmsUtxosByScriptKey {
+                            script: utxo.script.clone(),
+                            produced_height: utxo.height,
+                            txo_ref,
+                        })?;
+
+                        for (app_bytes, _) in &utxo_charms {
+                            task.delete::<CharmsUtxosByAppKV>(CharmsUtxosByAppKey {
+                                app: app_bytes.clone(),
                                 produced_height: utxo.height,
                                 txo_ref,
                             })?;
-
-                            for (app_bytes, _) in &utxo_charms {
-                                task.delete::<CharmsUtxosByAppKV>(CharmsUtxosByAppKey {
-                                    app: app_bytes.clone(),
-                                    produced_height: utxo.height,
-                                    txo_ref,
-                                })?;
-                            }
                         }
                     }
                 }

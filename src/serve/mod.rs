@@ -163,7 +163,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
     let addr = match address.parse::<SocketAddr>() {
         Ok(addr) => addr,
         Err(e) => {
-            eprintln!("Failed to parse server address '{}': {}", address, e);
+            eprintln!("Failed to parse server address '{address}': {e}");
             return Err(Error::Config(e.to_string()));
         }
     };

@@ -374,13 +374,13 @@ impl Worker {
             })?;
 
         // send a rollback to the intersect if it was behind our tip
-        if let Some(cursor_tip_height) = cursor_tip {
-            if *intersect_height != cursor_tip_height {
-                units.push(ChainEvent::RollBack(Point {
-                    height: *intersect_height,
-                    hash: first_header.prev_blockhash,
-                }))
-            }
+        if let Some(cursor_tip_height) = cursor_tip
+            && *intersect_height != cursor_tip_height
+        {
+            units.push(ChainEvent::RollBack(Point {
+                height: *intersect_height,
+                hash: first_header.prev_blockhash,
+            }))
         }
 
         // assign heights to the received headers using the intersect height

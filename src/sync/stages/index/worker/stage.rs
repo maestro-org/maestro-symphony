@@ -229,15 +229,14 @@ impl gasket::framework::Worker<Stage> for Worker {
     ) -> Result<WorkSchedule<ChainEvent>, WorkerError> {
         let event = stage.upstream.recv().await.or_panic()?.payload;
 
-        if let Some(stop) = stage.stop_after {
-            if let ChainEvent::RollForward(Point { height, .. }, ..) = event {
-                if height > stop {
-                    info!("passed stop after height, compacting db then stopping indexer...");
-                    stage.db.flush_and_compact().or_panic()?;
+        if let Some(stop) = stage.stop_after
+            && let ChainEvent::RollForward(Point { height, .. }, ..) = event
+            && height > stop
+        {
+            info!("passed stop after height, compacting db then stopping indexer...");
+            stage.db.flush_and_compact().or_panic()?;
 
-                    return Ok(WorkSchedule::Done);
-                }
-            }
+            return Ok(WorkSchedule::Done);
         }
 
         Ok(WorkSchedule::Unit(event))

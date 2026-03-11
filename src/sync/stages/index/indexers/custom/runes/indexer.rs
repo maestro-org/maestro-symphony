@@ -94,12 +94,12 @@ impl ProcessTransaction for RunesIndexer {
         let mut allocated: Vec<HashMap<RuneId, u128>> = vec![HashMap::new(); tx.output.len()];
 
         if let Some(artifact) = &artifact {
-            if let Some(id) = artifact.mint() {
-                if let Some(amount) = mint(task, id, height)? {
-                    // debug!("minted rune: {height}:{tx_index} {:?}:{}", id, amount);
+            if let Some(id) = artifact.mint()
+                && let Some(amount) = mint(task, id, height)?
+            {
+                // debug!("minted rune: {height}:{tx_index} {:?}:{}", id, amount);
 
-                    *unallocated.entry(id).or_default() += amount;
-                }
+                *unallocated.entry(id).or_default() += amount;
             }
 
             let etched = etched(
@@ -347,16 +347,16 @@ fn mint(task: &mut IndexingTask, id: RuneId, height: BlockHeight) -> Result<Opti
         return Ok(None);
     };
 
-    if let Some(start) = terms.start_height {
-        if height < start {
-            return Ok(None);
-        }
+    if let Some(start) = terms.start_height
+        && height < start
+    {
+        return Ok(None);
     }
 
-    if let Some(end) = terms.end_height {
-        if height >= end {
-            return Ok(None);
-        }
+    if let Some(end) = terms.end_height
+        && height >= end
+    {
+        return Ok(None);
     }
 
     let cap = terms.cap.unwrap_or_default();

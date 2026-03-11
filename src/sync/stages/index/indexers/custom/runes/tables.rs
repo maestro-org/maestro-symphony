@@ -130,7 +130,7 @@ impl Encode for RuneId {
 }
 
 impl Decode for RuneId {
-    fn decode(bytes: &[u8]) -> crate::DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> crate::DecodingResult<'_, Self> {
         let ((block, tx), bytes) = <_>::decode(bytes)?;
 
         Ok((RuneId { block, tx }, bytes))

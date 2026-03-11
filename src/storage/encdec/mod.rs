@@ -13,7 +13,7 @@ pub trait Decode
 where
     Self: Sized,
 {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self>;
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self>;
 
     /// `decode` but ignoring, and not returning, any remaining bytes
     fn decode_all(bytes: &[u8]) -> Result<Self, DecodingError> {

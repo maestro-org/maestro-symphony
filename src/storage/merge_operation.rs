@@ -21,7 +21,7 @@ impl Encode for MergeOperation {
 }
 
 impl Decode for MergeOperation {
-    fn decode(bytes: &[u8]) -> DecodingResult<Self> {
+    fn decode(bytes: &[u8]) -> DecodingResult<'_, Self> {
         let (op_code, bytes) = u8::decode(bytes)?;
 
         match op_code {

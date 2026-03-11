@@ -28,6 +28,10 @@ use utoipa::OpenApi;
         runes::rune_info_batch::runes_rune_info_batch,
         runes::rune_info::rune_info,
         runes::rune_balance_at_utxo::rune_balance_at_utxo,
+        charms::charm_latest::charm_latest,
+        charms::charm_value_at_utxo::charm_value_at_utxo,
+        addresses::all_charm_utxos::addresses_all_charm_utxos,
+        addresses::specific_charm_utxos::addresses_specific_charm_utxos,
     ),
     components(schemas(
         IndexerInfo,
@@ -51,6 +55,12 @@ use utoipa::OpenApi;
         AddressUtxo,
         RuneInfo,
         RuneTerms,
+        // -- charms
+        ServeResponse<CharmUtxo>,
+        ServeResponse<Vec<CharmUtxo>>,
+        ServeResponse<CharmAndValue>,
+        CharmAndValue,
+        CharmUtxo,
     )),
 )]
 pub struct APIDoc;

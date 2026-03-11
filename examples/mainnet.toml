@@ -23,7 +23,8 @@ mempool = true
 transaction_indexers = [
     { type = "TxCountByAddress" },
     { type = "UtxosByAddress" },
-    { type = "Runes", start_height = 840000, index_activity = true }
+    { type = "Runes", start_height = 840000, index_activity = true },
+    { type = "Charms", start_height = 872000 },
 ]
 
 [server]

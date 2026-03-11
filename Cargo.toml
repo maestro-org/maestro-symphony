@@ -58,7 +58,6 @@ charms-data = "11"
 
 [patch.crates-io]
 rocksdb = { git = "https://github.com/maestro-org/rust-rocksdb.git", rev = "32b8d249021aee8f530780dff4d85f44acfe9da0" }
-ark-relations = { path = "vendor/ark-relations" }
 
 [workspace]
 members = ["macros"]

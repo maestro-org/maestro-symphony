@@ -26,11 +26,9 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v5
             - name: Setup Rust toolchain
-              uses: moonrepo/setup-rust@v1
-              with:
-                  cache: false
-                  channel: "1.92.0"
-                  components: rustfmt,clippy
+              run: |
+                  rustup toolchain install 1.92.0 --profile minimal --component rustfmt --component clippy
+                  rustup default 1.92.0
             - name: Check formatting
               run: make fmt-check
             - name: Setup Rust cache
@@ -97,10 +95,9 @@ jobs:
             - name: Checkout repository
               uses: actions/checkout@v5
             - name: Setup Rust toolchain
-              uses: moonrepo/setup-rust@v1
-              with:
-                  cache: true
-                  channel: "1.92.0"
+              run: |
+                  rustup toolchain install 1.92.0 --profile minimal
+                  rustup default 1.92.0
             - name: Publish to crates.io
               env:
                   CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_TOKEN }}

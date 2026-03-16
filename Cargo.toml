@@ -39,8 +39,13 @@ bitcoin = { version = "0.32.3", features = ["serde", "rand-std"] }
 indexmap = "2.13.0"
 itertools = "0.14.0"
 clap = { version = "4.5.48", features = ["derive"] }
+<<<<<<< dependabot/cargo/axum-0.8.8
 axum = "0.8.8"
 axum-server = "0.7.2"
+=======
+axum = "0.8.6"
+axum-server = "0.8.0"
+>>>>>>> main
 serde_json = "1.0.145"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 chrono = "0.4.42"

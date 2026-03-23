@@ -53,7 +53,7 @@ ordinals = "0.0.15"
 bitcoincore-rpc = "0.19.0"
 
 # Charms
-charms-lib = "11"
+charms-lib = "12"
 charms-data = "11"
 
 [patch.crates-io]

@@ -34,7 +34,7 @@ jobs:
             - name: Setup Rust cache
               uses: Swatinem/rust-cache@v2
             - name: Run tests
-              run: cargo test --all-targets --all-features
+              run: cargo test --all-targets --all-features --locked
             - name: Run clippy
               run: make lint
             # - name: Install cargo-audit

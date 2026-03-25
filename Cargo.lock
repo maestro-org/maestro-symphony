@@ -2493,7 +2493,7 @@ dependencies = [
  "tikv-jemallocator",
  "tokio",
  "tracing",
- "tracing-subscriber 0.3.20",
+ "tracing-subscriber 0.3.23",
  "utoipa",
 ]
 
@@ -4570,7 +4570,7 @@ checksum = "ba510663661800990c1207ddbf3a1e67a551f05d882a60197adbb19c6824754f"
 dependencies = [
  "p3-util 0.3.2-succinct",
  "tracing-forest",
- "tracing-subscriber 0.3.20",
+ "tracing-subscriber 0.3.23",
 ]
 
 [[package]]
@@ -5301,7 +5301,7 @@ dependencies = [
  "smallvec",
  "thiserror 1.0.69",
  "tracing",
- "tracing-subscriber 0.3.20",
+ "tracing-subscriber 0.3.23",
 ]
 
 [[package]]
@@ -5326,9 +5326,9 @@ dependencies = [
 
 [[package]]
 name = "tracing-subscriber"
-version = "0.3.20"
+version = "0.3.23"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2054a14f5307d601f88daf0553e1cbf472acc4f2c51afab632431cdcd72124d5"
+checksum = "cb7f578e5945fb242538965c2d0b04418d38ec25c79d160cd279bf0731c8d319"
 dependencies = [
  "matchers",
  "nu-ansi-term",

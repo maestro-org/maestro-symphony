@@ -26,8 +26,8 @@ tokio = { version = "1.47.1", features = [
 ] }
 hex = "0.4.3"
 tracing = "0.1.44"
-tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
-config = { version = "0.15.22", default-features = false, features = [
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+config = { version = "0.15.18", default-features = false, features = [
     "toml",
     "json",
 ] }
@@ -45,7 +45,7 @@ serde_json = "1.0.145"
 utoipa = { version = "5.4.0", features = ["axum_extras"] }
 chrono = "0.4.44"
 mini-moka = "0.10.3"
-sysinfo = "0.36.1"
+sysinfo = "0.38.4"
 rustc-hash = "2.1"
 
 # runes

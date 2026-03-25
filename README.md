@@ -2,13 +2,18 @@
 
 # [Maestro Symphony](https://www.gomaestro.org/)
 
-[![CI](https://img.shields.io/github/actions/workflow/status/maestro-org/maestro-symphony/ci.yml?label=CI&logo=github&style=for-the-badge)](https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml)
-[![Crates.io](https://img.shields.io/crates/v/maestro-symphony?label=crates.io&logo=rust&style=for-the-badge)](https://crates.io/crates/maestro-symphony)
-[![Docs](https://img.shields.io/badge/docs-website-C53DD8?style=for-the-badge)](https://docs.gomaestro.org/)
-[![Discord](https://img.shields.io/discord/950173135838273556?label=discord&logo=discord&style=for-the-badge)](https://discord.gg/SJgkEje7)
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge)](./LICENSE)
+<p align="center">
+    <img src="https://github.com/maestro-org/maestro-symphony/raw/main/logo/logo.png" width="100">
+</p>
 
-<img src="https://github.com/maestro-org/maestro-symphony/raw/main/logo/logo.png" width="100">
+<p align="center">
+    <a href="https://github.com/maestro-org/maestro-symphony/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/maestro-org/maestro-symphony/ci.yml?label=CI&logo=github&style=for-the-badge" alt="CI"></a>
+    <a href="https://crates.io/crates/maestro-symphony"><img src="https://img.shields.io/crates/v/maestro-symphony?label=crates.io&logo=rust&style=for-the-badge" alt="Crates.io"></a>
+    <a href="https://docs.gomaestro.org/"><img src="https://img.shields.io/badge/docs-website-C53DD8?style=for-the-badge" alt="Docs"></a>
+    <a href="https://discord.gg/SJgkEje7"><img src="https://img.shields.io/discord/950173135838273556?label=discord&logo=discord&style=for-the-badge" alt="Discord"></a>
+    <a href="./LICENSE"><img src="https://img.shields.io/badge/license-Apache%202.0-blue.svg?style=for-the-badge" alt="License"></a>
+</p>
+
 
 ---
 

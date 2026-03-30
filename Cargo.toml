@@ -15,7 +15,7 @@ thiserror = "2.0.18"
 tempfile = "3.27.0"
 rocksdb = { version = "0.23.0", features = ["jemalloc"] }
 gasket = { version = "0.9.0", features = ["derive"] }
-tokio = { version = "1.47.1", features = [
+tokio = { version = "1.50.0", features = [
     "rt",
     "rt-multi-thread",
     "net",

@@ -32,8 +32,8 @@ Snapshots allow you to bootstrap your Symphony indexer with pre-synchronized dat
 
 #### Symphony
 
--   Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20250927.tar.lz4
--   Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20250927.tar.lz4
+-   Mainnet: https://snapshots.gomaestro.org/symphony/mainnet/snapshots/20260402.tar.lz4
+-   Testnet: https://snapshots.gomaestro.org/symphony/testnet/snapshots/20260402.tar.lz4
 
 ## Testnet setup example
 

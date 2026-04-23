@@ -383,7 +383,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94893f1e0c6eeab764ade8dc4c0db24caf4fe7cbbaafc0eba0a9030f447b5185"
 dependencies = [
  "num-traits",
- "rand 0.8.5",
+ "rand 0.8.6",
 ]
 
 [[package]]
@@ -393,7 +393,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "246a225cc6131e9ee4f24619af0f19d67761fff15d7ccc22e42b80846e69449a"
 dependencies = [
  "num-traits",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rayon",
 ]
 
@@ -1100,7 +1100,7 @@ dependencies = [
  "num 0.4.3",
  "num-bigint 0.4.6",
  "num-integer",
- "rand 0.8.5",
+ "rand 0.8.6",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -1126,7 +1126,7 @@ dependencies = [
  "linked-hash-map",
  "num-bigint 0.4.6",
  "num-integer",
- "rand 0.8.5",
+ "rand 0.8.6",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -1149,7 +1149,7 @@ dependencies = [
  "digest 0.9.0",
  "ed25519-bip32",
  "hex",
- "rand 0.8.5",
+ "rand 0.8.6",
  "schemars 0.8.22",
  "serde",
  "serde_json",
@@ -2915,7 +2915,7 @@ dependencies = [
  "p3-mds 0.2.3-succinct",
  "p3-poseidon2 0.2.3-succinct",
  "p3-symmetric 0.2.3-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -2930,7 +2930,7 @@ dependencies = [
  "p3-mds 0.3.2-succinct",
  "p3-poseidon2 0.3.2-succinct",
  "p3-symmetric 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -2945,7 +2945,7 @@ dependencies = [
  "p3-field 0.3.2-succinct",
  "p3-poseidon2 0.3.2-succinct",
  "p3-symmetric 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3013,7 +3013,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "num-traits",
  "p3-util 0.2.3-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3027,7 +3027,7 @@ dependencies = [
  "num-bigint 0.4.6",
  "num-traits",
  "p3-util 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3072,7 +3072,7 @@ dependencies = [
  "p3-mds 0.3.2-succinct",
  "p3-poseidon2 0.3.2-succinct",
  "p3-symmetric 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3086,7 +3086,7 @@ dependencies = [
  "p3-field 0.2.3-succinct",
  "p3-maybe-rayon 0.2.3-succinct",
  "p3-util 0.2.3-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
  "tracing",
 ]
@@ -3101,7 +3101,7 @@ dependencies = [
  "p3-field 0.3.2-succinct",
  "p3-maybe-rayon 0.3.2-succinct",
  "p3-util 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
  "tracing",
 ]
@@ -3133,7 +3133,7 @@ dependencies = [
  "p3-matrix 0.2.3-succinct",
  "p3-symmetric 0.2.3-succinct",
  "p3-util 0.2.3-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
 ]
 
 [[package]]
@@ -3148,7 +3148,7 @@ dependencies = [
  "p3-matrix 0.3.2-succinct",
  "p3-symmetric 0.3.2-succinct",
  "p3-util 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
 ]
 
 [[package]]
@@ -3178,7 +3178,7 @@ dependencies = [
  "p3-field 0.2.3-succinct",
  "p3-mds 0.2.3-succinct",
  "p3-symmetric 0.2.3-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3192,7 +3192,7 @@ dependencies = [
  "p3-field 0.3.2-succinct",
  "p3-mds 0.3.2-succinct",
  "p3-symmetric 0.3.2-succinct",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
 ]
 
@@ -3391,7 +3391,7 @@ dependencies = [
  "ff 0.12.1",
  "group 0.12.1",
  "lazy_static",
- "rand 0.8.5",
+ "rand 0.8.6",
  "static_assertions",
  "subtle",
 ]
@@ -3406,7 +3406,7 @@ dependencies = [
  "ff 0.13.1",
  "group 0.13.0",
  "lazy_static",
- "rand 0.8.5",
+ "rand 0.8.6",
  "static_assertions",
  "subtle",
 ]
@@ -3590,9 +3590,9 @@ checksum = "dc33ff2d4973d518d823d61aa239014831e521c75da58e3df4840d3f47749d09"
 
 [[package]]
 name = "rand"
-version = "0.8.5"
+version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "34af8d1a0e25924bc5b7c43c079c942339d8f0a8b57c39049bef581b46327404"
+checksum = "5ca0ecfa931c29007047d1bc58e623ab12e5590e8c7cc53200d5202b69266d8a"
 dependencies = [
  "libc",
  "rand_chacha",
@@ -3915,7 +3915,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9465315bc9d4566e1724f0fffcbcc446268cb522e60f9a27bcded6b19c108113"
 dependencies = [
  "bitcoin_hashes",
- "rand 0.8.5",
+ "rand 0.8.6",
  "secp256k1-sys 0.10.1",
  "serde",
 ]
@@ -4242,7 +4242,7 @@ checksum = "b86eb8581b52f97860242fe5e8d6b49d2a37e1b38d4a647adf24acaa2965ee7d"
 dependencies = [
  "derive-where",
  "itertools 0.14.0",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
  "slop-algebra",
  "slop-alloc",
@@ -4349,7 +4349,7 @@ dependencies = [
  "futures",
  "itertools 0.14.0",
  "num_cpus",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rayon",
  "serde",
  "slop-algebra",
@@ -4442,7 +4442,7 @@ dependencies = [
  "derive-where",
  "futures",
  "num_cpus",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rayon",
  "serde",
  "slop-algebra",
@@ -4531,7 +4531,7 @@ dependencies = [
  "arrayvec 0.7.6",
  "derive-where",
  "itertools 0.14.0",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rayon",
  "serde",
  "slop-algebra",
@@ -4571,7 +4571,7 @@ dependencies = [
  "derive-where",
  "futures",
  "itertools 0.14.0",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rayon",
  "serde",
  "slop-algebra",
@@ -4757,7 +4757,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "228ec6719240b0933289332d730be328d3a3e4f9e6ff9ee2e20ec2b4a99aeed9"
 dependencies = [
  "itertools 0.14.0",
- "rand 0.8.5",
+ "rand 0.8.6",
  "slop-air",
  "slop-algebra",
  "slop-basefold",
@@ -4935,7 +4935,7 @@ dependencies = [
  "crunchy",
  "lazy_static",
  "num-bigint 0.4.6",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rustc-hex",
  "sp1-lib",
 ]
@@ -4952,7 +4952,7 @@ dependencies = [
  "crunchy",
  "lazy_static",
  "num-bigint 0.4.6",
- "rand 0.8.5",
+ "rand 0.8.6",
  "rustc-hex",
 ]
 
@@ -6162,7 +6162,7 @@ dependencies = [
  "jubjub",
  "lazy_static",
  "pasta_curves 0.5.1",
- "rand 0.8.5",
+ "rand 0.8.6",
  "serde",
  "sha2 0.10.9",
  "sha3",

@@ -924,7 +924,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7d20f91d23c3781257d8a3b0c9435b07f27d0ae3880704034c48f225b049811b"
 dependencies = [
  "anyhow",
- "charms-data",
+ "charms-data 12.0.1",
  "rand 0.10.0",
  "sha2 0.10.9",
  "wasmi",
@@ -944,7 +944,7 @@ dependencies = [
  "ark-snark",
  "bitcoin",
  "charms-app-runner",
- "charms-data",
+ "charms-data 12.0.1",
  "cml-chain",
  "cml-core",
  "enum_dispatch",
@@ -967,6 +967,21 @@ name = "charms-data"
 version = "12.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e12ff054a1fe13d472dc6a4f4569d62b35f42bd2e90cb307c66dfa35a5159edb"
+dependencies = [
+ "anyhow",
+ "ark-std 0.5.0",
+ "ciborium",
+ "ciborium-io",
+ "hex",
+ "serde",
+ "serde_with",
+]
+
+[[package]]
+name = "charms-data"
+version = "14.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f997f4e08c2eb38123d400a0404cb4cf858406511a706bb49315ea686e6cc0c4"
 dependencies = [
  "anyhow",
  "ark-std 0.5.0",
@@ -2459,7 +2474,7 @@ dependencies = [
  "axum-server",
  "bitcoin",
  "bitcoincore-rpc",
- "charms-data",
+ "charms-data 14.0.0",
  "charms-lib",
  "chrono",
  "clap",
@@ -3807,7 +3822,7 @@ dependencies = [
  "errno",
  "libc",
  "linux-raw-sys",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.1",
 ]
 
 [[package]]
@@ -5026,7 +5041,7 @@ dependencies = [
  "getrandom 0.4.2",
  "once_cell",
  "rustix",
- "windows-sys 0.59.0",
+ "windows-sys 0.61.1",
 ]
 
 [[package]]

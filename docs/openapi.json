@@ -617,6 +617,124 @@
         }
       }
     },
+    "/addresses/{address}/txs": {
+      "get": {
+        "tags": [
+          "Addresses"
+        ],
+        "summary": "Transactions by Address",
+        "description": "Returns the transactions in which the address controlled an input or an\noutput, oldest first by default (order=desc for newest first), paginated\nvia an opaque cursor.",
+        "operationId": "addresses_txs_by_address",
+        "parameters": [
+          {
+            "name": "address",
+            "in": "path",
+            "description": "Bitcoin address",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "tb1qphcdyah2e4vtpxn56hsz3p6kapg90pl4x525kc"
+          },
+          {
+            "name": "mempool",
+            "in": "query",
+            "description": "Mempool-aware",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "description": "Max results per page (default 100, max 100)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "order",
+            "in": "query",
+            "description": "Sort order by height: asc or desc (default asc)",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "Pagination cursor from a previous response",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Include results from this height (inclusive)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Include results up to this height (inclusive)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Requested data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedServeResponse_Vec_AddressTx"
+                },
+                "example": {
+                  "data": [
+                    {
+                      "height": 147047,
+                      "input": true,
+                      "output": true,
+                      "tx_hash": "50cc4d0dc76f040df16c5c841ee5abe4718e36b2cd46df3cba3005598e2e0021"
+                    }
+                  ],
+                  "indexer_info": {
+                    "chain_tip": {
+                      "block_hash": "0000000000c05511f3ee1f8671b02362629544ad7ef7ffed90e93f2c3c0ae286",
+                      "block_height": 150814
+                    },
+                    "estimated_blocks": [],
+                    "mempool_timestamp": null
+                  },
+                  "next_cursor": null
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed query parameters"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
     "/addresses/{address}/utxos": {
       "get": {
         "tags": [
@@ -1042,6 +1160,31 @@
   },
   "components": {
     "schemas": {
+      "AddressTx": {
+        "type": "object",
+        "required": [
+          "tx_hash",
+          "height",
+          "input",
+          "output"
+        ],
+        "properties": {
+          "height": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "input": {
+            "type": "boolean"
+          },
+          "output": {
+            "type": "boolean"
+          },
+          "tx_hash": {
+            "type": "string"
+          }
+        }
+      },
       "AddressUtxo": {
         "type": "object",
         "required": [
@@ -1183,6 +1326,52 @@
         "properties": {
           "mempool": {
             "type": "boolean"
+          }
+        }
+      },
+      "PaginatedServeResponse_Vec_AddressTx": {
+        "type": "object",
+        "required": [
+          "data",
+          "indexer_info"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "tx_hash",
+                "height",
+                "input",
+                "output"
+              ],
+              "properties": {
+                "height": {
+                  "type": "integer",
+                  "format": "int64",
+                  "minimum": 0
+                },
+                "input": {
+                  "type": "boolean"
+                },
+                "output": {
+                  "type": "boolean"
+                },
+                "tx_hash": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "indexer_info": {
+            "$ref": "#/components/schemas/IndexerInfo"
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },

@@ -4,6 +4,7 @@ use maestro_symphony_macros::{Decode, Encode};
 use runes::indexer::{RunesIndexer, RunesIndexerConfig};
 use serde::Deserialize;
 use tx_count_by_address::TxCountByAddressIndexer;
+use txs_by_address::TxsByAddressIndexer;
 
 use crate::sync::stages::index::indexers::custom::charms::indexer::CharmsIndexerConfig;
 use crate::{
@@ -14,6 +15,7 @@ pub mod charms;
 pub mod id;
 pub mod runes;
 pub mod tx_count_by_address;
+pub mod txs_by_address;
 pub mod utxos_by_address;
 
 /// Unique u8 for each transaction indexer, used in the key encodings. Do not modify, only add new
@@ -25,6 +27,7 @@ pub enum TransactionIndexer {
     Runes = 1,
     UtxosByAddress = 2,
     Charms = 3,
+    TxsByAddress = 4,
 }
 
 #[derive(Clone, Debug, Deserialize)]
@@ -34,6 +37,7 @@ pub enum TransactionIndexerFactory {
     Runes(RunesIndexerConfig),
     UtxosByAddress,
     Charms(CharmsIndexerConfig),
+    TxsByAddress,
 }
 
 impl TransactionIndexerFactory {
@@ -43,6 +47,7 @@ impl TransactionIndexerFactory {
             Self::Runes(c) => Ok(Box::new(RunesIndexer::new(c)?)),
             Self::UtxosByAddress => Ok(Box::new(UtxosByAddressIndexer::new())),
             Self::Charms(c) => Ok(Box::new(CharmsIndexer::new(c))),
+            Self::TxsByAddress => Ok(Box::new(TxsByAddressIndexer::new())),
         }
     }
 }

@@ -25,6 +25,7 @@ use utoipa::OpenApi;
         addresses::specific_rune_utxos::addresses_specific_rune_utxos,
         addresses::utxos_by_address::addresses_utxos_by_address,
         addresses::tx_count_by_address::addresses_tx_count_by_address,
+        addresses::txs_by_address::addresses_txs_by_address,
         runes::rune_info_batch::runes_rune_info_batch,
         runes::rune_info::rune_info,
         runes::rune_balance_at_utxo::rune_balance_at_utxo,
@@ -47,12 +48,14 @@ use utoipa::OpenApi;
         ServeResponse<String>,
         ServeResponse<AddressUtxo>,
         ServeResponse<HashMap<String, Option<RuneInfo>>>,
+        PaginatedServeResponse<Vec<AddressTx>>,
         // ---
         RuneAndAmount,
         RuneBalanceWithInfo,
         RuneUtxo,
         RuneEdict,
         AddressUtxo,
+        AddressTx,
         RuneInfo,
         RuneTerms,
         // -- charms

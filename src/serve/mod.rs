@@ -33,6 +33,7 @@ use tokio::sync::RwLock;
 use tracing::{info, warn};
 use utoipa::OpenApi;
 
+pub mod cursor;
 mod error;
 pub mod openapi;
 mod reader_wrapper;

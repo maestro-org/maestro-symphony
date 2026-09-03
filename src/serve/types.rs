@@ -39,6 +39,31 @@ pub struct MempoolParam {
     pub mempool: bool,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
+pub struct PaginatedServeResponse<T> {
+    pub data: T,
+    pub indexer_info: IndexerInfo,
+    pub next_cursor: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, ToSchema)]
+#[serde(rename_all = "lowercase")]
+pub enum SortOrder {
+    Asc,
+    Desc,
+}
+
+#[derive(Deserialize, ToSchema)]
+pub struct TxsByAddressParams {
+    #[serde(default)]
+    pub mempool: bool,
+    pub count: Option<usize>,
+    pub order: Option<SortOrder>,
+    pub cursor: Option<String>,
+    pub from: Option<u64>,
+    pub to: Option<u64>,
+}
+
 #[derive(Deserialize, ToSchema)]
 pub struct RuneBalancesParam {
     #[serde(default)]
@@ -77,6 +102,14 @@ pub struct AddressUtxo {
     pub output_index: u32,
     pub height: u64,
     pub satoshis: String,
+}
+
+#[derive(Serialize, ToSchema)]
+pub struct AddressTx {
+    pub tx_hash: String,
+    pub height: u64,
+    pub input: bool,
+    pub output: bool,
 }
 
 #[derive(Serialize, ToSchema)]

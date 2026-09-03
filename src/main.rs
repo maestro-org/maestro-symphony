@@ -168,7 +168,12 @@ async fn main() -> Result<(), ()> {
 
             // Run the server until shutdown
             if let Some(Err(e)) = shutdown_manager
-                .run_until_shutdown(serve::run(db, &serve_address))
+                .run_until_shutdown(serve::run(
+                    db,
+                    &serve_address,
+                    Some(&config.sync.node),
+                    Some(config.sync.network),
+                ))
                 .await
             {
                 warn!("Serve mode ended with error: {e:?}");
@@ -186,6 +191,8 @@ async fn main() -> Result<(), ()> {
             });
 
             let sync_db = db.clone();
+            let node_config = config.sync.node.clone();
+            let network = config.sync.network;
 
             // Create channels to stop and start the sync and serve tasks
             let (sync_ended_tx, mut sync_ended_rx) = tokio::sync::mpsc::channel(1);
@@ -213,7 +220,7 @@ async fn main() -> Result<(), ()> {
 
                 info!("starting serve side...");
 
-                let res = serve::run(db, &serve_address).await;
+                let res = serve::run(db, &serve_address, Some(&node_config), Some(network)).await;
                 warn!(
                     "serve task ended with result: {:?}, telling sync side to stop...",
                     res

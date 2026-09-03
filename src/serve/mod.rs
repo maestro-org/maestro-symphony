@@ -40,6 +40,7 @@ mod reader_wrapper;
 mod routes;
 mod types;
 mod utils;
+pub mod v0;
 
 pub static DEFAULT_SERVE_ADDRESS: &str = "0.0.0.0:8080";
 
@@ -49,11 +50,25 @@ pub struct ServerConfig {
 }
 
 #[derive(Clone)]
-pub struct AppState(Arc<RwLock<StorageHandler>>);
+pub struct AppState {
+    storage: Arc<RwLock<StorageHandler>>,
+    node: Option<Arc<v0::node_rpc::NodeRpc>>,
+    network: Option<bitcoin::Network>,
+}
 
 impl AppState {
+    pub fn node(&self) -> Result<&v0::node_rpc::NodeRpc, ServeError> {
+        self.node
+            .as_deref()
+            .ok_or_else(|| ServeError::internal("node rpc not configured"))
+    }
+
+    pub fn network(&self) -> Option<bitcoin::Network> {
+        self.network
+    }
+
     pub async fn start_reader(&self, mempool: bool) -> Result<(Reader, IndexerInfo), ServeError> {
-        let storage = self.0.read().await;
+        let storage = self.storage.read().await;
 
         let latest_reader = storage.reader(Timestamp::from_u64(u64::MAX));
 
@@ -120,10 +135,10 @@ async fn auto_refresh(
 ) -> impl IntoResponse {
     // Try to refresh the database if in read-only mode (secondary rocksdb instance
     // need to be manually told to catch up to the primary)
-    let should_refresh = state.0.read().await.is_read_only();
+    let should_refresh = state.storage.read().await.is_read_only();
 
     if should_refresh {
-        let mut storage_handler = state.0.write().await;
+        let mut storage_handler = state.storage.write().await;
 
         if let Err(e) = storage_handler.try_refresh_read_only_data() {
             // Log warning but continue with potentially stale data
@@ -138,7 +153,12 @@ async fn auto_refresh(
     next.run(request).await
 }
 
-pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
+pub async fn run(
+    db: StorageHandler,
+    address: &str,
+    node_config: Option<&crate::sync::NodeConfig>,
+    network: Option<crate::sync::Network>,
+) -> Result<(), Error> {
     if let Err(e) = fs::write(
         "docs/openapi.json",
         APIDoc::openapi().to_pretty_json().unwrap(),
@@ -146,7 +166,22 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         warn!("unable to write spec to docs/openapi.json: {e:?}")
     };
 
-    let app_state = AppState(Arc::new(RwLock::new(db)));
+    let node = node_config
+        .map(v0::node_rpc::NodeRpc::new)
+        .transpose()?
+        .map(Arc::new);
+
+    let network = network.map(|n| match n {
+        crate::sync::Network::Mainnet => bitcoin::Network::Bitcoin,
+        crate::sync::Network::Testnet4 => bitcoin::Network::Testnet4,
+        crate::sync::Network::Regtest => bitcoin::Network::Regtest,
+    });
+
+    let app_state = AppState {
+        storage: Arc::new(RwLock::new(db)),
+        node,
+        network,
+    };
 
     let app = Router::new()
         .route("/", get(root))
@@ -155,6 +190,7 @@ pub async fn run(db: StorageHandler, address: &str) -> Result<(), Error> {
         .nest("/addresses", routes::addresses::router())
         .nest("/runes", routes::runes::router())
         .nest("/charms", routes::charms::router())
+        .nest("/v0", v0::router())
         .layer(middleware::from_fn_with_state(
             app_state.clone(),
             auto_refresh,
@@ -190,7 +226,7 @@ pub struct DumpParam {
 
 // Dump all KVs (temporary debugging)
 async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> impl IntoResponse {
-    let storage_handler = state.0.read().await;
+    let storage_handler = state.storage.read().await;
     let cf = storage_handler.cf_handle();
 
     let mut read_opts = ReadOptions::default();
@@ -217,7 +253,11 @@ async fn dump(State(state): State<AppState>, Query(param): Query<DumpParam>) -> 
 }
 
 async fn tip(State(state): State<AppState>) -> impl IntoResponse {
-    let storage = state.0.read().await.reader(Timestamp::from_u64(u64::MAX)); // TODO
+    let storage = state
+        .storage
+        .read()
+        .await
+        .reader(Timestamp::from_u64(u64::MAX)); // TODO
 
     let range = HashByHeightKV::encode_range(None::<&()>, None::<&()>);
 

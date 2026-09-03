@@ -176,43 +176,43 @@
                 "example": {
                   "data": [
                     {
-                      "amount": "100000000",
                       "id": "30562:50",
+                      "amount": "100000000",
                       "info": {
-                        "divisibility": 8,
-                        "etching_height": 30562,
-                        "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                         "id": "30562:50",
                         "name": "BESTINSLOTXYZ",
-                        "premine": "100000000",
                         "spaced_name": "BESTINSLOT•XYZ",
                         "symbol": "ʃ",
+                        "divisibility": 8,
+                        "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                        "etching_height": 30562,
                         "terms": {
                           "amount": "100000000",
                           "cap": "3402823669209384634633746074316",
-                          "end_height": null,
-                          "start_height": null
-                        }
+                          "start_height": null,
+                          "end_height": null
+                        },
+                        "premine": "100000000"
                       }
                     },
                     {
-                      "amount": "990000",
                       "id": "63523:1",
+                      "amount": "990000",
                       "info": {
-                        "divisibility": 2,
-                        "etching_height": 63523,
-                        "etching_tx": "3bcc9e8f8eaf120ea5af65a378925b703f6fb1960435629eef5cb5900c19bec9",
                         "id": "63523:1",
                         "name": "JFMJFMJFMHHHAAA",
-                        "premine": "1000000",
                         "spaced_name": "JFMJFMJFMHHHAAA",
                         "symbol": "J",
+                        "divisibility": 2,
+                        "etching_tx": "3bcc9e8f8eaf120ea5af65a378925b703f6fb1960435629eef5cb5900c19bec9",
+                        "etching_height": 63523,
                         "terms": {
                           "amount": "100000",
                           "cap": "100",
-                          "end_height": null,
-                          "start_height": 63515
-                        }
+                          "start_height": 63515,
+                          "end_height": null
+                        },
+                        "premine": "1000000"
                       }
                     }
                   ],
@@ -221,8 +221,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -294,8 +294,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -362,10 +362,10 @@
                 "example": {
                   "data": [
                     {
+                      "rune_id": "30562:50",
                       "amount": "100000000",
-                      "block_height": 30562,
                       "output": 1,
-                      "rune_id": "30562:50"
+                      "block_height": 30562
                     }
                   ],
                   "indexer_info": {
@@ -373,8 +373,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -432,16 +432,16 @@
                 "example": {
                   "data": [
                     {
-                      "height": 30562,
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                       "output_index": 1,
+                      "height": 30562,
+                      "satoshis": "10000",
                       "runes": [
                         {
-                          "amount": "100000000",
-                          "id": "30562:50"
+                          "id": "30562:50",
+                          "amount": "100000000"
                         }
-                      ],
-                      "satoshis": "10000",
-                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                      ]
                     }
                   ],
                   "indexer_info": {
@@ -449,8 +449,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -518,16 +518,16 @@
                 "example": {
                   "data": [
                     {
-                      "height": 30562,
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                       "output_index": 1,
+                      "height": 30562,
+                      "satoshis": "10000",
                       "runes": [
                         {
-                          "amount": "100000000",
-                          "id": "30562:50"
+                          "id": "30562:50",
+                          "amount": "100000000"
                         }
-                      ],
-                      "satoshis": "10000",
-                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                      ]
                     }
                   ],
                   "indexer_info": {
@@ -535,8 +535,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -598,8 +598,8 @@
                       "block_hash": "0000000004af5483f4e54ebf8f1d728b003d19ebc184761b82c50b8e86ec2a0a",
                       "block_height": 91625
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -707,10 +707,10 @@
                 "example": {
                   "data": [
                     {
+                      "tx_hash": "50cc4d0dc76f040df16c5c841ee5abe4718e36b2cd46df3cba3005598e2e0021",
                       "height": 147047,
                       "input": true,
-                      "output": true,
-                      "tx_hash": "50cc4d0dc76f040df16c5c841ee5abe4718e36b2cd46df3cba3005598e2e0021"
+                      "output": true
                     }
                   ],
                   "indexer_info": {
@@ -718,8 +718,8 @@
                       "block_hash": "0000000000c05511f3ee1f8671b02362629544ad7ef7ffed90e93f2c3c0ae286",
                       "block_height": 150814
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   },
                   "next_cursor": null
                 }
@@ -775,10 +775,10 @@
                 "example": {
                   "data": [
                     {
-                      "height": 30562,
+                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                       "output_index": 1,
-                      "satoshis": "10000",
-                      "tx_hash": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121"
+                      "height": 30562,
+                      "satoshis": "10000"
                     }
                   ],
                   "indexer_info": {
@@ -786,8 +786,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -966,20 +966,20 @@
                 "example": {
                   "data": {
                     "30562:50": {
-                      "divisibility": 8,
-                      "etching_height": 30562,
-                      "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                       "id": "30562:50",
                       "name": "BESTINSLOTXYZ",
-                      "premine": "100000000",
                       "spaced_name": "BESTINSLOT•XYZ",
                       "symbol": "ʃ",
+                      "divisibility": 8,
+                      "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                      "etching_height": 30562,
                       "terms": {
                         "amount": "100000000",
                         "cap": "3402823669209384634633746074316",
-                        "end_height": null,
-                        "start_height": null
-                      }
+                        "start_height": null,
+                        "end_height": null
+                      },
+                      "premine": "100000000"
                     },
                     "ABCDEF": null
                   },
@@ -988,8 +988,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -1045,28 +1045,28 @@
                 },
                 "example": {
                   "data": {
-                    "divisibility": 8,
-                    "etching_height": 30562,
-                    "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
                     "id": "30562:50",
                     "name": "BESTINSLOTXYZ",
-                    "premine": "100000000",
                     "spaced_name": "BESTINSLOT•XYZ",
                     "symbol": "ʃ",
+                    "divisibility": 8,
+                    "etching_tx": "63937d48e35d15a7c5530469210c202104cc94a945cc848554f336b3f4f24121",
+                    "etching_height": 30562,
                     "terms": {
                       "amount": "100000000",
                       "cap": "3402823669209384634633746074316",
-                      "end_height": null,
-                      "start_height": null
-                    }
+                      "start_height": null,
+                      "end_height": null
+                    },
+                    "premine": "100000000"
                   },
                   "indexer_info": {
                     "chain_tip": {
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
@@ -1138,8 +1138,8 @@
                       "block_hash": "00000000000000108a4cd9755381003a01bea7998ca2d770fe09b576753ac7ef",
                       "block_height": 31633
                     },
-                    "estimated_blocks": [],
-                    "mempool_timestamp": null
+                    "mempool_timestamp": null,
+                    "estimated_blocks": []
                   }
                 }
               }
